@@ -26,6 +26,7 @@ export default function ResultsAdminPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [counts, setCounts] = useState({ all: 0, pretest: 0, posttest: 0 });
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -47,12 +48,13 @@ export default function ResultsAdminPage() {
     let cancelled = false;
     const loadPage = async () => {
       setLoading(true);
+      setLoadError('');
       const { data, error } = await supabase.rpc('admin_training_results', {
         p_training_id: selectedTrainingId, p_search: debouncedSearch,
         p_test_filter: testFilter, p_limit: PAGE_SIZE, p_offset: (currentPage - 1) * PAGE_SIZE
       });
       if (cancelled) return;
-      if (error) { console.error(error); setRows([]); setTotalCount(0); }
+      if (error) { console.error(error); setRows([]); setTotalCount(0); setLoadError(error.message); }
       else {
         const result = (data || []) as ResultRow[];
         setRows(result); setTotalCount(Number(result[0]?.total_count || 0));
@@ -83,6 +85,8 @@ export default function ResultsAdminPage() {
         {([['all', 'Semua', counts.all], ['pretest', 'Pre-Test', counts.pretest], ['posttest', 'Post-Test', counts.posttest]] as const).map(([value, label, count]) => <button key={value} onClick={() => selectFilter(value)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${testFilter === value ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>{label} ({count})</button>)}
       </div>
     </div>
+
+    {loadError && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-800"><strong>Hasil tes gagal dimuat.</strong> {loadError}. Jalankan kembali file SQL optimasi versi terbaru.</div>}
 
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider"><tr><th className="p-4">Peserta</th><th className="p-4 text-center">Pre-Test</th><th className="p-4 text-center">Post-Test Terbaik</th><th className="p-4 text-center">Percobaan Post-Test</th><th className="p-4 text-center">Status</th><th className="p-4">Terakhir Mengerjakan</th></tr></thead>

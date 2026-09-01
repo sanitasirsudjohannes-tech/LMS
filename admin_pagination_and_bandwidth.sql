@@ -160,8 +160,8 @@ AS $$
   WITH grouped AS (
     SELECT
       a.user_id,
-      p.full_name,
-      p.email,
+      COALESCE(NULLIF(p.full_name, ''), 'Peserta') AS full_name,
+      COALESCE(p.email, '') AS email,
       MAX(a.score) FILTER (WHERE a.test_type = 'pretest') AS pre_score,
       MAX(a.score) FILTER (WHERE a.test_type = 'posttest') AS best_post_score,
       COUNT(*) FILTER (WHERE a.test_type = 'posttest') AS post_attempts,
@@ -169,7 +169,7 @@ AS $$
       BOOL_OR(a.test_type = 'pretest') AS has_pretest,
       BOOL_OR(a.test_type = 'posttest') AS has_posttest
     FROM public.test_attempts a
-    JOIN public.profiles p ON p.id = a.user_id AND p.role = 'peserta'
+    LEFT JOIN public.profiles p ON p.id = a.user_id
     WHERE a.training_id = p_training_id
     GROUP BY a.user_id, p.full_name, p.email
   ), counts AS (
