@@ -12,7 +12,7 @@ VALUES (
   '2026-08-01T00:00:00.000Z',
   '2026-12-31T23:59:59.000Z',
   80,
-  3,
+  5,
   true
 )
 ON CONFLICT (id) DO UPDATE SET 

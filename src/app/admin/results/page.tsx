@@ -176,7 +176,7 @@ export default function ResultsAdminPage() {
       </div>
 
       {loadError && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"><strong>Hasil tes gagal dimuat.</strong> {loadError}</div>}
-      {usingFallback && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Mode kompatibilitas aktif. Jalankan <strong>supabase/sql/bugfix_stability_2026_09.sql</strong> agar jumlah halaman dan filter hasil tes sepenuhnya dihitung oleh database.</div>}
+      {usingFallback && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Mode kompatibilitas aktif. Jalankan <strong>supabase/sql/migrations/008_bugfix_stability_2026_09.sql</strong> agar jumlah halaman dan filter hasil tes sepenuhnya dihitung oleh database.</div>}
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">

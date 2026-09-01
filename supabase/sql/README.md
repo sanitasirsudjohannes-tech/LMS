@@ -1,0 +1,52 @@
+# Panduan SQL LMS
+
+Semua berkas database disusun berdasarkan tujuan agar urutan instalasi tidak tertukar.
+
+## Struktur folder
+
+| Folder | Kegunaan | Kapan dijalankan |
+| --- | --- | --- |
+| `migrations/` | Struktur tabel, keamanan, RPC, indeks, dan perbaikan skema | Wajib, sesuai nomor urut |
+| `setup/` | Membuat admin dan data contoh | Setelah seluruh migrasi |
+| `maintenance/` | Perbaikan khusus untuk instalasi lama | Hanya jika mengalami masalah terkait |
+
+## Instalasi database baru
+
+Jalankan berkas di Supabase **SQL Editor** satu per satu dan tunggu status berhasil sebelum melanjutkan:
+
+1. `migrations/001_schema.sql`
+2. `migrations/002_security_hardening.sql`
+3. `migrations/003_training_jpl_and_attempt_limit.sql`
+4. `migrations/004_certificate_training_dates.sql`
+5. `migrations/005_certificate_signature_storage.sql`
+6. `migrations/006_training_visibility_and_certificate_archive.sql`
+7. `migrations/007_admin_pagination_and_bandwidth.sql`
+8. `migrations/008_bugfix_stability_2026_09.sql`
+
+Setelah itu:
+
+1. Buat user admin melalui **Authentication → Users → Add user** dan aktifkan **Auto confirm user**.
+2. Buka `setup/create_admin.sql`, ganti `GANTI_DENGAN_EMAIL_ADMIN`, kemudian jalankan bagian `INSERT` dan verifikasinya.
+3. `setup/seed_data.sql` bersifat opsional. Jangan jalankan pada database produksi yang sudah berisi pelatihan nyata kecuali memang ingin memasukkan data contoh.
+
+## Memperbarui instalasi lama
+
+Untuk aplikasi yang sebelumnya sudah terpasang, jalankan ulang secara berurutan:
+
+1. `migrations/002_security_hardening.sql`
+2. `migrations/007_admin_pagination_and_bandwidth.sql`
+3. `migrations/008_bugfix_stability_2026_09.sql`
+
+Ketiga berkas tersebut menggunakan transaksi dan dirancang aman dijalankan ulang. Jika migrasi berhenti karena nomor sertifikat atau urutan materi duplikat, rapikan data duplikat yang disebutkan dalam pesan kesalahan sebelum mencoba lagi. Jangan menghapus data secara massal hanya untuk melewati validasi.
+
+## Pemeliharaan
+
+`maintenance/fix_profile_access.sql` hanya diperlukan bila user dapat masuk melalui Supabase Auth tetapi aplikasi menampilkan pesan bahwa profil tidak ditemukan. Migrasi keamanan terbaru sudah memuat konfigurasi normal yang dibutuhkan, sehingga berkas ini bukan bagian instalasi rutin.
+
+## Catatan keamanan
+
+- Jangan menyimpan password, service role key, atau token Supabase dalam repository.
+- Frontend hanya menggunakan anon key melalui `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- Jangan melewati `002_security_hardening.sql`; berkas ini memasang RLS, kontrol role, penilaian tes di server, timer materi, dan penerbitan sertifikat atomik.
+- Jangan mengubah nomor urut sertifikat ke angka yang lebih rendah setelah sertifikat diterbitkan.
+- Setelah perubahan RPC, bila Supabase masih menyatakan fungsi tidak ditemukan, buka **Settings → API** lalu reload schema cache, atau jalankan `NOTIFY pgrst, 'reload schema';`.

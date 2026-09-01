@@ -3,39 +3,36 @@
 -- Jalankan SQL ini di Supabase SQL Editor (satu per satu)
 -- ============================================================
 
--- LANGKAH 1: Buat user admin di auth.users via Supabase Auth Admin API
--- Jalankan ini di SQL Editor Supabase:
-SELECT extensions.pgcrypto_version(); -- test agar extension aktif
-
--- LANGKAH 2: Insert user admin ke auth.users langsung
--- Ganti password_hash dengan password pilihan Anda menggunakan bcrypt
--- Atau gunakan cara di bawah yang lebih mudah (Langkah 3)
-
 -- ============================================================
--- CARA TERMUDAH: Gunakan Supabase Dashboard
+-- BUAT USER MELALUI SUPABASE DASHBOARD
 -- ============================================================
 -- 1. Buka: Authentication → Users → "Add user" (tombol kanan atas)
 -- 2. Isi:
---      Email    : admin@lms.id
+--      Email    : email admin Anda
 --      Password : gunakan password unik yang kuat (jangan simpan di repository)
 --      (centang "Auto confirm user")
 -- 3. Klik "Create user"
--- 4. Salin UUID user yang baru dibuat
--- 5. Jalankan SQL di bawah ini, ganti <UUID_DARI_LANGKAH_4>
+-- 4. Ganti email pada SQL di bawah, lalu jalankan blok INSERT dan verifikasi.
 
--- LANGKAH 3: Insert profil admin ke tabel profiles
--- Ganti nilai UUID di bawah dengan UUID dari langkah 4
+-- Membuat/memperbarui profil admin berdasarkan user Auth yang sudah ada.
+-- WAJIB ganti teks GANTI_DENGAN_EMAIL_ADMIN sebelum menjalankan.
 INSERT INTO public.profiles (id, full_name, email, institution, role)
-VALUES (
-  '2feff67d-a696-47bb-b5c9-e19faba096dc',   -- ← ganti dengan UUID asli
+SELECT
+  u.id,
   'Administrator LMS',
-  'admin@lms.id',
+  COALESCE(u.email, ''),
   'RSUD Prof. Dr. W. Z. Johannes',
   'admin'
-)
-ON CONFLICT (id) DO UPDATE SET role = 'admin';
+FROM auth.users u
+WHERE lower(u.email) = lower('GANTI_DENGAN_EMAIL_ADMIN')
+ON CONFLICT (id) DO UPDATE SET
+  email = EXCLUDED.email,
+  role = 'admin';
 
 -- ============================================================
 -- VERIFIKASI: Pastikan admin sudah masuk ke tabel profiles
 -- ============================================================
-SELECT id, full_name, email, role FROM public.profiles WHERE role = 'admin';
+SELECT id, full_name, email, role
+FROM public.profiles
+WHERE role = 'admin'
+ORDER BY created_at;

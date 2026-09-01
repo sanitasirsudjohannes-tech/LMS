@@ -1,73 +1,150 @@
 # LMS RSUD Prof. Dr. W.Z. Johannes Kupang
 
-Learning Management System internal milik RSUD Prof. Dr. W.Z. Johannes Kupang.
+Learning Management System internal untuk pelatihan daring RSUD Prof. Dr. W.Z. Johannes Kupang. Aplikasi mendukung alur peserta dari pendaftaran hingga sertifikat digital dan menyediakan panel admin untuk mengelola seluruh pelatihan.
 
-## Setup Supabase
+## Fitur utama
 
-Urutan instalasi database wajib:
+### Peserta
 
-1. Jalankan `supabase/sql/schema.sql` di Supabase SQL Editor.
-2. Jalankan `supabase/sql/security_hardening.sql` segera sesudahnya.
-3. Jalankan `supabase/sql/training_jpl_and_attempt_limit.sql` untuk mengaktifkan JPL dan batas Post-Test 5 kali.
-4. Jalankan `supabase/sql/certificate_training_dates.sql` agar periode pelatihan tersedia pada verifikasi sertifikat.
-5. Jalankan `supabase/sql/certificate_signature_storage.sql` untuk mengaktifkan unggah PNG tanda tangan direktur.
-6. Jalankan `supabase/sql/training_visibility_and_certificate_archive.sql` untuk memisahkan pelatihan aktif dari arsip sertifikat.
-7. Jalankan `supabase/sql/admin_pagination_and_bandwidth.sql` untuk mengaktifkan filter, statistik, dan pagination hemat bandwidth.
-8. Jalankan `supabase/sql/bugfix_stability_2026_09.sql` untuk perbaikan hasil tes, profil lama, verifikasi sertifikat, dan validasi periode materi.
+- Pendaftaran dan login menggunakan Supabase Authentication.
+- Pre-Test satu kali sebelum materi dibuka.
+- Materi wajib dipelajari secara berurutan dengan durasi minimum dari server.
+- Post-Test maksimal lima kali dengan penilaian di database.
+- Sertifikat digital, nomor otomatis opsional, QR verifikasi, PDF, dan arsip sertifikat.
+- Tampilan responsif untuk HP dan komputer.
 
-Untuk memperbarui instalasi yang sudah berjalan, jalankan ulang langkah 2, 7, lalu 8 secara berurutan. Migrasi akan menolak data lama yang masih mempunyai nomor sertifikat atau urutan materi duplikat; rapikan duplikat tersebut terlebih dahulu agar constraint integritas dapat dipasang.
-9. Buat akun admin melalui Supabase Authentication, lalu ikuti `supabase/sql/create_admin.sql` untuk menetapkan perannya.
+### Admin
 
-Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengguna tidak ditemukan”, jalankan `supabase/sql/fix_profile_access.sql` untuk memperbaiki izin helper RLS dan melengkapi profil akun lama.
+- Kelola pelatihan, periode, JPL, materi, dan bank soal.
+- Kelola format nomor dan tanda tangan sertifikat per pelatihan.
+- Statistik peserta, progres, hasil tes, status kelulusan, dan ekspor CSV.
+- Pagination dan filter di database untuk mengurangi pemakaian bandwidth.
+- Verifikasi sertifikat publik menggunakan kode unik.
 
-`supabase/sql/security_hardening.sql` memasang Row Level Security berbasis kepemilikan/admin, menyembunyikan kunci jawaban dari peserta, menilai tes di server, memvalidasi timer materi di server, dan menerbitkan sertifikat secara atomik. Jangan deploy frontend baru sebelum migrasi ini berhasil.
+## Teknologi
 
-## Menjalankan aplikasi
+- Next.js 16 dan React 19
+- TypeScript dan Tailwind CSS 4
+- Supabase Authentication, PostgreSQL, Storage, RLS, dan RPC
+- Vercel untuk deployment
 
-Untuk deployment produksi, tambahkan environment variable berikut di Vercel:
+## Persyaratan
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
-NEXT_PUBLIC_APP_URL=https://lmsrsudjohannes.vercel.app
+- Node.js 20 atau lebih baru
+- Akun Supabase
+- Akun Vercel untuk deployment produksi
+- Repository GitHub ini
+
+## 1. Instalasi aplikasi
+
+```bash
+git clone https://github.com/sanitasirsudjohannes-tech/LMS.git
+cd LMS
+npm ci
 ```
 
-Ketiganya wajib tersedia pada environment **Production**, **Preview**, dan **Development** yang digunakan, kemudian lakukan Redeploy. Aplikasi tidak lagi memakai URL/key fallback agar salah konfigurasi tidak diam-diam tersambung ke proyek Supabase lain.
+## 2. Instalasi database Supabase
 
-Di Supabase Authentication → URL Configuration, gunakan Site URL
-`https://lmsrsudjohannes.vercel.app` dan tambahkan Redirect URL
-`https://lmsrsudjohannes.vercel.app/reset-password`.
+1. Buat project Supabase.
+2. Buka **SQL Editor**.
+3. Jalankan seluruh berkas dalam `supabase/sql/migrations/` sesuai nomor `001` sampai `008`.
+4. Buat akun admin dan tetapkan role menggunakan `supabase/sql/setup/create_admin.sql`.
+5. Data contoh pada `supabase/sql/setup/seed_data.sql` bersifat opsional.
 
-First, run the development server:
+Panduan lengkap, urutan migrasi, pembaruan instalasi lama, dan pemecahan masalah tersedia di [`supabase/sql/README.md`](supabase/sql/README.md).
+
+## 3. Pengaturan Supabase Authentication
+
+Di **Authentication → URL Configuration**, isi:
+
+- **Site URL**: URL produksi, misalnya `https://lmsrsudjohannes.vercel.app`
+- **Redirect URL**: `https://lmsrsudjohannes.vercel.app/reset-password`
+
+Alur pendaftaran aplikasi saat ini mengharapkan peserta langsung memiliki sesi setelah mendaftar. Di **Authentication → Providers → Email**, nonaktifkan kewajiban konfirmasi email. Untuk akun admin yang dibuat manual, gunakan pilihan **Auto confirm user**.
+
+## 4. Environment variable
+
+Buat `.env.local` untuk pengembangan lokal:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_ID.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=ANON_KEY_PROJECT
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Gunakan anon key, bukan service role key. Jangan commit `.env.local` ke GitHub.
+
+Tambahkan ketiga variabel yang sama di Vercel untuk environment **Production**, **Preview**, dan **Development**. Ubah `NEXT_PUBLIC_APP_URL` menjadi URL masing-masing deployment.
+
+## 5. Menjalankan secara lokal
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Pemeriksaan sebelum commit atau deployment:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+npm audit --omit=dev
+```
 
-## Learn More
+## 6. Deployment Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. Impor repository ini ke Vercel.
+2. Pastikan framework terdeteksi sebagai **Next.js**.
+3. Tambahkan seluruh environment variable.
+4. Deploy aplikasi.
+5. Uji pendaftaran peserta, Pre-Test, materi, Post-Test, sertifikat, login admin, dan verifikasi QR.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Jika environment variable diubah, lakukan **Redeploy**. Aplikasi sengaja berhenti saat build bila URL atau anon key Supabase belum tersedia agar tidak tersambung ke project yang salah.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Memperbarui database yang sudah berjalan
 
-## Deploy on Vercel
+Jalankan ulang tiga migrasi berikut secara berurutan:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. `supabase/sql/migrations/002_security_hardening.sql`
+2. `supabase/sql/migrations/007_admin_pagination_and_bandwidth.sql`
+3. `supabase/sql/migrations/008_bugfix_stability_2026_09.sql`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# LMS
+Migrasi terbaru memperbaiki kontrol role peserta/admin, statistik peserta yang belum mulai, penerbitan ulang sertifikat, integritas nomor sertifikat dan urutan materi, serta konkurensi submit tes.
+
+## Struktur penting repository
+
+```text
+src/app/                  Halaman peserta, admin, login, dan verifikasi
+src/components/           Komponen antarmuka dan template sertifikat
+src/lib/                  Integrasi Supabase, penyimpanan data, PDF, dan utilitas
+supabase/sql/migrations/  Migrasi database wajib dan berurutan
+supabase/sql/setup/       Pembuatan admin dan data contoh opsional
+supabase/sql/maintenance/ Perbaikan khusus instalasi lama
+```
+
+## Pemecahan masalah singkat
+
+### Fungsi RPC tidak ditemukan
+
+Pastikan migrasi `007` dan `008` berhasil. Kemudian reload schema cache Supabase atau jalankan:
+
+```sql
+NOTIFY pgrst, 'reload schema';
+```
+
+### Profil pengguna tidak ditemukan
+
+Pastikan migrasi keamanan berhasil. Untuk instalasi lama, jalankan `supabase/sql/maintenance/fix_profile_access.sql`.
+
+### Build gagal karena konfigurasi Supabase
+
+Pastikan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_ANON_KEY` tersedia pada environment yang sedang dibangun.
+
+## Keamanan
+
+- Kunci jawaban tidak dikirim ke browser peserta.
+- Nilai tes dihitung oleh RPC database.
+- Penulisan progres dan sertifikat dilakukan melalui fungsi server.
+- RLS membatasi data peserta ke pemiliknya dan fungsi admin memeriksa role di database.
+- Service role key tidak digunakan di frontend.
