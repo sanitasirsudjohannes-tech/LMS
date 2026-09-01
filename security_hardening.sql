@@ -145,7 +145,13 @@ USING (private.is_lms_admin());
 -- Pelatihan dan materi aktif dapat dibaca pengguna login; semua mutasi admin.
 CREATE POLICY trainings_select_authenticated ON public.trainings
 FOR SELECT TO authenticated
-USING (active OR private.is_lms_admin());
+USING (
+  active OR private.is_lms_admin()
+  OR EXISTS (
+    SELECT 1 FROM public.certificates c
+    WHERE c.training_id = id AND c.user_id = (SELECT auth.uid())
+  )
+);
 CREATE POLICY trainings_insert_admin ON public.trainings FOR INSERT TO authenticated
 WITH CHECK (private.is_lms_admin());
 CREATE POLICY trainings_update_admin ON public.trainings FOR UPDATE TO authenticated

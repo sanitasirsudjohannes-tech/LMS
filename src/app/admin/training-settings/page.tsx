@@ -88,27 +88,33 @@ export default function TrainingSettingsAdminPage() {
       return;
     }
 
-    StorageAPI.saveTraining({
-      id: editingId || undefined,
-      title: title.trim(),
-      description: description.trim(),
-      start_date: startDate ? new Date(startDate).toISOString() : undefined,
-      end_date: endDate ? new Date(endDate).toISOString() : undefined,
-      passing_score: Number(passingScore),
-      max_posttest_attempts: 5,
-      jpl: Number(jpl),
-      active
-    });
+    try {
+      await StorageAPI.saveTraining({
+        id: editingId || undefined,
+        title: title.trim(),
+        description: description.trim(),
+        start_date: startDate ? new Date(startDate).toISOString() : undefined,
+        end_date: endDate ? new Date(endDate).toISOString() : undefined,
+        passing_score: Number(passingScore),
+        max_posttest_attempts: 5,
+        jpl: Number(jpl),
+        active
+      });
 
-    setIsModalOpen(false);
-    Swal.fire({
-      icon: 'success',
-      title: 'Tersimpan!',
-      text: 'Data dan periode pelatihan berhasil disimpan.',
-      timer: 2000,
-      showConfirmButton: false
-    });
-    reloadTrainings();
+      setIsModalOpen(false);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Tersimpan!',
+        text: active
+          ? 'Pelatihan aktif dan sekarang terlihat oleh peserta.'
+          : 'Pelatihan disimpan sebagai nonaktif dan tidak terlihat oleh peserta.',
+        timer: 2200,
+        showConfirmButton: false
+      });
+      reloadTrainings();
+    } catch (error) {
+      await Swal.fire('Gagal Menyimpan', error instanceof Error ? error.message : 'Data pelatihan gagal disimpan.', 'error');
+    }
   };
 
   const handleDelete = async (t: Training) => {
@@ -161,7 +167,7 @@ export default function TrainingSettingsAdminPage() {
     Swal.fire({
       icon: 'info',
       title: 'Pelatihan Dipilih',
-      text: `"${t.title}" sekarang menjadi pelatihan aktif di portal.`,
+      text: `"${t.title}" sekarang dipilih untuk dikelola. Status publikasinya tetap ${t.active ? 'Aktif' : 'Nonaktif'}.`,
       timer: 1500,
       showConfirmButton: false
     });
@@ -181,7 +187,7 @@ export default function TrainingSettingsAdminPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Kelola & Periode Pelatihan</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Tambah pelatihan baru, atur periode tanggal pelaksanaan, passing grade, dan pilih pelatihan aktif.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Status Aktif menentukan tampilan peserta. Pilihan Kelola hanya menentukan pelatihan yang sedang diedit admin.</p>
         </div>
         <button
           onClick={handleOpenCreate}
@@ -215,13 +221,13 @@ export default function TrainingSettingsAdminPage() {
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[220px] sm:max-w-xs">{t.title}</h3>
                       {isCurrentActive && (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900">
-                          Aktif di Portal
+                          Sedang Dikelola
                         </span>
                       )}
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                         t.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300' : 'bg-slate-100 text-slate-500'
                       }`}>
-                        {t.active ? 'Status Aktif' : 'Nonaktif'}
+                        {t.active ? 'AKTIF • Tampil di Peserta' : 'NONAKTIF • Disembunyikan'}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2 break-words">{t.description || 'Tidak ada deskripsi'}</p>
@@ -243,7 +249,7 @@ export default function TrainingSettingsAdminPage() {
                       onClick={() => handleSelectActive(t)}
                       className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
                     >
-                      Pilih Aktif
+                      Kelola Ini
                     </button>
                   )}
                   <button
@@ -383,8 +389,9 @@ export default function TrainingSettingsAdminPage() {
                   className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                 />
                 <label htmlFor="activeCheck" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Status Pelatihan Aktif
+                  Aktifkan dan tampilkan pelatihan kepada peserta
                 </label>
+                <p className="text-[10px] text-slate-400 ml-7">Jika dimatikan, pelatihan tidak muncul di dashboard peserta. Sertifikat yang sudah terbit tetap tersedia di Arsip Sertifikat.</p>
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-2">

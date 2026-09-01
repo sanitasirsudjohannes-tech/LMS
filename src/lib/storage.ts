@@ -219,7 +219,7 @@ export const StorageAPI = {
     }
   },
 
-  saveTraining: (trData: Partial<Training>): Training => {
+  saveTraining: async (trData: Partial<Training>): Promise<Training> => {
     const isNew = !trData.id;
     const targetId = isNew ? crypto.randomUUID() : trData.id!;
 
@@ -236,6 +236,9 @@ export const StorageAPI = {
       created_at: trData.created_at || new Date().toISOString()
     };
 
+    const { error } = await supabase.from('trainings').upsert(saved);
+    if (error) throw new Error(`Gagal menyimpan pelatihan: ${error.message}`);
+
     if (cacheState.trainings.some(t => t.id === targetId)) {
       cacheState.trainings = cacheState.trainings.map(t => (t.id === targetId ? saved : t));
     } else {
@@ -244,14 +247,10 @@ export const StorageAPI = {
 
     cacheState.training = saved;
 
-    supabase.from('trainings').upsert(saved).then(({ error }) => {
-      if (error) console.error('Supabase saveTraining error:', error.message);
-    });
-
     return saved;
   },
 
-  updateTraining: (updates: Partial<Training>): Training => {
+  updateTraining: async (updates: Partial<Training>): Promise<Training> => {
     const updated = { ...(cacheState.training || {}), ...updates };
     return StorageAPI.saveTraining(updated);
   },

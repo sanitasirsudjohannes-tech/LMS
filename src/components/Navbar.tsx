@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserProfile } from '@/types';
 import { StorageAPI, initCurrentUser } from '@/lib/storage';
-import { BookOpen, LogOut, Shield, User, Menu, X } from 'lucide-react';
+import { BookOpen, LogOut, Shield, User, Menu, X, Award } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -103,6 +103,14 @@ export default function Navbar() {
                       }`}
                     >
                       Dashboard Saya
+                    </Link>
+                    <Link
+                      href="/certificates"
+                      className={`text-sm font-medium transition-colors ${
+                        pathname === '/certificates' ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Arsip Sertifikat
                     </Link>
                   </>
                 )}
@@ -206,6 +214,9 @@ export default function Navbar() {
                 <>
                   <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                     Dashboard Saya
+                  </Link>
+                  <Link href="/certificates" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <Award className="w-4 h-4" /> Arsip Sertifikat
                   </Link>
                 </>
               )}

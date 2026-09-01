@@ -11,7 +11,8 @@ Urutan instalasi database wajib:
 3. Jalankan `training_jpl_and_attempt_limit.sql` untuk mengaktifkan JPL dan batas Post-Test 5 kali.
 4. Jalankan `certificate_training_dates.sql` agar periode pelatihan tersedia pada verifikasi sertifikat.
 5. Jalankan `certificate_signature_storage.sql` untuk mengaktifkan unggah PNG tanda tangan direktur.
-6. Buat akun admin melalui Supabase Authentication, lalu ikuti `create_admin.sql` untuk menetapkan perannya.
+6. Jalankan `training_visibility_and_certificate_archive.sql` untuk memisahkan pelatihan aktif dari arsip sertifikat.
+7. Buat akun admin melalui Supabase Authentication, lalu ikuti `create_admin.sql` untuk menetapkan perannya.
 
 Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengguna tidak ditemukan”, jalankan `fix_profile_access.sql` untuk memperbaiki izin helper RLS dan melengkapi profil akun lama.
 

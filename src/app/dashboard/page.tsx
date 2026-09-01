@@ -64,8 +64,8 @@ export default function DashboardPage() {
       const listTr = StorageAPI.getTrainings().filter(t => t.active);
       setTrainings(listTr);
 
-      const activeTr = StorageAPI.getTraining();
-      const initialTr = activeTr || listTr[0];
+      const previouslySelected = StorageAPI.getTraining();
+      const initialTr = listTr.find(training => training.id === previouslySelected?.id) || listTr[0];
       setSelectedTraining(initialTr);
 
       if (initialTr) {

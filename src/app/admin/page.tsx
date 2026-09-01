@@ -90,7 +90,7 @@ export default function AdminOverviewPage() {
                             : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                           : 'bg-slate-200 text-slate-600'
                       }`}>
-                        {t.active ? 'Status Aktif' : 'Nonaktif'}
+                        {t.active ? 'AKTIF • Tampil di Peserta' : 'NONAKTIF • Disembunyikan'}
                       </span>
                       {isSelected && <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />}
                     </div>
@@ -127,7 +127,7 @@ export default function AdminOverviewPage() {
       {selectedTraining && (
         <div className="bg-slate-900 dark:bg-slate-800 text-white rounded-2xl p-5 shadow-sm flex items-center justify-between gap-4">
           <div>
-            <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Ringkasan Statistik Pelatihan Dipilih</span>
+            <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Ringkasan Pelatihan yang Sedang Dikelola</span>
             <h3 className="text-base font-bold">{selectedTraining.title}</h3>
           </div>
           <div className="text-right text-xs text-slate-300 font-mono hidden sm:block">
