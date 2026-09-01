@@ -45,17 +45,21 @@ export default function CertificateSettingsAdminPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const trainingList = StorageAPI.getTrainings();
-      const currentTraining = StorageAPI.getTraining() || trainingList[0];
-      setTrainings(trainingList);
-      if (currentTraining) {
-        StorageAPI.setSelectTraining(currentTraining.id);
-        setSelectedTrainingId(currentTraining.id);
-        applySettings(currentTraining.id);
+      try {
+        await initLocalStorage();
+        const trainingList = StorageAPI.getTrainings();
+        const currentTraining = StorageAPI.getTraining() || trainingList[0];
+        setTrainings(trainingList);
+        if (currentTraining) {
+          StorageAPI.setSelectTraining(currentTraining.id);
+          setSelectedTrainingId(currentTraining.id);
+          applySettings(currentTraining.id);
+        }
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'Pengaturan sertifikat gagal dimuat.');
       }
     };
-    load();
+    void load();
   }, []);
 
   useEffect(() => {
@@ -74,13 +78,34 @@ export default function CertificateSettingsAdminPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setSaveError('');
+    if (!selectedTrainingId) {
+      setSaveError('Pilih pelatihan terlebih dahulu.');
+      return;
+    }
+    if (numberingEnabled && !numberFormat.includes('{NO}')) {
+      setSaveError('Format nomor wajib memuat placeholder {NO}.');
+      return;
+    }
+    if (!Number.isInteger(startNumber) || startNumber < 1) {
+      setSaveError('Nomor awal minimal 1.');
+      return;
+    }
+    if (!Number.isInteger(numberDigits) || numberDigits < 1 || numberDigits > 8) {
+      setSaveError('Jumlah digit nomor harus antara 1 dan 8.');
+      return;
+    }
+    if (!Number.isInteger(currentNumber) || currentNumber < startNumber) {
+      setSaveError('Nomor urut saat ini tidak boleh lebih kecil dari nomor awal.');
+      return;
+    }
+
+    setSaving(true);
     try {
       const uploadedImageUrl = signatureFile
         ? await StorageAPI.uploadDirectorSignature(signatureFile)
         : signatoryImageUrl;
-      await StorageAPI.updateCertificateSettings({
+      const savedSettings = await StorageAPI.updateCertificateSettings({
         certificate_enabled: certificateEnabled,
         numbering_enabled: numberingEnabled,
         number_format: numberFormat.trim(),
@@ -92,6 +117,7 @@ export default function CertificateSettingsAdminPage() {
         signatory_title: signatoryTitle.trim(),
         signatory_image_url: uploadedImageUrl || null
       });
+      setCurrentNumber(savedSettings.current_number);
       setSignatoryImageUrl(uploadedImageUrl);
       setSignaturePreview(uploadedImageUrl);
       setSignatureFile(null);
@@ -329,9 +355,11 @@ export default function CertificateSettingsAdminPage() {
                     type="number"
                     min={1}
                     value={currentNumber}
-                    onChange={(e) => setCurrentNumber(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-amber-600"
+                    readOnly
+                    aria-describedby="current-number-help"
+                    className="w-full px-3.5 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-amber-600 cursor-not-allowed"
                   />
+                  <p id="current-number-help" className="mt-1 text-[10px] text-slate-500">Dikelola otomatis dan tidak dapat diturunkan.</p>
                 </div>
               </div>
 

@@ -44,3 +44,36 @@ export function formatGoogleDriveEmbedUrl(url: string): string {
 
   return url;
 }
+
+export function formatVideoEmbedUrl(url: string): string {
+  if (!url) return url;
+
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+
+    if (hostname === 'youtu.be') {
+      const videoId = parsed.pathname.split('/').filter(Boolean)[0];
+      return videoId ? `https://www.youtube.com/embed/${encodeURIComponent(videoId)}` : url;
+    }
+
+    if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
+      const pathParts = parsed.pathname.split('/').filter(Boolean);
+      const videoId = parsed.pathname === '/watch'
+        ? parsed.searchParams.get('v')
+        : ['embed', 'shorts', 'live'].includes(pathParts[0])
+          ? pathParts[1]
+          : null;
+      return videoId ? `https://www.youtube.com/embed/${encodeURIComponent(videoId)}` : url;
+    }
+
+    if (hostname === 'vimeo.com' || hostname === 'player.vimeo.com') {
+      const videoId = parsed.pathname.split('/').filter(Boolean).find(part => /^\d+$/.test(part));
+      return videoId ? `https://player.vimeo.com/video/${videoId}` : url;
+    }
+  } catch {
+    return url;
+  }
+
+  return url;
+}

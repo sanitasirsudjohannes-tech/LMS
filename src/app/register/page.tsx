@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { StorageAPI, initLocalStorage } from '@/lib/storage';
+import { StorageAPI } from '@/lib/storage';
 import { User, Mail, Building, Lock, FileText, Phone, ArrowRight, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
 
@@ -24,10 +24,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  useEffect(() => {
-    initLocalStorage();
-  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();

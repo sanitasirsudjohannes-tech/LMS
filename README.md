@@ -14,6 +14,8 @@ Urutan instalasi database wajib:
 6. Jalankan `supabase/sql/training_visibility_and_certificate_archive.sql` untuk memisahkan pelatihan aktif dari arsip sertifikat.
 7. Jalankan `supabase/sql/admin_pagination_and_bandwidth.sql` untuk mengaktifkan filter, statistik, dan pagination hemat bandwidth.
 8. Jalankan `supabase/sql/bugfix_stability_2026_09.sql` untuk perbaikan hasil tes, profil lama, verifikasi sertifikat, dan validasi periode materi.
+
+Untuk memperbarui instalasi yang sudah berjalan, jalankan ulang langkah 2, 7, lalu 8 secara berurutan. Migrasi akan menolak data lama yang masih mempunyai nomor sertifikat atau urutan materi duplikat; rapikan duplikat tersebut terlebih dahulu agar constraint integritas dapat dipasang.
 9. Buat akun admin melalui Supabase Authentication, lalu ikuti `supabase/sql/create_admin.sql` untuk menetapkan perannya.
 
 Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengguna tidak ditemukan”, jalankan `supabase/sql/fix_profile_access.sql` untuk memperbaiki izin helper RLS dan melengkapi profil akun lama.

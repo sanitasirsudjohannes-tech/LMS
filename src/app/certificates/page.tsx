@@ -13,28 +13,48 @@ export default function CertificateArchivePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const currentUser = StorageAPI.getCurrentUser();
-      if (!currentUser) {
-        router.push('/login');
-        return;
+      try {
+        await initLocalStorage();
+        const currentUser = StorageAPI.getCurrentUser();
+        if (!currentUser) {
+          router.push('/login');
+          return;
+        }
+        if (currentUser.role === 'admin') {
+          router.push('/admin/certificates');
+          return;
+        }
+        setUser(currentUser);
+
+        for (const training of StorageAPI.getTrainings()) {
+          const passed = StorageAPI.getTestAttempts(currentUser.id, 'posttest', training.id)
+            .some(attempt => attempt.score >= training.passing_score);
+          const hasCertificate = !!StorageAPI.getCertificateForUser(currentUser.id, training.id);
+          if (passed && !hasCertificate) {
+            try {
+              await StorageAPI.ensureMyCertificate(training.id);
+            } catch (error) {
+              setLoadError(error instanceof Error ? error.message : 'Sebagian sertifikat belum dapat diterbitkan.');
+            }
+          }
+        }
+
+        setCertificates(
+          StorageAPI.getCertificates()
+            .filter(certificate => certificate.user_id === currentUser.id)
+            .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime())
+        );
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Arsip sertifikat gagal dimuat.');
+      } finally {
+        setLoading(false);
       }
-      if (currentUser.role === 'admin') {
-        router.push('/admin/certificates');
-        return;
-      }
-      setUser(currentUser);
-      setCertificates(
-        StorageAPI.getCertificates()
-          .filter(certificate => certificate.user_id === currentUser.id)
-          .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime())
-      );
-      setLoading(false);
     };
-    load();
+    void load();
   }, [router]);
 
   const openCertificate = (certificate: Certificate) => {
@@ -42,12 +62,17 @@ export default function CertificateArchivePage() {
     router.push('/certificate');
   };
 
+  if (loadError && !user) {
+    return <div className="max-w-3xl mx-auto py-12 text-center text-sm text-red-700 dark:text-red-300">{loadError}</div>;
+  }
+
   if (loading || !user) {
     return <div className="max-w-3xl mx-auto py-12 text-center text-sm text-slate-500">Memuat arsip sertifikat...</div>;
   }
 
   return (
     <div className="max-w-3xl mx-auto py-2 space-y-6">
+      {loadError && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{loadError}</div>}
       <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-sm flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
           <Award className="w-7 h-7" />

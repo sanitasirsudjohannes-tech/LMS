@@ -27,15 +27,19 @@ export default function MaterialsAdminPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const listTr = StorageAPI.getTrainings();
-      setTrainings(listTr);
-      const current = StorageAPI.getTraining();
-      const activeId = current ? current.id : (listTr[0]?.id || '');
-      setSelectedTrainingId(activeId);
-      setMaterials(activeId ? StorageAPI.getMaterials(activeId) : []);
+      try {
+        await initLocalStorage();
+        const listTr = StorageAPI.getTrainings();
+        setTrainings(listTr);
+        const current = StorageAPI.getTraining();
+        const activeId = current ? current.id : (listTr[0]?.id || '');
+        setSelectedTrainingId(activeId);
+        setMaterials(activeId ? StorageAPI.getMaterials(activeId) : []);
+      } catch (error) {
+        setOperationError(error instanceof Error ? error.message : 'Materi gagal dimuat.');
+      }
     };
-    load();
+    void load();
   }, []);
 
   const reloadMaterials = (trId?: string) => {
@@ -60,7 +64,7 @@ export default function MaterialsAdminPage() {
     setContent('');
     setContentUrl('');
     setMinDuration(15);
-    setOrderNum(materials.length + 1);
+    setOrderNum(Math.max(0, ...materials.map(material => material.order_number)) + 1);
     setActive(true);
     setIsModalOpen(true);
   };

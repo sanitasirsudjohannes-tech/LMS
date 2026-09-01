@@ -3,7 +3,50 @@
 
 BEGIN;
 
--- Peserta dengan akun Auth tetapi profil lama yang belum lengkap tetap muncul.
+-- Validasi ini juga dipasang di security_hardening.sql. Definisi ulang di sini
+-- membuat file bugfix aman digunakan pada instalasi yang sudah berjalan.
+CREATE OR REPLACE FUNCTION private.validate_lms_certificate_settings()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.start_number IS NULL OR NEW.start_number < 1 THEN
+    RAISE EXCEPTION 'Nomor awal minimal 1';
+  END IF;
+  IF NEW.current_number IS NULL OR NEW.current_number < NEW.start_number THEN
+    RAISE EXCEPTION 'Nomor berjalan tidak boleh lebih kecil dari nomor awal';
+  END IF;
+  IF NEW.number_digits IS NULL OR NEW.number_digits NOT BETWEEN 1 AND 8 THEN
+    RAISE EXCEPTION 'Jumlah digit nomor harus antara 1 dan 8';
+  END IF;
+  IF NEW.numbering_enabled AND position('{NO}' IN COALESCE(NEW.number_format, '')) = 0 THEN
+    RAISE EXCEPTION 'Format nomor wajib memuat placeholder {NO}';
+  END IF;
+  IF TG_OP = 'UPDATE'
+     AND OLD.numbering_enabled
+     AND NEW.numbering_enabled
+     AND NEW.current_number < OLD.current_number THEN
+    RAISE EXCEPTION 'Nomor berjalan tidak boleh diturunkan';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS certificate_settings_validate_numbering ON public.certificate_settings;
+CREATE TRIGGER certificate_settings_validate_numbering
+BEFORE INSERT OR UPDATE ON public.certificate_settings
+FOR EACH ROW EXECUTE FUNCTION private.validate_lms_certificate_settings();
+
+CREATE UNIQUE INDEX IF NOT EXISTS certificates_training_number_uidx
+  ON public.certificates (training_id, certificate_number)
+  WHERE certificate_number IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS materials_training_order_uidx
+  ON public.materials (training_id, order_number);
+
+REVOKE ALL ON FUNCTION private.validate_lms_certificate_settings() FROM PUBLIC, anon, authenticated;
+
+-- Seluruh akun peserta muncul, termasuk yang belum mempunyai aktivitas sama sekali.
 CREATE OR REPLACE FUNCTION public.admin_training_participants(
   p_training_id UUID,
   p_search TEXT DEFAULT '',
@@ -29,15 +72,15 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  WITH activity AS (
-    SELECT user_id FROM public.test_attempts WHERE training_id = p_training_id
+  WITH participant_users AS (
+    SELECT p.id AS user_id
+    FROM public.profiles p
+    WHERE p.role = 'peserta'
     UNION
-    SELECT user_id FROM public.certificates WHERE training_id = p_training_id
-    UNION
-    SELECT mp.user_id
-    FROM public.material_progress mp
-    JOIN public.materials m ON m.id = mp.material_id
-    WHERE m.training_id = p_training_id
+    SELECT au.id AS user_id
+    FROM auth.users au
+    LEFT JOIN public.profiles p ON p.id = au.id
+    WHERE p.id IS NULL
   ), attempt_stats AS (
     SELECT
       user_id,
@@ -46,6 +89,18 @@ AS $$
     FROM public.test_attempts
     WHERE training_id = p_training_id
     GROUP BY user_id
+  ), material_totals AS (
+    SELECT COUNT(*) AS total
+    FROM public.materials
+    WHERE training_id = p_training_id AND active
+  ), material_completed AS (
+    SELECT mp.user_id, COUNT(DISTINCT mp.material_id) AS completed
+    FROM public.material_progress mp
+    JOIN public.materials m ON m.id = mp.material_id
+    WHERE m.training_id = p_training_id
+      AND m.active
+      AND mp.completed_at IS NOT NULL
+    GROUP BY mp.user_id
   ), rows AS (
     SELECT
       x.user_id,
@@ -59,17 +114,20 @@ AS $$
       CASE
         WHEN a.post_score >= t.passing_score THEN 'Lulus'
         WHEN a.post_score IS NOT NULL THEN 'Belum Lulus'
+        WHEN a.pre_score IS NOT NULL
+          AND (mt.total = 0 OR COALESCE(mc.completed, 0) >= mt.total) THEN 'Selesai Materi'
         WHEN a.pre_score IS NOT NULL THEN 'Sedang Mengikuti'
         ELSE 'Belum Mulai'
       END AS status,
       c.certificate_number
-    FROM activity x
+    FROM participant_users x
     LEFT JOIN public.profiles p ON p.id = x.user_id
     LEFT JOIN auth.users au ON au.id = x.user_id
     JOIN public.trainings t ON t.id = p_training_id
+    CROSS JOIN material_totals mt
     LEFT JOIN attempt_stats a ON a.user_id = x.user_id
+    LEFT JOIN material_completed mc ON mc.user_id = x.user_id
     LEFT JOIN public.certificates c ON c.user_id = x.user_id AND c.training_id = p_training_id
-    WHERE p.role = 'peserta' OR p.id IS NULL
   )
   SELECT r.*, COUNT(*) OVER() AS total_count
   FROM rows r
@@ -80,10 +138,75 @@ AS $$
       OR (p_status = 'passed' AND r.status = 'Lulus')
       OR (p_status = 'failed' AND r.status = 'Belum Lulus')
       OR (p_status = 'in_progress' AND r.status = 'Sedang Mengikuti')
+      OR (p_status = 'materials_completed' AND r.status = 'Selesai Materi')
       OR (p_status = 'not_started' AND r.status = 'Belum Mulai'))
   ORDER BY r.full_name
   LIMIT LEAST(GREATEST(p_limit, 1), 10000)
   OFFSET GREATEST(p_offset, 0);
+$$;
+
+-- Statistik memakai seluruh akun peserta; jumlah "belum mulai" tidak lagi hilang.
+CREATE OR REPLACE FUNCTION public.admin_training_stats(p_training_id UUID)
+RETURNS JSONB
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  WITH tr AS (
+    SELECT passing_score FROM public.trainings WHERE id = p_training_id
+  ), participant_users AS (
+    SELECT p.id AS user_id FROM public.profiles p WHERE p.role = 'peserta'
+    UNION
+    SELECT au.id FROM auth.users au LEFT JOIN public.profiles p ON p.id = au.id WHERE p.id IS NULL
+  ), pre_users AS (
+    SELECT DISTINCT a.user_id
+    FROM public.test_attempts a
+    JOIN participant_users pu ON pu.user_id = a.user_id
+    WHERE a.training_id = p_training_id AND a.test_type = 'pretest'
+  ), post_users AS (
+    SELECT DISTINCT a.user_id
+    FROM public.test_attempts a
+    JOIN participant_users pu ON pu.user_id = a.user_id
+    WHERE a.training_id = p_training_id AND a.test_type = 'posttest'
+  ), passed_users AS (
+    SELECT DISTINCT a.user_id
+    FROM public.test_attempts a
+    JOIN participant_users pu ON pu.user_id = a.user_id
+    CROSS JOIN tr
+    WHERE a.training_id = p_training_id AND a.test_type = 'posttest' AND a.score >= tr.passing_score
+  ), completed_users AS (
+    SELECT pu.user_id
+    FROM pre_users pu
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.materials m
+      WHERE m.training_id = p_training_id
+        AND m.active
+        AND NOT EXISTS (
+          SELECT 1 FROM public.material_progress mp
+          WHERE mp.user_id = pu.user_id
+            AND mp.material_id = m.id
+            AND mp.completed_at IS NOT NULL
+        )
+    )
+  )
+  SELECT jsonb_build_object(
+    'totalParticipants', (SELECT COUNT(*) FROM participant_users),
+    'completedPretest', (SELECT COUNT(*) FROM pre_users),
+    'completedAllMaterials', (SELECT COUNT(*) FROM completed_users),
+    'inProgressMaterials', GREATEST((SELECT COUNT(*) FROM pre_users) - (SELECT COUNT(*) FROM completed_users), 0),
+    'completedPosttest', (SELECT COUNT(*) FROM post_users),
+    'passed', (SELECT COUNT(*) FROM passed_users),
+    'failed', GREATEST((SELECT COUNT(*) FROM post_users) - (SELECT COUNT(*) FROM passed_users), 0),
+    'certificatesIssued', (
+      SELECT COUNT(*)
+      FROM public.certificates c
+      JOIN participant_users pu ON pu.user_id = c.user_id
+      WHERE c.training_id = p_training_id
+    )
+  )
+  WHERE private.is_lms_admin(auth.uid());
 $$;
 
 -- Satu peserta satu baris dan filter hasil tes dihitung di database.
@@ -128,6 +251,7 @@ AS $$
     LEFT JOIN public.profiles p ON p.id = a.user_id
     LEFT JOIN auth.users au ON au.id = a.user_id
     WHERE a.training_id = p_training_id
+      AND (p.role = 'peserta' OR p.id IS NULL)
     GROUP BY a.user_id, p.full_name, p.email, au.raw_user_meta_data, au.email
   ), counts AS (
     SELECT COUNT(*) AS all_count,
@@ -180,6 +304,9 @@ DECLARE
   v_duration INTEGER;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autentikasi diperlukan'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'peserta'
+  ) THEN RAISE EXCEPTION 'Akses hanya untuk peserta'; END IF;
 
   SELECT * INTO v_progress
   FROM public.material_progress
@@ -239,11 +366,13 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.admin_training_participants(UUID, TEXT, TEXT, INT, INT) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.admin_training_stats(UUID) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.admin_training_results(UUID, TEXT, TEXT, INT, INT) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.complete_material_progress(UUID) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.verify_certificate(TEXT) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.admin_training_participants(UUID, TEXT, TEXT, INT, INT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_training_stats(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_training_results(UUID, TEXT, TEXT, INT, INT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.complete_material_progress(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_certificate(TEXT) TO anon, authenticated;

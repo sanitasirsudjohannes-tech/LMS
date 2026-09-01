@@ -22,15 +22,20 @@ export default function TrainingSettingsAdminPage() {
   const [passingScore, setPassingScore] = useState(80);
   const [jpl, setJpl] = useState(1);
   const [active, setActive] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const list = StorageAPI.getTrainings();
-      setTrainings(list);
-      setSelectedTraining(StorageAPI.getTraining());
+      try {
+        await initLocalStorage();
+        const list = StorageAPI.getTrainings();
+        setTrainings(list);
+        setSelectedTraining(StorageAPI.getTraining());
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Daftar pelatihan gagal dimuat.');
+      }
     };
-    load();
+    void load();
   }, []);
 
   const reloadTrainings = () => {
@@ -179,6 +184,7 @@ export default function TrainingSettingsAdminPage() {
 
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden">
+      {loadError && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{loadError}</div>}
       
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

@@ -22,36 +22,39 @@ export default function PretestPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const user = StorageAPI.getCurrentUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      setCurrentUser(user);
-
-      const tr = StorageAPI.getTraining();
-      setTraining(tr);
-
       try {
+        await initLocalStorage();
+        const user = StorageAPI.getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+        if (user.role === 'admin') {
+          router.push('/admin');
+          return;
+        }
+        setCurrentUser(user);
+
+        const tr = StorageAPI.getTraining();
+        setTraining(tr);
+
         const qList = tr ? await StorageAPI.loadQuestionsForTest(tr.id, 'pretest') : [];
         setQuestions(qList);
+
+        // Check if already completed
+        const existing = StorageAPI.getTestAttempts(user.id, 'pretest');
+        if (existing.length > 0) {
+          setSubmitted(true);
+          setScore(existing[0].score);
+        }
+
+        setLoading(false);
       } catch (error) {
         setSubmitError(error instanceof Error ? error.message : 'Pre-Test belum dapat dibuka.');
         setLoading(false);
-        return;
       }
-
-      // Check if already completed
-      const existing = StorageAPI.getTestAttempts(user.id, 'pretest');
-      if (existing.length > 0) {
-        setSubmitted(true);
-        setScore(existing[0].score);
-      }
-
-      setLoading(false);
     };
-    load();
+    void load();
   }, [router]);
 
   const handleSelect = (questionId: string, option: 'A' | 'B' | 'C' | 'D') => {

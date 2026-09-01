@@ -42,18 +42,21 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      
-      const listTr = StorageAPI.getTrainings();
-      setTrainings(listTr);
+      try {
+        await initLocalStorage();
+        const listTr = StorageAPI.getTrainings();
+        setTrainings(listTr);
 
-      const currentTr = StorageAPI.getTraining();
-      const initial = currentTr || listTr[0];
-      setSelectedTraining(initial);
+        const currentTr = StorageAPI.getTraining();
+        const initial = currentTr || listTr[0];
+        setSelectedTraining(initial);
 
-      if (initial) await loadStats(initial.id);
+        if (initial) await loadStats(initial.id);
+      } catch (error) {
+        setLoadError(`Gagal memuat ringkasan: ${error instanceof Error ? error.message : 'terjadi kesalahan koneksi.'}`);
+      }
     };
-    load();
+    void load();
   }, []);
 
   const handleSelectTraining = async (tr: Training) => {

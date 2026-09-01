@@ -49,13 +49,17 @@ export default function ResultsAdminPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const list = StorageAPI.getTrainings();
-      const selected = StorageAPI.getTraining() || list[0] || null;
-      setTrainings(list);
-      setSelectedTrainingId(selected?.id || '');
+      try {
+        await initLocalStorage();
+        const list = StorageAPI.getTrainings();
+        const selected = StorageAPI.getTraining() || list[0] || null;
+        setTrainings(list);
+        setSelectedTrainingId(selected?.id || '');
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Hasil tes gagal dimuat.');
+      }
     };
-    load();
+    void load();
   }, []);
 
   useEffect(() => {
@@ -105,8 +109,8 @@ export default function ResultsAdminPage() {
         p_training_id: selectedTrainingId,
         p_search: debouncedSearch,
         p_status: 'all',
-        p_limit: PAGE_SIZE,
-        p_offset: (currentPage - 1) * PAGE_SIZE
+        p_limit: 10000,
+        p_offset: 0
       });
       if (cancelled) return;
 
@@ -121,8 +125,9 @@ export default function ResultsAdminPage() {
           if (testFilter === 'posttest') return row.post_score != null;
           return row.pre_score != null || row.post_score != null;
         });
-        setRows(filtered);
-        setTotalCount(Number(result[0]?.total_count || 0));
+        const pageStart = (currentPage - 1) * PAGE_SIZE;
+        setRows(filtered.slice(pageStart, pageStart + PAGE_SIZE));
+        setTotalCount(filtered.length);
         setUsingFallback(true);
       }
       setLoading(false);

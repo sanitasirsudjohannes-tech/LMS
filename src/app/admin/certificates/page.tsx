@@ -23,14 +23,19 @@ export default function CertificatesAdminPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const list = StorageAPI.getTrainings();
-      const selected = StorageAPI.getTraining() || list[0] || null;
-      setTrainings(list);
-      setSelectedTrainingId(selected?.id || '');
-      if (!selected) setLoading(false);
+      try {
+        await initLocalStorage();
+        const list = StorageAPI.getTrainings();
+        const selected = StorageAPI.getTraining() || list[0] || null;
+        setTrainings(list);
+        setSelectedTrainingId(selected?.id || '');
+        if (!selected) setLoading(false);
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Daftar sertifikat gagal dimuat.');
+        setLoading(false);
+      }
     };
-    load();
+    void load();
   }, []);
 
   useEffect(() => {

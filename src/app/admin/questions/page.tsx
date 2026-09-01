@@ -36,24 +36,24 @@ export default function QuestionsAdminPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const listTr = StorageAPI.getTrainings();
-      setTrainings(listTr);
-      const current = StorageAPI.getTraining();
-      const activeId = current ? current.id : (listTr[0]?.id || '');
-      setSelectedTrainingId(activeId);
-      if (activeId) {
-        setLoadingQuestions(true);
-        try {
+      try {
+        await initLocalStorage();
+        const listTr = StorageAPI.getTrainings();
+        setTrainings(listTr);
+        const current = StorageAPI.getTraining();
+        const activeId = current ? current.id : (listTr[0]?.id || '');
+        setSelectedTrainingId(activeId);
+        if (activeId) {
+          setLoadingQuestions(true);
           setQuestions(await StorageAPI.loadQuestionsForAdmin(activeId));
-        } catch (error) {
-          setOperationError(error instanceof Error ? error.message : 'Soal gagal dimuat.');
-        } finally {
-          setLoadingQuestions(false);
         }
+      } catch (error) {
+        setOperationError(error instanceof Error ? error.message : 'Soal gagal dimuat.');
+      } finally {
+        setLoadingQuestions(false);
       }
     };
-    load();
+    void load();
   }, []);
 
   const reloadQuestions = (trId?: string) => {

@@ -36,13 +36,17 @@ export default function ParticipantsAdminPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const list = StorageAPI.getTrainings();
-      const selected = StorageAPI.getTraining() || list[0] || null;
-      setTrainings(list);
-      setSelectedTrainingId(selected?.id || '');
+      try {
+        await initLocalStorage();
+        const list = StorageAPI.getTrainings();
+        const selected = StorageAPI.getTraining() || list[0] || null;
+        setTrainings(list);
+        setSelectedTrainingId(selected?.id || '');
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Daftar peserta gagal dimuat.');
+      }
     };
-    load();
+    void load();
   }, []);
 
   useEffect(() => {
@@ -110,7 +114,7 @@ export default function ParticipantsAdminPage() {
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
       <div className="relative w-full md:w-80"><Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" /><input value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} placeholder="Cari nama, email, instansi..." className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" /></div>
       <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"><Filter className="w-3.5 h-3.5 text-slate-400 ml-2" /><select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="bg-transparent text-slate-800 dark:text-slate-200 text-xs font-semibold py-1 px-2 focus:outline-none"><option value="all">Semua Status</option><option value="passed">Lulus</option><option value="failed">Belum Lulus</option><option value="in_progress">Sedang Mengikuti</option><option value="not_started">Belum Mulai</option></select></div>
+        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"><Filter className="w-3.5 h-3.5 text-slate-400 ml-2" /><select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="bg-transparent text-slate-800 dark:text-slate-200 text-xs font-semibold py-1 px-2 focus:outline-none"><option value="all">Semua Status</option><option value="passed">Lulus</option><option value="failed">Belum Lulus</option><option value="materials_completed">Selesai Materi</option><option value="in_progress">Sedang Mengikuti</option><option value="not_started">Belum Mulai</option></select></div>
         <button onClick={handleExportCSV} disabled={!selectedTrainingId || totalCount === 0 || exporting} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"><Download className="w-4 h-4" />{exporting ? 'Menyiapkan...' : `Ekspor (${totalCount})`}</button>
       </div>
     </div>

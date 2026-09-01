@@ -18,40 +18,60 @@ export default function CertificatePage() {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareError, setShareError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [certificateRecoveryError, setCertificateRecoveryError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const user = StorageAPI.getCurrentUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      setCurrentUser(user);
-
-      const cert = StorageAPI.getCertificateForUser(user.id);
-      setCertificate(cert);
-
-      const st = StorageAPI.getCertificateSettings();
-      setSettings(st);
-
-      if (cert) {
-        try {
-          const { default: confetti } = await import('canvas-confetti');
-          confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.6 }
-          });
-        } catch {
-          // ignore
+      try {
+        await initLocalStorage();
+        const user = StorageAPI.getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
         }
-      }
+        if (user.role === 'admin') {
+          router.push('/admin/certificates');
+          return;
+        }
+        setCurrentUser(user);
 
-      setLoading(false);
+        const training = StorageAPI.getTraining();
+        let cert = StorageAPI.getCertificateForUser(user.id);
+        const passed = training && StorageAPI.getTestAttempts(user.id, 'posttest', training.id)
+          .some(attempt => attempt.score >= training.passing_score);
+        if (!cert && training && passed) {
+          try {
+            cert = await StorageAPI.ensureMyCertificate(training.id);
+          } catch (error) {
+            setCertificateRecoveryError(error instanceof Error ? error.message : 'Sertifikat belum dapat diterbitkan.');
+          }
+        }
+        setCertificate(cert);
+
+        const st = StorageAPI.getCertificateSettings();
+        setSettings(st);
+
+        if (cert) {
+          try {
+            const { default: confetti } = await import('canvas-confetti');
+            confetti({
+              particleCount: 80,
+              spread: 70,
+              origin: { y: 0.6 }
+            });
+          } catch {
+            // Efek dekoratif tidak boleh menggagalkan tampilan sertifikat.
+          }
+        }
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Sertifikat gagal dimuat.');
+      } finally {
+        setLoading(false);
+      }
     };
-    load();
+    void load();
   }, [router]);
 
   const handleDownloadPDF = async () => {
@@ -85,6 +105,10 @@ export default function CertificatePage() {
     }
   };
 
+  if (loadError) {
+    return <div className="max-w-md mx-auto py-12 text-center text-sm text-red-700 dark:text-red-300">{loadError}</div>;
+  }
+
   if (loading || !currentUser) {
     return <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm">Memuat Sertifikat...</div>;
   }
@@ -98,7 +122,7 @@ export default function CertificatePage() {
           </div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Sertifikat Belum Tersedia 🔒</h2>
           <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Sertifikat digital hanya tersedia setelah Anda menyelesaikan Pre-Test, seluruh materi, dan lulus Post-Test.
+            {certificateRecoveryError || 'Sertifikat digital hanya tersedia setelah Anda menyelesaikan Pre-Test, seluruh materi, dan lulus Post-Test.'}
           </p>
           <div className="pt-2">
             <Link
@@ -118,7 +142,7 @@ export default function CertificatePage() {
       {shareError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{shareError}</div>}
       
       {/* Top Header & Actions */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="certificate-screen-actions bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" /> Sertifikat Resmi Pelatihan
@@ -156,7 +180,7 @@ export default function CertificatePage() {
       </div>
 
       {/* Certificate Live Preview Render Target */}
-      <div className="overflow-x-auto p-2 bg-slate-200/50 dark:bg-slate-950 rounded-2xl border border-slate-300 dark:border-slate-800">
+      <div className="certificate-print-area overflow-x-auto p-2 bg-slate-200/50 dark:bg-slate-950 rounded-2xl border border-slate-300 dark:border-slate-800">
         <CertificateTemplate certificate={certificate} settings={settings || undefined} />
       </div>
 

@@ -1,6 +1,6 @@
 -- ============================================================
 -- LMS SECURITY HARDENING MIGRATION
--- Jalankan satu kali di Supabase SQL Editor setelah schema.sql.
+-- Jalankan di Supabase SQL Editor setelah schema.sql; aman dijalankan ulang.
 -- Seluruh perubahan dibungkus transaksi agar gagal secara utuh.
 -- ============================================================
 
@@ -215,6 +215,49 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.questions TO authenticated;
 GRANT SELECT ON public.test_attempts, public.material_progress, public.certificates TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.certificate_settings TO authenticated;
 
+-- Lindungi penomoran dari format tanpa nomor dan reset counter yang dapat
+-- menghasilkan nomor sertifikat ganda.
+CREATE OR REPLACE FUNCTION private.validate_lms_certificate_settings()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.start_number IS NULL OR NEW.start_number < 1 THEN
+    RAISE EXCEPTION 'Nomor awal minimal 1';
+  END IF;
+  IF NEW.current_number IS NULL OR NEW.current_number < NEW.start_number THEN
+    RAISE EXCEPTION 'Nomor berjalan tidak boleh lebih kecil dari nomor awal';
+  END IF;
+  IF NEW.number_digits IS NULL OR NEW.number_digits NOT BETWEEN 1 AND 8 THEN
+    RAISE EXCEPTION 'Jumlah digit nomor harus antara 1 dan 8';
+  END IF;
+  IF NEW.numbering_enabled AND position('{NO}' IN COALESCE(NEW.number_format, '')) = 0 THEN
+    RAISE EXCEPTION 'Format nomor wajib memuat placeholder {NO}';
+  END IF;
+  IF TG_OP = 'UPDATE'
+     AND OLD.numbering_enabled
+     AND NEW.numbering_enabled
+     AND NEW.current_number < OLD.current_number THEN
+    RAISE EXCEPTION 'Nomor berjalan tidak boleh diturunkan';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS certificate_settings_validate_numbering ON public.certificate_settings;
+CREATE TRIGGER certificate_settings_validate_numbering
+BEFORE INSERT OR UPDATE ON public.certificate_settings
+FOR EACH ROW EXECUTE FUNCTION private.validate_lms_certificate_settings();
+
+CREATE UNIQUE INDEX IF NOT EXISTS certificates_training_number_uidx
+  ON public.certificates (training_id, certificate_number)
+  WHERE certificate_number IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS materials_training_order_uidx
+  ON public.materials (training_id, order_number);
+
+REVOKE ALL ON FUNCTION private.validate_lms_certificate_settings() FROM PUBLIC, anon, authenticated;
+
 -- Peserta menerima soal tanpa kolom correct_answer.
 CREATE OR REPLACE FUNCTION public.get_test_questions(
   p_training_id UUID,
@@ -238,6 +281,9 @@ SET search_path = ''
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autentikasi diperlukan'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'peserta'
+  ) THEN RAISE EXCEPTION 'Akses hanya untuk peserta'; END IF;
   IF p_test_type NOT IN ('pretest', 'posttest') THEN RAISE EXCEPTION 'Jenis tes tidak valid'; END IF;
 
   IF NOT EXISTS (
@@ -284,6 +330,9 @@ DECLARE
   v_progress public.material_progress%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autentikasi diperlukan'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'peserta'
+  ) THEN RAISE EXCEPTION 'Akses hanya untuk peserta'; END IF;
 
   SELECT m.* INTO v_material
   FROM public.materials m JOIN public.trainings t ON t.id = m.training_id
@@ -329,6 +378,9 @@ DECLARE
   v_duration INTEGER;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autentikasi diperlukan'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'peserta'
+  ) THEN RAISE EXCEPTION 'Akses hanya untuk peserta'; END IF;
   SELECT * INTO v_progress
   FROM public.material_progress
   WHERE user_id = auth.uid() AND material_id = p_material_id;
@@ -374,6 +426,9 @@ DECLARE
   v_roman TEXT;
   v_code TEXT;
 BEGIN
+  -- Kunci hanya pasangan peserta/pelatihan. Peserta lain tetap dapat diproses paralel.
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_user_id::TEXT || ':' || p_training_id::TEXT || ':certificate', 0));
+
   IF EXISTS (SELECT 1 FROM public.certificates c WHERE c.user_id = p_user_id AND c.training_id = p_training_id) THEN
     RETURN TRUE;
   END IF;
@@ -434,14 +489,20 @@ DECLARE
   v_certificate BOOLEAN := FALSE;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autentikasi diperlukan'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'peserta'
+  ) THEN RAISE EXCEPTION 'Akses hanya untuk peserta'; END IF;
   IF p_test_type NOT IN ('pretest', 'posttest') THEN RAISE EXCEPTION 'Jenis tes tidak valid'; END IF;
   IF jsonb_typeof(p_answers) <> 'object' THEN RAISE EXCEPTION 'Format jawaban tidak valid'; END IF;
+
+  -- Hindari nomor attempt ganda untuk peserta yang menekan submit berulang,
+  -- tanpa mengunci satu baris pelatihan untuk seluruh peserta.
+  PERFORM pg_advisory_xact_lock(hashtextextended(auth.uid()::TEXT || ':' || p_training_id::TEXT || ':' || p_test_type, 0));
 
   SELECT * INTO v_training FROM public.trainings
   WHERE id = p_training_id AND active
     AND (start_date IS NULL OR start_date <= now())
-    AND (end_date IS NULL OR end_date >= now())
-  FOR UPDATE;
+    AND (end_date IS NULL OR end_date >= now());
   IF NOT FOUND THEN RAISE EXCEPTION 'Pelatihan tidak aktif atau di luar periode'; END IF;
 
   SELECT count(*) INTO v_total FROM public.questions q
@@ -496,7 +557,13 @@ BEGIN
   ) VALUES (auth.uid(), p_training_id, p_test_type, v_score, v_attempt, now(), now());
 
   IF v_passed THEN
-    v_certificate := private.issue_lms_certificate(auth.uid(), p_training_id, v_score);
+    -- Nilai lulus tetap tersimpan bila konfigurasi sertifikat bermasalah.
+    -- Peserta dapat memulihkan penerbitan melalui ensure_my_certificate().
+    BEGIN
+      v_certificate := private.issue_lms_certificate(auth.uid(), p_training_id, v_score);
+    EXCEPTION WHEN OTHERS THEN
+      v_certificate := FALSE;
+    END;
   END IF;
 
   RETURN jsonb_build_object(
@@ -505,6 +572,42 @@ BEGIN
     'passed', v_passed,
     'certificate_issued', v_certificate
   );
+END;
+$$;
+
+-- Penerbitan ulang yang idempoten untuk peserta yang sudah lulus tetapi belum
+-- mendapat sertifikat (misalnya fitur sertifikat baru diaktifkan kemudian).
+CREATE OR REPLACE FUNCTION public.ensure_my_certificate(p_training_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_score NUMERIC;
+  v_passing_score INTEGER;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autentikasi diperlukan'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'peserta'
+  ) THEN RAISE EXCEPTION 'Akses hanya untuk peserta'; END IF;
+
+  SELECT t.passing_score INTO v_passing_score
+  FROM public.trainings t
+  WHERE t.id = p_training_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Pelatihan tidak ditemukan'; END IF;
+
+  SELECT MAX(a.score) INTO v_score
+  FROM public.test_attempts a
+  WHERE a.user_id = auth.uid()
+    AND a.training_id = p_training_id
+    AND a.test_type = 'posttest';
+
+  IF v_score IS NULL OR v_score < v_passing_score THEN
+    RAISE EXCEPTION 'Peserta belum lulus Post-Test';
+  END IF;
+
+  RETURN private.issue_lms_certificate(auth.uid(), p_training_id, v_score);
 END;
 $$;
 
@@ -546,12 +649,14 @@ REVOKE ALL ON FUNCTION public.get_test_questions(UUID, TEXT) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.start_material_progress(UUID) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.complete_material_progress(UUID) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.submit_test_attempt(UUID, TEXT, JSONB) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.ensure_my_certificate(UUID) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.verify_certificate(TEXT) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.get_test_questions(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.start_material_progress(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.complete_material_progress(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_test_attempt(UUID, TEXT, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ensure_my_certificate(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_certificate(TEXT) TO anon, authenticated;
 
 COMMIT;

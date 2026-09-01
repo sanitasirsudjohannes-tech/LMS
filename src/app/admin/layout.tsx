@@ -12,20 +12,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const user = StorageAPI.getCurrentUser();
-      if (!user || user.role !== 'admin') {
-        router.push('/login');
-        return;
+      try {
+        await initLocalStorage();
+        const user = StorageAPI.getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+        if (user.role !== 'admin') {
+          router.push('/dashboard');
+          return;
+        }
+        setCurrentUser(user);
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Dashboard admin gagal dimuat.');
+      } finally {
+        setLoading(false);
       }
-      setCurrentUser(user);
-      setLoading(false);
     };
-    load();
+    void load();
   }, [router]);
+
+  if (loadError) {
+    return (
+      <div className="max-w-md mx-auto py-12 text-center space-y-4">
+        <p className="text-sm text-red-700 dark:text-red-300">{loadError}</p>
+        <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold">Coba Lagi</button>
+      </div>
+    );
+  }
 
   if (loading || !currentUser) {
     return <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm">Memuat Dashboard Admin...</div>;

@@ -29,68 +29,79 @@ export default function PosttestPage() {
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const user = StorageAPI.getCurrentUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      setCurrentUser(user);
+      try {
+        await initLocalStorage();
+        const user = StorageAPI.getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+        if (user.role === 'admin') {
+          router.push('/admin');
+          return;
+        }
+        setCurrentUser(user);
 
-      const tr = StorageAPI.getTraining();
-      setTraining(tr);
-      if (!tr) {
-        setIsAccessAllowed(false);
-        setAccessErrorMsg('Belum ada pelatihan aktif yang dapat diikuti.');
-        setLoading(false);
-        return;
-      }
+        const tr = StorageAPI.getTraining();
+        setTraining(tr);
+        if (!tr) {
+          setIsAccessAllowed(false);
+          setAccessErrorMsg('Belum ada pelatihan aktif yang dapat diikuti.');
+          setLoading(false);
+          return;
+        }
 
       // Validate if all materials are completed (PRD Section 12)
-      const materials = StorageAPI.getMaterials().filter(m => m.active);
-      const userProgress = StorageAPI.getMaterialProgress(user.id);
-      const materialIds = new Set(materials.map(material => material.id));
-      const completedMats = new Set(
-        userProgress
-          .filter(progress => progress.completed_at && materialIds.has(progress.material_id))
-          .map(progress => progress.material_id)
-      );
+        const materials = StorageAPI.getMaterials().filter(m => m.active);
+        const userProgress = StorageAPI.getMaterialProgress(user.id);
+        const materialIds = new Set(materials.map(material => material.id));
+        const completedMats = new Set(
+          userProgress
+            .filter(progress => progress.completed_at && materialIds.has(progress.material_id))
+            .map(progress => progress.material_id)
+        );
 
-      if (materials.length > 0 && completedMats.size < materials.length) {
-        setIsAccessAllowed(false);
-        setAccessErrorMsg('Anda belum menyelesaikan seluruh materi pelatihan. Selesaikan semua materi untuk membuka Post-Test.');
-        setLoading(false);
-        return;
-      }
+        if (materials.length > 0 && completedMats.size < materials.length) {
+          setIsAccessAllowed(false);
+          setAccessErrorMsg('Anda belum menyelesaikan seluruh materi pelatihan. Selesaikan semua materi untuk membuka Post-Test.');
+          setLoading(false);
+          return;
+        }
 
-      try {
         const qList = await StorageAPI.loadQuestionsForTest(tr.id, 'posttest');
         setQuestions(qList);
+
+      // Check existing post-test attempts
+        const existingAttempts = StorageAPI.getTestAttempts(user.id, 'posttest');
+        setAttempts(existingAttempts);
+
+        if (existingAttempts.length > 0) {
+          const passed = existingAttempts.some(a => a.score >= tr.passing_score);
+          setIsPassed(passed);
+          let certificate = StorageAPI.getCertificateForUser(user.id, tr.id);
+          if (passed && !certificate) {
+            try {
+              certificate = await StorageAPI.ensureMyCertificate(tr.id);
+            } catch (error) {
+              setSubmitError(error instanceof Error ? error.message : 'Sertifikat belum dapat diterbitkan.');
+            }
+          }
+          setCertificateIssued(!!certificate);
+          setLastAttemptScore(existingAttempts[existingAttempts.length - 1].score);
+
+          if (passed || existingAttempts.length >= tr.max_posttest_attempts) {
+            setIsSubmitted(true);
+          }
+        }
+
+        setLoading(false);
       } catch (error) {
         setIsAccessAllowed(false);
         setAccessErrorMsg(error instanceof Error ? error.message : 'Post-Test belum dapat dibuka.');
         setLoading(false);
-        return;
       }
-
-      // Check existing post-test attempts
-      const existingAttempts = StorageAPI.getTestAttempts(user.id, 'posttest');
-      setAttempts(existingAttempts);
-
-      if (existingAttempts.length > 0) {
-        const passed = existingAttempts.some(a => a.score >= tr.passing_score);
-        setIsPassed(passed);
-        setCertificateIssued(!!StorageAPI.getCertificateForUser(user.id, tr.id));
-        setLastAttemptScore(existingAttempts[existingAttempts.length - 1].score);
-
-        if (passed || existingAttempts.length >= tr.max_posttest_attempts) {
-          setIsSubmitted(true);
-        }
-      }
-
-      setLoading(false);
     };
-    load();
+    void load();
   }, [router]);
 
   const handleSelect = (questionId: string, option: 'A' | 'B' | 'C' | 'D') => {

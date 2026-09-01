@@ -32,9 +32,12 @@ export default function DashboardPage() {
   const [materialProgress, setMaterialProgress] = useState<MaterialProgress[]>([]);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [certificateNotice, setCertificateNotice] = useState('');
 
-  const loadTrainingDetails = (userId: string, tr: Training) => {
+  const loadTrainingDetails = async (userId: string, tr: Training) => {
     StorageAPI.setSelectTraining(tr.id);
+    setCertificateNotice('');
 
     const mats = StorageAPI.getMaterials(tr.id).filter(m => m.active);
     setMaterials(mats);
@@ -48,40 +51,71 @@ export default function DashboardPage() {
     const mp = StorageAPI.getMaterialProgress(userId);
     setMaterialProgress(mp);
 
-    const cert = StorageAPI.getCertificateForUser(userId, tr.id);
+    let cert = StorageAPI.getCertificateForUser(userId, tr.id);
+    const hasPassed = post.some(attempt => attempt.score >= tr.passing_score);
+    if (hasPassed && !cert) {
+      try {
+        cert = await StorageAPI.ensureMyCertificate(tr.id);
+        if (!cert) {
+          setCertificateNotice('Anda sudah lulus. Sertifikat akan tersedia setelah fitur sertifikat diaktifkan admin.');
+        }
+      } catch (error) {
+        setCertificateNotice(error instanceof Error ? error.message : 'Sertifikat belum dapat diterbitkan.');
+      }
+    }
     setCertificate(cert);
   };
 
   useEffect(() => {
     const load = async () => {
-      await initLocalStorage();
-      const user = StorageAPI.getCurrentUser();
-      if (!user) {
-        router.push('/login');
-        return;
+      try {
+        await initLocalStorage();
+        const user = StorageAPI.getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+        if (user.role === 'admin') {
+          router.push('/admin');
+          return;
+        }
+        setCurrentUser(user);
+
+        const listTr = StorageAPI.getTrainings().filter(training => isTrainingAvailable(training));
+        setTrainings(listTr);
+
+        const previouslySelected = StorageAPI.getTraining();
+        const initialTr = listTr.find(training => training.id === previouslySelected?.id) || listTr[0];
+        setSelectedTraining(initialTr);
+
+        if (initialTr) {
+          await loadTrainingDetails(user.id, initialTr);
+        }
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Dashboard gagal dimuat.');
+      } finally {
+        setLoading(false);
       }
-      setCurrentUser(user);
-
-      const listTr = StorageAPI.getTrainings().filter(training => isTrainingAvailable(training));
-      setTrainings(listTr);
-
-      const previouslySelected = StorageAPI.getTraining();
-      const initialTr = listTr.find(training => training.id === previouslySelected?.id) || listTr[0];
-      setSelectedTraining(initialTr);
-
-      if (initialTr) {
-        loadTrainingDetails(user.id, initialTr);
-      }
-      setLoading(false);
     };
-    load();
+    void load();
   }, [router]);
 
-  const handleSelectTraining = (tr: Training) => {
+  const handleSelectTraining = async (tr: Training) => {
     if (!currentUser) return;
     setSelectedTraining(tr);
-    loadTrainingDetails(currentUser.id, tr);
+    await loadTrainingDetails(currentUser.id, tr);
   };
+
+  if (loadError) {
+    return (
+      <div className="max-w-xl mx-auto py-12 text-center space-y-4">
+        <p className="text-sm text-red-700 dark:text-red-300">{loadError}</p>
+        <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold">
+          Coba Lagi
+        </button>
+      </div>
+    );
+  }
 
   if (loading || !currentUser) {
     return (
@@ -430,14 +464,20 @@ export default function DashboardPage() {
             </div>
 
             {/* Certificate Stage */}
+            {certificateNotice && (
+              <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                {certificateNotice}
+              </div>
+            )}
+
             <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-              isPassedPosttest
+              hasCertificate
                 ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60'
                 : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'
             }`}>
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  isPassedPosttest ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'
+                  hasCertificate ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'
                 }`}>
                   <Award className="w-4 h-4" />
                 </div>
@@ -446,12 +486,16 @@ export default function DashboardPage() {
                     {materials.length + 3}. Sertifikat Digital
                   </h4>
                   <p className="text-xs text-slate-500">
-                    {isPassedPosttest ? 'Sertifikat telah diterbitkan & dapat diunduh' : 'Tersedia setelah lulus Post-Test'}
+                    {hasCertificate
+                      ? 'Sertifikat telah diterbitkan & dapat diunduh'
+                      : isPassedPosttest
+                        ? 'Anda sudah lulus • sertifikat belum diterbitkan'
+                        : 'Tersedia setelah lulus Post-Test'}
                   </p>
                 </div>
               </div>
 
-              {isPassedPosttest ? (
+              {hasCertificate ? (
                 <Link
                   href="/certificate"
                   className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"

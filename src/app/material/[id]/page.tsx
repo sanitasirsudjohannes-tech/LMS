@@ -7,7 +7,7 @@ import { Material, UserProfile, MaterialProgress } from '@/types';
 import TimerWidget from '@/components/TimerWidget';
 import { BookOpen, ArrowLeft, ArrowRight, Lock, Video, FileText } from 'lucide-react';
 import Link from 'next/link';
-import { getMediaType, formatGoogleDriveEmbedUrl } from '@/lib/mediaUtils';
+import { getMediaType, formatGoogleDriveEmbedUrl, formatVideoEmbedUrl } from '@/lib/mediaUtils';
 
 export default function MaterialDetailPage() {
   const params = useParams();
@@ -30,65 +30,75 @@ export default function MaterialDetailPage() {
 
   useEffect(() => {
     const load = async () => {
-      // Await initLocalStorage so Supabase data is ready before access check
-      await initLocalStorage();
+      try {
+        // Await initLocalStorage so Supabase data is ready before access check
+        await initLocalStorage();
 
-      const user = StorageAPI.getCurrentUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      setCurrentUser(user);
+        const user = StorageAPI.getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+        if (user.role === 'admin') {
+          router.push('/admin');
+          return;
+        }
+        setCurrentUser(user);
 
-      const mats = StorageAPI.getMaterials().filter(m => m.active);
-      setAllMaterials(mats);
+        const mats = StorageAPI.getMaterials().filter(m => m.active);
+        setAllMaterials(mats);
 
-      const targetMat = mats.find(m => m.id === materialId);
-      if (!targetMat) {
-        setAccessErrorMsg('Materi tidak ditemukan.');
-        setIsAccessAllowed(false);
-        setLoading(false);
-        return;
-      }
-
-      setMaterial(targetMat);
-
-      // Sequential Access Validation (PRD Section 11)
-      const preAttempts = StorageAPI.getTestAttempts(user.id, 'pretest');
-      if (preAttempts.length === 0) {
-        setIsAccessAllowed(false);
-        setAccessErrorMsg('Anda wajib menyelesaikan Pre-Test terlebih dahulu sebelum mengakses materi.');
-        setLoading(false);
-        return;
-      }
-
-      const currentIdx = mats.findIndex(m => m.id === materialId);
-      const userProgress = StorageAPI.getMaterialProgress(user.id);
-
-      if (currentIdx > 0) {
-        const prevMatId = mats[currentIdx - 1].id;
-        const isPrevCompleted = userProgress.some(p => p.material_id === prevMatId && p.completed_at);
-        if (!isPrevCompleted) {
+        const targetMat = mats.find(m => m.id === materialId);
+        if (!targetMat) {
+          setAccessErrorMsg('Materi tidak ditemukan.');
           setIsAccessAllowed(false);
-          setAccessErrorMsg(`Anda belum menyelesaikan materi sebelumnya (${mats[currentIdx - 1].title}). Selesaikan materi berurutan.`);
           setLoading(false);
           return;
         }
-      }
+
+        setMaterial(targetMat);
+
+      // Sequential Access Validation (PRD Section 11)
+        const preAttempts = StorageAPI.getTestAttempts(user.id, 'pretest');
+        if (preAttempts.length === 0) {
+          setIsAccessAllowed(false);
+          setAccessErrorMsg('Anda wajib menyelesaikan Pre-Test terlebih dahulu sebelum mengakses materi.');
+          setLoading(false);
+          return;
+        }
+
+        const currentIdx = mats.findIndex(m => m.id === materialId);
+        const userProgress = StorageAPI.getMaterialProgress(user.id);
+
+        if (currentIdx > 0) {
+          const prevMatId = mats[currentIdx - 1].id;
+          const isPrevCompleted = userProgress.some(p => p.material_id === prevMatId && p.completed_at);
+          if (!isPrevCompleted) {
+            setIsAccessAllowed(false);
+            setAccessErrorMsg(`Anda belum menyelesaikan materi sebelumnya (${mats[currentIdx - 1].title}). Selesaikan materi berurutan.`);
+            setLoading(false);
+            return;
+          }
+        }
 
       // Record started_at
-      const p = await StorageAPI.startMaterial(user.id, targetMat.id);
-      setProgress(p);
+        const p = await StorageAPI.startMaterial(user.id, targetMat.id);
+        setProgress(p);
 
       // Unlock button immediately if already completed or no timer required
-      if (p.completed_at || targetMat.minimum_duration_seconds <= 0) {
-        setIsTimerCompleted(true);
-      }
+        if (p.completed_at || targetMat.minimum_duration_seconds <= 0) {
+          setIsTimerCompleted(true);
+        }
 
-      setLoading(false);
+        setLoading(false);
+      } catch (error) {
+        setAccessErrorMsg(error instanceof Error ? error.message : 'Materi belum dapat dibuka.');
+        setIsAccessAllowed(false);
+        setLoading(false);
+      }
     };
 
-    load();
+    void load();
   }, [materialId, router]);
 
   const handleCompleteMaterial = async () => {
@@ -178,7 +188,9 @@ export default function MaterialDetailPage() {
         {/* Video / PDF Media Viewer */}
         {material.content_url && (() => {
           const mediaType = getMediaType(material.content_url);
-          const embedUrl = mediaType === 'pdf' ? formatGoogleDriveEmbedUrl(material.content_url) : material.content_url;
+          const embedUrl = mediaType === 'pdf'
+            ? formatGoogleDriveEmbedUrl(material.content_url)
+            : formatVideoEmbedUrl(material.content_url);
 
           return (
             <div className="space-y-2">

@@ -64,7 +64,8 @@ export async function initCurrentUser(): Promise<UserProfile | null> {
   // Jangan pernah mempercayai role/identitas dari sessionStorage tanpa
   // memvalidasinya kembali ke Supabase. Nilai sessionStorage dapat basi atau diubah.
   const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-  if (authError || !authUser) {
+  if (authError) throw new Error(`Gagal memvalidasi sesi: ${authError.message}`);
+  if (!authUser) {
     clearCurrentUserCache();
     return null;
   }
@@ -73,8 +74,9 @@ export async function initCurrentUser(): Promise<UserProfile | null> {
     .from('profiles')
     .select('*')
     .eq('id', authUser.id)
-    .single();
-  if (profileError || !profileData) {
+    .maybeSingle();
+  if (profileError) throw new Error(`Gagal memuat profil: ${profileError.message}`);
+  if (!profileData) {
     clearCurrentUserCache();
     return null;
   }
@@ -90,7 +92,11 @@ async function fetchLmsData(): Promise<void> {
 
   try {
     // 1. Fetch Trainings
-    const { data: dbTrainings } = await supabase.from('trainings').select('*').order('created_at', { ascending: false });
+    const { data: dbTrainings, error: trainingsError } = await supabase
+      .from('trainings')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (trainingsError) throw new Error(`Gagal memuat pelatihan: ${trainingsError.message}`);
     if (dbTrainings && dbTrainings.length > 0) {
       cacheState.trainings = dbTrainings;
       const selectedTrainingId = sessionStorage.getItem('lms_selected_training_id');
@@ -106,22 +112,39 @@ async function fetchLmsData(): Promise<void> {
 
     // Setelah pelatihan terpilih diketahui, seluruh data independen dimuat paralel.
     const [materialsResult, questionsResult, settingsResult, profilesResult, attemptsResult, progressResult, certificatesResult] = await Promise.all([
-      supabase.from('materials').select('*').order('order_number', { ascending: true }),
+      supabase.from('materials').select('*').order('order_number', { ascending: true }).order('id', { ascending: true }),
       isAdmin && cacheState.training
         ? supabase.from('questions').select('*').eq('training_id', cacheState.training.id)
-        : Promise.resolve({ data: [] as Question[] }),
+        : Promise.resolve({ data: [] as Question[], error: null }),
       supabase.from('certificate_settings').select('*'),
-      Promise.resolve({ data: cacheState.currentUser ? [cacheState.currentUser] : [] }),
+      Promise.resolve({ data: cacheState.currentUser ? [cacheState.currentUser] : [], error: null }),
       userFilter
         ? supabase.from('test_attempts').select('*').eq('user_id', userFilter)
-        : Promise.resolve({ data: [] as TestAttempt[] }),
+        : Promise.resolve({ data: [] as TestAttempt[], error: null }),
       userFilter
         ? supabase.from('material_progress').select('*').eq('user_id', userFilter)
-        : Promise.resolve({ data: [] as MaterialProgress[] }),
+        : Promise.resolve({ data: [] as MaterialProgress[], error: null }),
       userFilter
         ? supabase.from('certificates').select('*').eq('user_id', userFilter)
-        : Promise.resolve({ data: [] as Certificate[] })
+        : Promise.resolve({ data: [] as Certificate[], error: null })
     ]);
+
+    const fetchFailure = [
+      ['materi', materialsResult.error],
+      ['soal', questionsResult.error],
+      ['pengaturan sertifikat', settingsResult.error],
+      ['profil', profilesResult.error],
+      ['hasil tes', attemptsResult.error],
+      ['progres materi', progressResult.error],
+      ['sertifikat', certificatesResult.error]
+    ].find(([, error]) => error);
+    if (fetchFailure) {
+      const [label, error] = fetchFailure;
+      const message = error && typeof error === 'object' && 'message' in error
+        ? String(error.message)
+        : 'Kesalahan tidak diketahui';
+      throw new Error(`Gagal memuat ${label}: ${message}`);
+    }
 
     cacheState.materials = materialsResult.data || [];
     cacheState.questions = questionsResult.data || [];
@@ -149,15 +172,16 @@ async function fetchLmsData(): Promise<void> {
     lastInitializedAt = Date.now();
   } catch (err) {
     console.error('Supabase Direct Fetch Error:', err);
+    throw err;
   }
 }
 
 // Dedup request bersamaan dan gunakan cache singkat saat berpindah halaman.
 export async function initLocalStorage(force = false): Promise<void> {
   if (typeof window === 'undefined') return;
+  if (!force && cacheState.currentUser && lastInitializedAt > 0 && Date.now() - lastInitializedAt < CACHE_TTL_MS) return;
   const currentUser = await initCurrentUser();
   if (!currentUser) return;
-  if (!force && lastInitializedAt > 0 && Date.now() - lastInitializedAt < CACHE_TTL_MS) return;
   if (initInFlight) return initInFlight;
   initInFlight = fetchLmsData().finally(() => { initInFlight = null; });
   return initInFlight;
@@ -290,7 +314,9 @@ export const StorageAPI = {
   getMaterials: (trainingId?: string): Material[] => {
     const targetTrainingId = trainingId || cacheState.training?.id;
     if (!targetTrainingId) return [];
-    return cacheState.materials.filter(m => m.training_id === targetTrainingId);
+    return cacheState.materials
+      .filter(m => m.training_id === targetTrainingId)
+      .sort((a, b) => a.order_number - b.order_number || a.id.localeCompare(b.id));
   },
 
   saveMaterial: async (mat: Partial<Material>): Promise<Material> => {
@@ -305,9 +331,31 @@ export const StorageAPI = {
       content: mat.content || '',
       content_url: mat.content_url || '',
       minimum_duration_seconds: mat.minimum_duration_seconds || 0,
-      order_number: mat.order_number || cacheState.materials.length + 1,
+      order_number: mat.order_number ?? Math.max(
+        0,
+        ...cacheState.materials
+          .filter(item => item.training_id === (mat.training_id || cacheState.training?.id))
+          .map(item => item.order_number)
+      ) + 1,
       active: mat.active !== undefined ? mat.active : true
     };
+
+    if (!saved.training_id) throw new Error('Pilih pelatihan sebelum menyimpan materi.');
+    if (!Number.isInteger(saved.order_number) || saved.order_number < 1) {
+      throw new Error('Urutan materi harus berupa bilangan bulat minimal 1.');
+    }
+
+    const { data: duplicateOrder, error: duplicateError } = await supabase
+      .from('materials')
+      .select('id')
+      .eq('training_id', saved.training_id)
+      .eq('order_number', saved.order_number)
+      .neq('id', targetId)
+      .limit(1);
+    if (duplicateError) throw new Error(`Gagal memeriksa urutan materi: ${duplicateError.message}`);
+    if (duplicateOrder && duplicateOrder.length > 0) {
+      throw new Error(`Urutan ${saved.order_number} sudah digunakan materi lain pada pelatihan ini.`);
+    }
 
     const { error } = await supabase.from('materials').upsert(saved);
     if (error) throw new Error(`Gagal menyimpan materi: ${error.message}`);
@@ -529,6 +577,32 @@ export const StorageAPI = {
     return result;
   },
 
+  ensureMyCertificate: async (trainingId: string): Promise<Certificate | null> => {
+    const currentUserId = cacheState.currentUser?.id;
+    if (!currentUserId) throw new Error('Sesi peserta tidak ditemukan. Silakan masuk kembali.');
+
+    const { data: issued, error: issueError } = await supabase.rpc('ensure_my_certificate', {
+      p_training_id: trainingId
+    });
+    if (issueError) throw new Error(`Gagal menerbitkan sertifikat: ${issueError.message}`);
+    if (!issued) return null;
+
+    const { data: certificate, error: certificateError } = await supabase
+      .from('certificates')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .eq('training_id', trainingId)
+      .maybeSingle();
+    if (certificateError) throw new Error(`Gagal memuat sertifikat: ${certificateError.message}`);
+    if (!certificate) return null;
+
+    cacheState.certificates = [
+      ...cacheState.certificates.filter(item => !(item.user_id === currentUserId && item.training_id === trainingId)),
+      certificate as Certificate
+    ];
+    return StorageAPI.getCertificateForUser(currentUserId, trainingId);
+  },
+
   getMaterialProgress: (userId?: string): MaterialProgress[] => {
     if (!userId) return [...cacheState.materialProgress];
     return cacheState.materialProgress.filter(p => p.user_id === userId);
@@ -573,13 +647,25 @@ export const StorageAPI = {
   updateCertificateSettings: async (updates: Partial<CertificateSettings>): Promise<CertificateSettings> => {
     const trainingId = cacheState.training?.id;
     if (!trainingId) throw new Error('Pilih pelatihan terlebih dahulu.');
-    const existing = cacheState.certSettingsList.find(setting => setting.training_id === trainingId);
+    const { data: databaseSettings, error: settingsError } = await supabase
+      .from('certificate_settings')
+      .select('*')
+      .eq('training_id', trainingId)
+      .maybeSingle();
+    if (settingsError) throw new Error(`Gagal memeriksa pengaturan sertifikat: ${settingsError.message}`);
+
+    const existing = (databaseSettings as CertificateSettings | null)
+      || cacheState.certSettingsList.find(setting => setting.training_id === trainingId);
     const base = existing || (cacheState.certSettings.training_id === trainingId
       ? cacheState.certSettings
       : { ...DEFAULT_CERT_SETTINGS, id: crypto.randomUUID(), training_id: trainingId });
+    const safeCurrentNumber = existing
+      ? Math.max(existing.current_number, updates.current_number ?? existing.current_number)
+      : updates.current_number;
     const updated = {
       ...base,
       ...updates,
+      ...(safeCurrentNumber !== undefined ? { current_number: safeCurrentNumber } : {}),
       training_id: trainingId,
       updated_at: new Date().toISOString()
     };
