@@ -60,6 +60,24 @@ export interface SubmittedTestResult {
   certificate_issued: boolean;
 }
 
+export interface TestSession {
+  id: string;
+  user_id: string;
+  training_id: string;
+  test_type: 'pretest' | 'posttest';
+  attempt_number: number;
+  answers: Record<string, TestOption>;
+  status: 'in_progress' | 'submitted';
+  started_at: string;
+  updated_at: string;
+}
+
+export interface DisplayTestOption {
+  label: TestOption;
+  value: TestOption;
+  text: string;
+}
+
 export interface TestAttempt {
   id: string;
   user_id: string;

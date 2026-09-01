@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { ParticipantQuestion, UserProfile, Training } from '@/types';
 import { FileCheck2, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
+import { useTestSession } from '@/hooks/useTestSession';
+import { getDisplayOptions, orderTestQuestions } from '@/lib/testSession';
 
 export default function PretestPage() {
   const router = useRouter();
@@ -12,13 +14,12 @@ export default function PretestPage() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [training, setTraining] = useState<Training | null>(null);
   const [questions, setQuestions] = useState<ParticipantQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({});
-  
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const { session, answers, saveStatus, initialize, selectAnswer, submit } = useTestSession();
 
   useEffect(() => {
     const load = async () => {
@@ -38,14 +39,19 @@ export default function PretestPage() {
         const tr = StorageAPI.getTraining();
         setTraining(tr);
 
-        const qList = tr ? await StorageAPI.loadQuestionsForTest(tr.id, 'pretest') : [];
-        setQuestions(qList);
-
         // Check if already completed
         const existing = StorageAPI.getTestAttempts(user.id, 'pretest');
         if (existing.length > 0) {
+          const qList = tr ? await StorageAPI.loadQuestionsForTest(tr.id, 'pretest') : [];
+          setQuestions(qList);
           setSubmitted(true);
           setScore(existing[0].score);
+        } else if (tr) {
+          const [qList, activeSession] = await Promise.all([
+            StorageAPI.loadQuestionsForTest(tr.id, 'pretest'),
+            initialize(tr.id, 'pretest')
+          ]);
+          setQuestions(orderTestQuestions(qList, activeSession.id));
         }
 
         setLoading(false);
@@ -55,11 +61,11 @@ export default function PretestPage() {
       }
     };
     void load();
-  }, [router]);
+  }, [initialize, router]);
 
   const handleSelect = (questionId: string, option: 'A' | 'B' | 'C' | 'D') => {
     if (submitted) return;
-    setAnswers(prev => ({ ...prev, [questionId]: option }));
+    selectAnswer(questionId, option);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,7 +80,7 @@ export default function PretestPage() {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const result = await StorageAPI.submitTestAttempt(training.id, 'pretest', answers);
+      const result = await submit();
       setScore(result.score);
       setSubmitted(true);
     } catch (error) {
@@ -176,18 +182,13 @@ export default function PretestPage() {
               </div>
 
               <div className="space-y-2 pt-1 pl-9">
-                {[
-                  { key: 'A', text: q.option_a },
-                  { key: 'B', text: q.option_b },
-                  { key: 'C', text: q.option_c },
-                  { key: 'D', text: q.option_d }
-                ].map((opt) => {
-                  const isSelected = answers[q.id] === opt.key;
+                {getDisplayOptions(q, session?.id || '').map((opt) => {
+                  const isSelected = answers[q.id] === opt.value;
                   return (
                     <button
-                      key={opt.key}
+                      key={opt.value}
                       type="button"
-                      onClick={() => handleSelect(q.id, opt.key as 'A' | 'B' | 'C' | 'D')}
+                      onClick={() => handleSelect(q.id, opt.value)}
                       className={`w-full p-3 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-center gap-3 ${
                         isSelected
                           ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 shadow-sm'
@@ -199,7 +200,7 @@ export default function PretestPage() {
                           ? 'border-white text-white dark:border-slate-900 dark:text-slate-900 bg-white/20'
                           : 'border-slate-300 dark:border-slate-600 text-slate-500'
                       }`}>
-                        {opt.key}
+                        {opt.label}
                       </span>
                       <span>{opt.text}</span>
                     </button>
@@ -212,6 +213,11 @@ export default function PretestPage() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
             <span className="text-xs text-slate-500">
               {Object.keys(answers).length} dari {questions.length} soal telah dijawab.
+              <span className="block mt-1 text-[11px]">
+                {saveStatus === 'saving' && 'Menyimpan jawaban...'}
+                {saveStatus === 'saved' && 'Jawaban tersimpan otomatis.'}
+                {saveStatus === 'local' && 'Tersimpan di perangkat; akan disinkronkan saat koneksi tersedia.'}
+              </span>
             </span>
 
             <button

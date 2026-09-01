@@ -9,7 +9,9 @@ import {
   Certificate,
   AdminStats,
   ParticipantQuestion,
-  SubmittedTestResult
+  SubmittedTestResult,
+  TestOption,
+  TestSession
 } from '@/types';
 import { supabase } from './supabase';
 
@@ -46,6 +48,19 @@ const cacheState = {
 let initInFlight: Promise<void> | null = null;
 let lastInitializedAt = 0;
 const CACHE_TTL_MS = 30_000;
+
+function testSessionStorageKey(session: TestSession): string {
+  return `lms_test_session:${session.user_id}:${session.training_id}:${session.test_type}:${session.id}`;
+}
+
+function sanitizeAnswers(value: unknown): Record<string, TestOption> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, TestOption] =>
+      ['A', 'B', 'C', 'D'].includes(String(entry[1]).toUpperCase())
+    ).map(([questionId, answer]) => [questionId, answer.toUpperCase() as TestOption])
+  );
+}
 
 function clearCurrentUserCache() {
   cacheState.currentUser = null;
@@ -546,6 +561,76 @@ export const StorageAPI = {
 
   getAllTestAttempts: (): TestAttempt[] => {
     return [...cacheState.testAttempts];
+  },
+
+  startTestSession: async (
+    trainingId: string,
+    testType: 'pretest' | 'posttest'
+  ): Promise<TestSession> => {
+    const { data, error } = await supabase.rpc('start_test_session', {
+      p_training_id: trainingId,
+      p_test_type: testType
+    });
+    if (error) throw new Error(error.message);
+    const session = data as TestSession;
+    return { ...session, answers: sanitizeAnswers(session.answers) };
+  },
+
+  getRecoveredTestAnswers: (session: TestSession): Record<string, TestOption> => {
+    let localAnswers: Record<string, TestOption> = {};
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(testSessionStorageKey(session));
+        if (stored) localAnswers = sanitizeAnswers(JSON.parse(stored));
+      } catch { /* data lokal rusak diabaikan */ }
+    }
+    return { ...sanitizeAnswers(session.answers), ...localAnswers };
+  },
+
+  saveTestAnswersLocally: (session: TestSession, answers: Record<string, TestOption>) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(testSessionStorageKey(session), JSON.stringify(answers));
+      } catch { /* Supabase tetap menjadi penyimpanan utama */ }
+    }
+  },
+
+  saveTestSession: async (sessionId: string, answers: Record<string, TestOption>) => {
+    const { error } = await supabase.rpc('save_test_session', {
+      p_session_id: sessionId,
+      p_answers: answers
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  submitTestSession: async (
+    session: TestSession,
+    answers: Record<string, TestOption>
+  ): Promise<SubmittedTestResult> => {
+    StorageAPI.saveTestAnswersLocally(session, answers);
+    const { data, error } = await supabase.rpc('submit_test_session', {
+      p_session_id: session.id,
+      p_answers: answers
+    });
+    if (error) throw new Error(error.message);
+    if (typeof window !== 'undefined') localStorage.removeItem(testSessionStorageKey(session));
+
+    const result = data as SubmittedTestResult;
+    if (result.certificate_issued) lastInitializedAt = 0;
+    const currentUserId = cacheState.currentUser?.id;
+    if (currentUserId) {
+      cacheState.testAttempts.push({
+        id: crypto.randomUUID(),
+        user_id: currentUserId,
+        training_id: session.training_id,
+        test_type: session.test_type,
+        score: result.score,
+        attempt_number: result.attempt_number,
+        started_at: session.started_at,
+        submitted_at: new Date().toISOString()
+      });
+    }
+    return result;
   },
 
   submitTestAttempt: async (

@@ -10,6 +10,8 @@ Learning Management System internal untuk pelatihan daring RSUD Prof. Dr. W.Z. J
 - Pre-Test satu kali sebelum materi dibuka.
 - Materi wajib dipelajari secara berurutan dengan durasi minimum dari server.
 - Post-Test maksimal lima kali dengan penilaian di database.
+- Soal dan pilihan diacak secara konsisten untuk setiap sesi tes.
+- Jawaban tersimpan otomatis di perangkat dan Supabase serta pulih setelah halaman dimuat ulang.
 - Sertifikat digital, nomor otomatis opsional, QR verifikasi, PDF, dan arsip sertifikat.
 - Tampilan responsif untuk HP dan komputer.
 
@@ -47,7 +49,7 @@ npm ci
 
 1. Buat project Supabase.
 2. Buka **SQL Editor**.
-3. Jalankan seluruh berkas dalam `supabase/sql/migrations/` sesuai nomor `001` sampai `008`.
+3. Jalankan seluruh berkas dalam `supabase/sql/migrations/` sesuai nomor `001` sampai `009`.
 4. Buat akun admin dan tetapkan role menggunakan `supabase/sql/setup/create_admin.sql`.
 5. Data contoh pada `supabase/sql/setup/seed_data.sql` bersifat opsional.
 

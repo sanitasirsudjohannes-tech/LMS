@@ -22,6 +22,7 @@ Jalankan berkas di Supabase **SQL Editor** satu per satu dan tunggu status berha
 6. `migrations/006_training_visibility_and_certificate_archive.sql`
 7. `migrations/007_admin_pagination_and_bandwidth.sql`
 8. `migrations/008_bugfix_stability_2026_09.sql`
+9. `migrations/009_test_sessions_autosave_shuffle.sql`
 
 Setelah itu:
 
@@ -36,8 +37,9 @@ Untuk aplikasi yang sebelumnya sudah terpasang, jalankan ulang secara berurutan:
 1. `migrations/002_security_hardening.sql`
 2. `migrations/007_admin_pagination_and_bandwidth.sql`
 3. `migrations/008_bugfix_stability_2026_09.sql`
+4. `migrations/009_test_sessions_autosave_shuffle.sql`
 
-Ketiga berkas tersebut menggunakan transaksi dan dirancang aman dijalankan ulang. Jika migrasi berhenti karena nomor sertifikat atau urutan materi duplikat, rapikan data duplikat yang disebutkan dalam pesan kesalahan sebelum mencoba lagi. Jangan menghapus data secara massal hanya untuk melewati validasi.
+Keempat berkas tersebut menggunakan transaksi dan dirancang aman dijalankan ulang. Jika migrasi berhenti karena nomor sertifikat atau urutan materi duplikat, rapikan data duplikat yang disebutkan dalam pesan kesalahan sebelum mencoba lagi. Jangan menghapus data secara massal hanya untuk melewati validasi.
 
 ## Pemeliharaan
 

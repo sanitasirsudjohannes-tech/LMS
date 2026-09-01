@@ -1,0 +1,146 @@
+-- Sesi tes dan autosave. Aman dijalankan ulang setelah migrasi 001-008.
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.test_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  training_id UUID NOT NULL REFERENCES public.trainings(id) ON DELETE CASCADE,
+  test_type TEXT NOT NULL CHECK (test_type IN ('pretest', 'posttest')),
+  attempt_number INT NOT NULL CHECK (attempt_number > 0),
+  answers JSONB NOT NULL DEFAULT '{}'::JSONB CHECK (jsonb_typeof(answers) = 'object'),
+  status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'submitted')),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  submitted_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS test_sessions_one_active_idx
+  ON public.test_sessions (user_id, training_id, test_type)
+  WHERE status = 'in_progress';
+CREATE INDEX IF NOT EXISTS test_sessions_user_training_idx
+  ON public.test_sessions (user_id, training_id, test_type, started_at DESC);
+
+ALTER TABLE public.test_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS test_sessions_select_own_or_admin ON public.test_sessions;
+CREATE POLICY test_sessions_select_own_or_admin ON public.test_sessions
+  FOR SELECT TO authenticated
+  USING (user_id = auth.uid() OR private.is_lms_admin(auth.uid()));
+REVOKE ALL ON TABLE public.test_sessions FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION private.validate_test_session_answers(
+  p_training_id UUID, p_test_type TEXT, p_answers JSONB
+)
+RETURNS VOID LANGUAGE plpgsql STABLE SET search_path = '' AS $$
+DECLARE
+  v_supplied INT;
+  v_valid INT;
+BEGIN
+  IF jsonb_typeof(p_answers) <> 'object' THEN RAISE EXCEPTION 'Format jawaban tidak valid'; END IF;
+  SELECT count(*) INTO v_supplied FROM jsonb_each_text(p_answers);
+  SELECT count(*) INTO v_valid
+  FROM jsonb_each_text(p_answers) answer
+  JOIN public.questions q ON q.id::TEXT = answer.key
+  WHERE q.training_id = p_training_id AND q.test_type = p_test_type AND q.active
+    AND upper(answer.value) IN ('A', 'B', 'C', 'D');
+  IF v_valid <> v_supplied THEN RAISE EXCEPTION 'Jawaban memuat soal atau pilihan yang tidak valid'; END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.start_test_session(p_training_id UUID, p_test_type TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_session public.test_sessions%ROWTYPE;
+  v_attempt INT;
+  v_training public.trainings%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autentikasi diperlukan'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'peserta') THEN
+    RAISE EXCEPTION 'Akses hanya untuk peserta';
+  END IF;
+  IF p_test_type NOT IN ('pretest', 'posttest') THEN RAISE EXCEPTION 'Jenis tes tidak valid'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(auth.uid()::TEXT || ':' || p_training_id::TEXT || ':' || p_test_type, 0));
+
+  SELECT * INTO v_training FROM public.trainings
+  WHERE id = p_training_id AND active
+    AND (start_date IS NULL OR start_date <= now()) AND (end_date IS NULL OR end_date >= now());
+  IF NOT FOUND THEN RAISE EXCEPTION 'Pelatihan tidak aktif atau di luar periode'; END IF;
+
+  SELECT * INTO v_session FROM public.test_sessions
+  WHERE user_id = auth.uid() AND training_id = p_training_id
+    AND test_type = p_test_type AND status = 'in_progress' LIMIT 1;
+  IF FOUND THEN RETURN to_jsonb(v_session); END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.questions q WHERE q.training_id = p_training_id AND q.test_type = p_test_type AND q.active) THEN
+    RAISE EXCEPTION 'Soal belum tersedia';
+  END IF;
+  SELECT count(*) + 1 INTO v_attempt FROM public.test_attempts a
+  WHERE a.user_id = auth.uid() AND a.training_id = p_training_id AND a.test_type = p_test_type;
+  IF p_test_type = 'pretest' AND v_attempt > 1 THEN RAISE EXCEPTION 'Pre-Test sudah pernah diselesaikan'; END IF;
+  IF p_test_type = 'posttest' THEN
+    IF NOT EXISTS (SELECT 1 FROM public.test_attempts a WHERE a.user_id = auth.uid() AND a.training_id = p_training_id AND a.test_type = 'pretest') THEN
+      RAISE EXCEPTION 'Selesaikan Pre-Test terlebih dahulu';
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM public.materials m
+      WHERE m.training_id = p_training_id AND m.active
+        AND NOT EXISTS (
+          SELECT 1 FROM public.material_progress mp
+          WHERE mp.user_id = auth.uid() AND mp.material_id = m.id AND mp.completed_at IS NOT NULL
+        )
+    ) THEN RAISE EXCEPTION 'Selesaikan seluruh materi terlebih dahulu'; END IF;
+    IF EXISTS (SELECT 1 FROM public.test_attempts a WHERE a.user_id = auth.uid() AND a.training_id = p_training_id AND a.test_type = 'posttest' AND a.score >= v_training.passing_score) THEN
+      RAISE EXCEPTION 'Post-Test sudah lulus';
+    END IF;
+    IF v_attempt > LEAST(v_training.max_posttest_attempts, 5) THEN RAISE EXCEPTION 'Kesempatan Post-Test telah habis'; END IF;
+  END IF;
+
+  INSERT INTO public.test_sessions (user_id, training_id, test_type, attempt_number)
+  VALUES (auth.uid(), p_training_id, p_test_type, v_attempt) RETURNING * INTO v_session;
+  RETURN to_jsonb(v_session);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.save_test_session(p_session_id UUID, p_answers JSONB)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE v_session public.test_sessions%ROWTYPE;
+BEGIN
+  SELECT * INTO v_session FROM public.test_sessions
+  WHERE id = p_session_id AND user_id = auth.uid() AND status = 'in_progress' FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Sesi tes tidak ditemukan atau sudah selesai'; END IF;
+  PERFORM private.validate_test_session_answers(v_session.training_id, v_session.test_type, p_answers);
+  UPDATE public.test_sessions SET answers = p_answers, updated_at = now() WHERE id = p_session_id;
+  RETURN TRUE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.submit_test_session(p_session_id UUID, p_answers JSONB)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_session public.test_sessions%ROWTYPE;
+  v_result JSONB;
+BEGIN
+  SELECT * INTO v_session FROM public.test_sessions
+  WHERE id = p_session_id AND user_id = auth.uid() AND status = 'in_progress' FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Sesi tes tidak ditemukan atau sudah selesai'; END IF;
+  PERFORM private.validate_test_session_answers(v_session.training_id, v_session.test_type, p_answers);
+  v_result := public.submit_test_attempt(v_session.training_id, v_session.test_type, p_answers);
+  UPDATE public.test_attempts SET started_at = v_session.started_at
+  WHERE user_id = auth.uid() AND training_id = v_session.training_id AND test_type = v_session.test_type
+    AND attempt_number = (v_result ->> 'attempt_number')::INT;
+  UPDATE public.test_sessions
+  SET answers = p_answers, status = 'submitted', updated_at = now(), submitted_at = now()
+  WHERE id = p_session_id;
+  RETURN v_result;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.validate_test_session_answers(UUID, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.start_test_session(UUID, TEXT) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.save_test_session(UUID, JSONB) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.submit_test_session(UUID, JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.start_test_session(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.save_test_session(UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_test_session(UUID, JSONB) TO authenticated;
+
+NOTIFY pgrst, 'reload schema';
+COMMIT;
