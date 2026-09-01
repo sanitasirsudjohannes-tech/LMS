@@ -3,7 +3,7 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Certificate, CertificateSettings } from '@/types';
-import { formatDateIndonesian } from '@/lib/utils';
+import { formatDateIndonesian, formatDateInputWita } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 
 interface CertificateTemplateProps {
@@ -16,8 +16,15 @@ export default function CertificateTemplate({ certificate, settings, previewMode
   const showScore = settings ? settings.show_posttest_score : true;
   const signatoryName = settings?.signatory_name || 'Nama Direktur';
   const signatoryTitle = settings?.signatory_title || 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang';
+
+  const trainingStartDateKey = formatDateInputWita(certificate.training_start_date);
+  const trainingEndDateKey = formatDateInputWita(certificate.training_end_date);
+  const isSingleDayTraining = Boolean(
+    trainingStartDateKey && trainingEndDateKey && trainingStartDateKey === trainingEndDateKey
+  );
+
   const trainingPeriod = certificate.training_start_date
-    ? certificate.training_end_date && certificate.training_end_date !== certificate.training_start_date
+    ? certificate.training_end_date && !isSingleDayTraining
       ? `${formatDateIndonesian(certificate.training_start_date)} sampai ${formatDateIndonesian(certificate.training_end_date)}`
       : formatDateIndonesian(certificate.training_start_date)
     : null;
