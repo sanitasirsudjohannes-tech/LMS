@@ -468,7 +468,7 @@ BEGIN
         AND a.test_type = 'posttest' AND a.score >= v_training.passing_score
     ) THEN RAISE EXCEPTION 'Post-Test sudah lulus'; END IF;
 
-    IF v_attempt > v_training.max_posttest_attempts THEN RAISE EXCEPTION 'Kesempatan Post-Test telah habis'; END IF;
+    IF v_attempt > LEAST(v_training.max_posttest_attempts, 5) THEN RAISE EXCEPTION 'Kesempatan Post-Test telah habis'; END IF;
   END IF;
 
   SELECT count(*) INTO v_correct FROM public.questions q
@@ -503,7 +503,8 @@ RETURNS TABLE (
   posttest_score NUMERIC,
   user_name TEXT,
   user_institution TEXT,
-  training_title TEXT
+  training_title TEXT,
+  training_jpl INTEGER
 )
 LANGUAGE SQL
 STABLE
@@ -511,7 +512,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT c.certificate_number, c.verification_code, c.issued_at, c.posttest_score,
-         p.full_name, p.institution, t.title
+         p.full_name, p.institution, t.title, t.jpl
   FROM public.certificates c
   JOIN public.profiles p ON p.id = c.user_id
   JOIN public.trainings t ON t.id = c.training_id

@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS public.trainings (
   start_date TIMESTAMPTZ,
   end_date TIMESTAMPTZ,
   passing_score INT DEFAULT 80,
-  max_posttest_attempts INT DEFAULT 3,
+  max_posttest_attempts INT NOT NULL DEFAULT 5 CHECK (max_posttest_attempts = 5),
+  jpl INT NOT NULL DEFAULT 1 CHECK (jpl > 0),
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

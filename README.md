@@ -8,7 +8,8 @@ Urutan instalasi database wajib:
 
 1. Jalankan `schema.sql` di Supabase SQL Editor.
 2. Jalankan `security_hardening.sql` segera sesudahnya.
-3. Buat akun admin melalui Supabase Authentication, lalu ikuti `create_admin.sql` untuk menetapkan perannya.
+3. Jalankan `training_jpl_and_attempt_limit.sql` untuk mengaktifkan JPL dan batas Post-Test 5 kali.
+4. Buat akun admin melalui Supabase Authentication, lalu ikuti `create_admin.sql` untuk menetapkan perannya.
 
 `security_hardening.sql` memasang Row Level Security berbasis kepemilikan/admin, menyembunyikan kunci jawaban dari peserta, menilai tes di server, memvalidasi timer materi di server, dan menerbitkan sertifikat secara atomik. Jangan deploy frontend baru sebelum migrasi ini berhasil.
 

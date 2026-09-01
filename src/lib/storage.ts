@@ -229,7 +229,8 @@ export const StorageAPI = {
       start_date: trData.start_date || new Date().toISOString(),
       end_date: trData.end_date || new Date(Date.now() + 30 * 86400000).toISOString(),
       passing_score: trData.passing_score !== undefined ? Number(trData.passing_score) : 80,
-      max_posttest_attempts: trData.max_posttest_attempts !== undefined ? Number(trData.max_posttest_attempts) : 3,
+      max_posttest_attempts: 5,
+      jpl: trData.jpl !== undefined ? Number(trData.jpl) : 1,
       active: trData.active !== undefined ? trData.active : true,
       created_at: trData.created_at || new Date().toISOString()
     };
@@ -547,7 +548,8 @@ export const StorageAPI = {
         ...cert,
         user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
         user_institution: cert.user_institution || user?.institution || '',
-        training_title: cert.training_title || training?.title || 'Pelatihan LMS'
+        training_title: cert.training_title || training?.title || 'Pelatihan LMS',
+        training_jpl: cert.training_jpl || training?.jpl || 1
       };
     });
   },
@@ -564,7 +566,8 @@ export const StorageAPI = {
       ...cert,
       user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
       user_institution: cert.user_institution || user?.institution || '',
-      training_title: cert.training_title || training?.title || 'Pelatihan LMS'
+      training_title: cert.training_title || training?.title || 'Pelatihan LMS',
+      training_jpl: cert.training_jpl || training?.jpl || 1
     };
   },
 
@@ -579,7 +582,8 @@ export const StorageAPI = {
       ...cert,
       user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
       user_institution: cert.user_institution || user?.institution || '',
-      training_title: cert.training_title || training?.title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja'
+      training_title: cert.training_title || training?.title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja',
+      training_jpl: cert.training_jpl || training?.jpl || 1
     };
   },
 

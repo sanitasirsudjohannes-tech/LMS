@@ -19,6 +19,7 @@ export interface Training {
   end_date: string;
   passing_score: number;
   max_posttest_attempts: number;
+  jpl: number;
   active: boolean;
   created_at: string;
 }
@@ -105,6 +106,7 @@ export interface Certificate {
   user_name?: string;
   user_institution?: string;
   training_title?: string;
+  training_jpl?: number;
 }
 
 export interface AdminStats {
