@@ -131,9 +131,81 @@ AS $$
   WHERE private.is_lms_admin(auth.uid());
 $$;
 
+CREATE OR REPLACE FUNCTION public.admin_training_results(
+  p_training_id UUID,
+  p_search TEXT DEFAULT '',
+  p_test_filter TEXT DEFAULT 'all',
+  p_limit INT DEFAULT 20,
+  p_offset INT DEFAULT 0
+)
+RETURNS TABLE (
+  user_id UUID,
+  full_name TEXT,
+  email TEXT,
+  pre_score NUMERIC,
+  best_post_score NUMERIC,
+  post_attempts BIGINT,
+  status TEXT,
+  last_submitted_at TIMESTAMPTZ,
+  total_count BIGINT,
+  all_count BIGINT,
+  pre_count BIGINT,
+  post_count BIGINT
+)
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  WITH grouped AS (
+    SELECT
+      a.user_id,
+      p.full_name,
+      p.email,
+      MAX(a.score) FILTER (WHERE a.test_type = 'pretest') AS pre_score,
+      MAX(a.score) FILTER (WHERE a.test_type = 'posttest') AS best_post_score,
+      COUNT(*) FILTER (WHERE a.test_type = 'posttest') AS post_attempts,
+      MAX(a.submitted_at) AS last_submitted_at,
+      BOOL_OR(a.test_type = 'pretest') AS has_pretest,
+      BOOL_OR(a.test_type = 'posttest') AS has_posttest
+    FROM public.test_attempts a
+    JOIN public.profiles p ON p.id = a.user_id AND p.role = 'peserta'
+    WHERE a.training_id = p_training_id
+    GROUP BY a.user_id, p.full_name, p.email
+  ), counts AS (
+    SELECT COUNT(*) AS all_count,
+      COUNT(*) FILTER (WHERE has_pretest) AS pre_count,
+      COUNT(*) FILTER (WHERE has_posttest) AS post_count
+    FROM grouped
+  ), filtered AS (
+    SELECT g.*
+    FROM grouped g
+    WHERE (COALESCE(p_search, '') = '' OR g.full_name ILIKE '%' || p_search || '%' OR g.email ILIKE '%' || p_search || '%')
+      AND (p_test_filter = 'all' OR (p_test_filter = 'pretest' AND g.has_pretest) OR (p_test_filter = 'posttest' AND g.has_posttest))
+  )
+  SELECT
+    f.user_id, f.full_name, f.email, f.pre_score, f.best_post_score, f.post_attempts,
+    CASE
+      WHEN f.best_post_score >= t.passing_score THEN 'Lulus'
+      WHEN f.best_post_score IS NOT NULL THEN 'Belum Lulus'
+      ELSE 'Belum Post-Test'
+    END,
+    f.last_submitted_at,
+    COUNT(*) OVER(), c.all_count, c.pre_count, c.post_count
+  FROM filtered f
+  CROSS JOIN counts c
+  JOIN public.trainings t ON t.id = p_training_id
+  WHERE private.is_lms_admin(auth.uid())
+  ORDER BY f.last_submitted_at DESC
+  LIMIT LEAST(GREATEST(p_limit, 1), 100)
+  OFFSET GREATEST(p_offset, 0);
+$$;
+
 REVOKE ALL ON FUNCTION public.admin_training_participants(UUID, TEXT, TEXT, INT, INT) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.admin_training_stats(UUID) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.admin_training_results(UUID, TEXT, TEXT, INT, INT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_training_participants(UUID, TEXT, TEXT, INT, INT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_training_stats(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_training_results(UUID, TEXT, TEXT, INT, INT) TO authenticated;
 
 COMMIT;
