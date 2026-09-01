@@ -138,10 +138,9 @@ export default function CertificatePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 py-2">
-      {shareError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{shareError}</div>}
-      
-      {/* Top Header & Actions */}
+    <div className="certificate-page max-w-5xl mx-auto space-y-6 py-2">
+      {shareError && <div className="certificate-screen-actions rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{shareError}</div>}
+
       <div className="certificate-screen-actions bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -179,11 +178,9 @@ export default function CertificatePage() {
         </div>
       </div>
 
-      {/* Certificate Live Preview Render Target */}
       <div className="certificate-print-area overflow-x-auto p-2 bg-slate-200/50 dark:bg-slate-950 rounded-2xl border border-slate-300 dark:border-slate-800">
         <CertificateTemplate certificate={certificate} settings={settings || undefined} />
       </div>
-
     </div>
   );
 }
