@@ -38,23 +38,31 @@ body {
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
+    background: #fff !important;
   }
 
-  body * {
-    visibility: hidden;
+  /* Hapus seluruh elemen non-sertifikat dari alur layout agar browser HP
+     tidak membuat halaman kosong kedua. */
+  .certificate-screen-actions {
+    display: none !important;
   }
 
-  .certificate-print-area,
-  .certificate-print-area * {
-    visibility: visible;
+  .certificate-page {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 297mm !important;
+    height: 210mm !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   .certificate-print-area {
     position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    inset: 0 !important;
     width: 297mm !important;
-    height: 209mm !important;
+    height: 210mm !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
@@ -64,6 +72,9 @@ body {
   }
 
   #certificate-render-target {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 297mm !important;
     height: 209mm !important;
     max-width: none !important;
@@ -72,6 +83,7 @@ body {
     padding: 10mm !important;
     box-shadow: none !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
     page-break-before: avoid !important;
