@@ -42,7 +42,6 @@ body {
     background: #fff !important;
   }
 
-  /* Saat mencetak sertifikat, keluarkan seluruh elemen aplikasi selain main. */
   body > :not(main) {
     display: none !important;
   }
@@ -66,20 +65,25 @@ body {
   }
 
   .certificate-page,
-  .certificate-print-area {
-    position: fixed !important;
-    inset: 0 !important;
+  .certificate-print-area,
+  .certificate-preview-viewport,
+  .certificate-preview-stage,
+  .certificate-preview-scale {
+    position: static !important;
+    display: block !important;
     width: 297mm !important;
     height: 210mm !important;
     max-width: none !important;
+    min-width: 0 !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     border: 0 !important;
     border-radius: 0 !important;
     background: #fff !important;
     box-shadow: none !important;
+    transform: none !important;
   }
 
   #certificate-render-target {
@@ -97,6 +101,7 @@ body {
     box-shadow: none !important;
     box-sizing: border-box !important;
     transform: none !important;
+    transform-origin: top left !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
     page-break-before: avoid !important;
