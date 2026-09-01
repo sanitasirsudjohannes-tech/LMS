@@ -209,3 +209,6 @@ GRANT EXECUTE ON FUNCTION public.admin_training_stats(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_training_results(UUID, TEXT, TEXT, INT, INT) TO authenticated;
 
 COMMIT;
+
+-- Minta PostgREST/Supabase segera mengenali fungsi RPC yang baru dibuat.
+NOTIFY pgrst, 'reload schema';
