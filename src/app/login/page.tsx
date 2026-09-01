@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { StorageAPI } from '@/lib/storage';
 import { Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
 
 export default function LoginPage() {
   const router = useRouter();
+  const checkingSession = useGuestRouteGuard();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -65,6 +67,10 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return <div className="max-w-md mx-auto py-12 text-center text-sm text-slate-500">Memeriksa sesi...</div>;
+  }
 
   return (
     <div className="max-w-md mx-auto py-6 sm:py-12">

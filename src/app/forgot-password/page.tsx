@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowRight, CheckCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
 
 export default function ForgotPasswordPage() {
+  const checkingSession = useGuestRouteGuard();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,10 @@ export default function ForgotPasswordPage() {
     }
     setSent(true);
   };
+
+  if (checkingSession) {
+    return <div className="max-w-md mx-auto py-12 text-center text-sm text-slate-500">Memeriksa sesi...</div>;
+  }
 
   return (
     <div className="max-w-md mx-auto py-6 sm:py-12">

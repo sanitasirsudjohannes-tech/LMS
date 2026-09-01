@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { User, Mail, Building, Lock, FileText, Phone, ArrowRight, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const checkingSession = useGuestRouteGuard();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -67,6 +69,10 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return <div className="max-w-xl mx-auto py-12 text-center text-sm text-slate-500">Memeriksa sesi...</div>;
+  }
 
   return (
     <div className="max-w-xl mx-auto py-6 sm:py-10">
