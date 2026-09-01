@@ -4,8 +4,10 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'LMS Pelatihan Online - RSUD Prof. Dr. W. Z. Johannes',
-  description: 'Sistem Manajemen Pembelajaran Pelatihan Online - Pendaftaran, Materi Berurutan, Evaluasi & Sertifikat Digital.',
+  title: 'LONTAR - LMS Online & Pelatihan Terpadu RSUD Johannes',
+  description: 'LMS Online & Pelatihan Terpadu RSUD Prof. Dr. W. Z. Johannes Kupang untuk materi, evaluasi, dan sertifikat digital.',
+  applicationName: 'LONTAR',
+  icons: { icon: '/lontar-logo.jpg', apple: '/lontar-logo.jpg' },
 };
 
 export default function RootLayout({

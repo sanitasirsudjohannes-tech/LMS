@@ -183,7 +183,7 @@ export default function DashboardPage() {
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Learning Management System</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">LONTAR</p>
             <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">RSUD Prof. Dr. W.Z. Johannes Kupang</p>
           </div>
         </div>

@@ -10,14 +10,14 @@ export default function AppError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('LMS page error:', error);
+    console.error('LONTAR page error:', error);
   }, [error]);
 
   return (
     <div className="max-w-lg mx-auto py-16 text-center space-y-4">
       <h1 className="text-xl font-bold text-slate-900 dark:text-white">Halaman tidak dapat dimuat</h1>
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        Terjadi gangguan saat mengambil data LMS. Periksa koneksi lalu coba lagi.
+        Terjadi gangguan saat mengambil data LONTAR. Periksa koneksi lalu coba lagi.
       </p>
       <button
         type="button"

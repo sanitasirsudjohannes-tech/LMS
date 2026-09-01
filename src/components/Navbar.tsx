@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserProfile } from '@/types';
 import { StorageAPI, initCurrentUser } from '@/lib/storage';
-import { BookOpen, LogOut, Shield, User, Menu, X, Award } from 'lucide-react';
+import { LogOut, Shield, User, Menu, X, Award } from 'lucide-react';
+import LontarLogo from '@/components/LontarLogo';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -38,12 +39,10 @@ export default function Navbar() {
           
           {/* Logo & Brand */}
           <Link href={currentUser?.role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-slate-100 flex items-center justify-center text-white dark:text-slate-900 font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
-              <BookOpen className="w-5 h-5" />
-            </div>
+            <LontarLogo priority className="shadow-sm ring-1 ring-slate-200 transition-transform group-hover:scale-105 dark:ring-slate-700" />
             <div>
-              <span className="font-semibold text-slate-900 dark:text-white tracking-tight text-base block">LMS Pelatihan</span>
-              <span className="text-[10px] text-slate-500 font-medium block -mt-0.5">Online Training System</span>
+              <span className="font-bold text-[#07375c] dark:text-sky-300 tracking-[0.12em] text-base block">LONTAR</span>
+              <span className="hidden min-[390px]:block text-[9px] text-slate-500 font-medium -mt-0.5">LMS Online & Pelatihan Terpadu</span>
             </div>
           </Link>
 

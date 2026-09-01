@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { StorageAPI } from '@/lib/storage';
 import { User, Mail, Building, Lock, FileText, Phone, ArrowRight, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
+import LontarLogo from '@/components/LontarLogo';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -75,7 +76,8 @@ export default function RegisterPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
 
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Pendaftaran Peserta</h1>
+          <LontarLogo className="mx-auto mb-3 ring-1 ring-slate-200 dark:ring-slate-700" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Pendaftaran Peserta LONTAR</h1>
           <p className="text-xs text-slate-500">Lengkapi data diri untuk membuat akun pelatihan</p>
         </div>
 

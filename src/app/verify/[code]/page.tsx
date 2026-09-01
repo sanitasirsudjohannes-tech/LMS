@@ -145,7 +145,7 @@ export default function VerifyCertificatePage() {
         ) : (
           <div className="text-center space-y-4 pt-2">
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Kode verifikasi <strong>&quot;{code}&quot;</strong> tidak terdaftar dalam basis data sertifikat LMS Pelatihan Online. Pastikan Anda memasukkan kode yang benar.
+              Kode verifikasi <strong>&quot;{code}&quot;</strong> tidak terdaftar dalam basis data sertifikat LONTAR. Pastikan Anda memasukkan kode yang benar.
             </p>
             <Link
               href="/"

@@ -1,6 +1,6 @@
-# LMS RSUD Prof. Dr. W.Z. Johannes Kupang
+# LONTAR
 
-Learning Management System internal untuk pelatihan daring RSUD Prof. Dr. W.Z. Johannes Kupang. Aplikasi mendukung alur peserta dari pendaftaran hingga sertifikat digital dan menyediakan panel admin untuk mengelola seluruh pelatihan.
+**LMS Online & Pelatihan Terpadu RSUD Johannes** adalah sistem internal untuk pelatihan daring RSUD Prof. Dr. W.Z. Johannes Kupang. Aplikasi mendukung alur peserta dari pendaftaran hingga sertifikat digital dan menyediakan panel admin untuk mengelola seluruh pelatihan.
 
 ## Fitur utama
 
