@@ -15,7 +15,8 @@ import {
   ArrowRight,
   Sparkles,
   Sliders,
-  Check
+  Check,
+  Building2
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -139,6 +140,16 @@ export default function DashboardPage() {
       
       {/* Header Info Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60 p-3.5">
+          <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Learning Management System</p>
+            <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">RSUD Prof. Dr. W.Z. Johannes Kupang</p>
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
             <span className="text-xs text-slate-500 font-medium">Selamat datang,</span>

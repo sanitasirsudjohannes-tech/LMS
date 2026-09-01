@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Award,
   Sparkles,
-  Users
+  Users,
+  Building2
 } from 'lucide-react';
 
 export default function Home() {
@@ -40,17 +41,27 @@ export default function Home() {
     <div className="space-y-16 py-4">
       {/* Hero Section */}
       <section className="text-center space-y-6 max-w-3xl mx-auto pt-6">
+        <div className="flex items-center justify-center gap-3 text-emerald-800 dark:text-emerald-300">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 flex items-center justify-center">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div className="text-left leading-tight">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.16em]">Learning Management System</p>
+            <p className="text-sm sm:text-base font-bold">RSUD Prof. Dr. W.Z. Johannes Kupang</p>
+          </div>
+        </div>
+
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold tracking-wide border border-slate-200 dark:border-slate-700">
           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span>Platform Pelatihan Online Minimalis & Responsive</span>
+          <span>Platform Pelatihan dan Pengembangan Kompetensi</span>
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-          LMS Pelatihan Online
+          LMS RSUD Johannes Kupang
         </h1>
 
         <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-          Memfasilitasi pendaftaran, penyampaian materi berurutan, evaluasi otomatis, hingga penerbitan sertifikat digital yang dapat diverifikasi secara instan.
+          Platform pembelajaran resmi milik RSUD Prof. Dr. W.Z. Johannes Kupang untuk memfasilitasi pelatihan, evaluasi, dan penerbitan sertifikat digital bagi peserta.
         </p>
 
         {/* CTA Buttons */}
