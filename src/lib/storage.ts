@@ -16,7 +16,7 @@ import { supabase } from './supabase';
 const DEFAULT_CERT_SETTINGS: CertificateSettings = {
   id: '00000000-0000-0000-0000-000000000301',
   training_id: '00000000-0000-0000-0000-000000000001',
-  certificate_enabled: true,
+  certificate_enabled: false,
   numbering_enabled: true,
   number_format: '{NO}/SERT/MFK/{BULAN_ROMAWI}/{TAHUN}',
   start_number: 1,
@@ -47,29 +47,37 @@ let initInFlight: Promise<void> | null = null;
 let lastInitializedAt = 0;
 const CACHE_TTL_MS = 30_000;
 
+function clearCurrentUserCache() {
+  cacheState.currentUser = null;
+  cacheState.testAttempts = [];
+  cacheState.materialProgress = [];
+  cacheState.certificates = [];
+  lastInitializedAt = 0;
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('lms_current_user');
+  }
+}
+
 export async function initCurrentUser(): Promise<UserProfile | null> {
   if (typeof window === 'undefined') return null;
-  if (cacheState.currentUser) return cacheState.currentUser;
 
-  const cached = sessionStorage.getItem('lms_current_user');
-  if (cached) {
-    try {
-      cacheState.currentUser = JSON.parse(cached) as UserProfile;
-      return cacheState.currentUser;
-    } catch {
-      sessionStorage.removeItem('lms_current_user');
-    }
+  // Jangan pernah mempercayai role/identitas dari sessionStorage tanpa
+  // memvalidasinya kembali ke Supabase. Nilai sessionStorage dapat basi atau diubah.
+  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+  if (authError || !authUser) {
+    clearCurrentUserCache();
+    return null;
   }
 
-  const { data: { user: authUser } } = await supabase.auth.getUser();
-  if (!authUser) return null;
-
-  const { data: profileData } = await supabase
+  const { data: profileData, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', authUser.id)
     .single();
-  if (!profileData) return null;
+  if (profileError || !profileData) {
+    clearCurrentUserCache();
+    return null;
+  }
 
   cacheState.currentUser = profileData as UserProfile;
   sessionStorage.setItem('lms_current_user', JSON.stringify(profileData));
@@ -81,9 +89,6 @@ async function fetchLmsData(): Promise<void> {
   if (typeof window === 'undefined') return;
 
   try {
-    // Restore current user without loading the rest of the LMS data.
-    await initCurrentUser();
-
     // 1. Fetch Trainings
     const { data: dbTrainings } = await supabase.from('trainings').select('*').order('created_at', { ascending: false });
     if (dbTrainings && dbTrainings.length > 0) {
@@ -102,7 +107,9 @@ async function fetchLmsData(): Promise<void> {
     // Setelah pelatihan terpilih diketahui, seluruh data independen dimuat paralel.
     const [materialsResult, questionsResult, settingsResult, profilesResult, attemptsResult, progressResult, certificatesResult] = await Promise.all([
       supabase.from('materials').select('*').order('order_number', { ascending: true }),
-      isAdmin ? supabase.from('questions').select('*') : Promise.resolve({ data: [] as Question[] }),
+      isAdmin && cacheState.training
+        ? supabase.from('questions').select('*').eq('training_id', cacheState.training.id)
+        : Promise.resolve({ data: [] as Question[] }),
       supabase.from('certificate_settings').select('*'),
       Promise.resolve({ data: cacheState.currentUser ? [cacheState.currentUser] : [] }),
       userFilter
@@ -148,6 +155,8 @@ async function fetchLmsData(): Promise<void> {
 // Dedup request bersamaan dan gunakan cache singkat saat berpindah halaman.
 export async function initLocalStorage(force = false): Promise<void> {
   if (typeof window === 'undefined') return;
+  const currentUser = await initCurrentUser();
+  if (!currentUser) return;
   if (!force && lastInitializedAt > 0 && Date.now() - lastInitializedAt < CACHE_TTL_MS) return;
   if (initInFlight) return initInFlight;
   initInFlight = fetchLmsData().finally(() => { initInFlight = null; });
@@ -171,13 +180,13 @@ export const StorageAPI = {
 
   setCurrentUser: (user: UserProfile | null) => {
     if (cacheState.currentUser?.id !== user?.id) lastInitializedAt = 0;
+    if (!user) {
+      clearCurrentUserCache();
+      return;
+    }
     cacheState.currentUser = user;
     if (typeof window !== 'undefined') {
-      if (user) {
-        sessionStorage.setItem('lms_current_user', JSON.stringify(user));
-      } else {
-        sessionStorage.removeItem('lms_current_user');
-      }
+      sessionStorage.setItem('lms_current_user', JSON.stringify(user));
     }
   },
 
@@ -256,7 +265,12 @@ export const StorageAPI = {
   },
 
   deleteTraining: async (id: string) => {
-    // Filter local cache
+    // Relasi di schema memakai ON DELETE CASCADE. Hapus induk secara atomik dan
+    // baru ubah cache setelah database mengonfirmasi keberhasilan.
+    const { data: deleted, error } = await supabase.from('trainings').delete().eq('id', id).select('id').maybeSingle();
+    if (error) throw new Error(`Gagal menghapus pelatihan: ${error.message}`);
+    if (!deleted) throw new Error('Pelatihan tidak ditemukan atau Anda tidak memiliki izin untuk menghapusnya.');
+
     cacheState.trainings = cacheState.trainings.filter(t => t.id !== id);
     cacheState.materials = cacheState.materials.filter(m => m.training_id !== id);
     cacheState.questions = cacheState.questions.filter(q => q.training_id !== id);
@@ -271,13 +285,6 @@ export const StorageAPI = {
       }
     }
 
-    // Cascade delete related materials, questions, test_attempts, certificates in Supabase
-    await supabase.from('materials').delete().eq('training_id', id);
-    await supabase.from('questions').delete().eq('training_id', id);
-    await supabase.from('test_attempts').delete().eq('training_id', id);
-    await supabase.from('certificates').delete().eq('training_id', id);
-    const { error } = await supabase.from('trainings').delete().eq('id', id);
-    if (error) console.error('Error deleting training from Supabase:', error.message);
   },
 
   getMaterials: (trainingId?: string): Material[] => {
@@ -286,7 +293,7 @@ export const StorageAPI = {
     return cacheState.materials.filter(m => m.training_id === targetTrainingId);
   },
 
-  saveMaterial: (mat: Partial<Material>): Material => {
+  saveMaterial: async (mat: Partial<Material>): Promise<Material> => {
     const isNew = !mat.id || mat.id.startsWith('m-');
     const targetId = isNew ? crypto.randomUUID() : mat.id!;
 
@@ -302,24 +309,24 @@ export const StorageAPI = {
       active: mat.active !== undefined ? mat.active : true
     };
 
+    const { error } = await supabase.from('materials').upsert(saved);
+    if (error) throw new Error(`Gagal menyimpan materi: ${error.message}`);
+
     if (cacheState.materials.some(m => m.id === mat.id || m.id === targetId)) {
       cacheState.materials = cacheState.materials.map(m => (m.id === mat.id || m.id === targetId ? saved : m));
     } else {
       cacheState.materials.push(saved);
     }
 
-    supabase.from('materials').upsert(saved).then(({ error }) => {
-      if (error) console.error('Supabase saveMaterial error:', error.message);
-    });
-
     return saved;
   },
 
   deleteMaterial: async (id: string) => {
+    const { data: deleted, error } = await supabase.from('materials').delete().eq('id', id).select('id').maybeSingle();
+    if (error) throw new Error(`Gagal menghapus materi: ${error.message}`);
+    if (!deleted) throw new Error('Materi tidak ditemukan atau Anda tidak memiliki izin untuk menghapusnya.');
     cacheState.materials = cacheState.materials.filter(m => m.id !== id);
     cacheState.materialProgress = cacheState.materialProgress.filter(mp => mp.material_id !== id);
-    await supabase.from('material_progress').delete().eq('material_id', id);
-    await supabase.from('materials').delete().eq('id', id);
   },
 
   getQuestions: (testType?: 'pretest' | 'posttest', trainingId?: string): Question[] => {
@@ -330,6 +337,23 @@ export const StorageAPI = {
       list = list.filter(q => q.test_type === testType && q.active);
     }
     return list;
+  },
+
+  loadQuestionsForAdmin: async (trainingId: string): Promise<Question[]> => {
+    if (!trainingId) return [];
+    const { data, error } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('training_id', trainingId)
+      .order('test_type')
+      .order('id');
+    if (error) throw new Error(`Gagal memuat soal admin: ${error.message}`);
+    const loaded = (data || []) as Question[];
+    cacheState.questions = [
+      ...cacheState.questions.filter(question => question.training_id !== trainingId),
+      ...loaded
+    ];
+    return loaded;
   },
 
   loadQuestionsForTest: async (
@@ -344,7 +368,7 @@ export const StorageAPI = {
     return (data || []) as ParticipantQuestion[];
   },
 
-  saveQuestion: (q: Partial<Question>): Question => {
+  saveQuestion: async (q: Partial<Question>): Promise<Question> => {
     const isNew = !q.id || q.id.startsWith('q-');
     const targetId = isNew ? crypto.randomUUID() : q.id!;
 
@@ -361,22 +385,23 @@ export const StorageAPI = {
       active: q.active !== undefined ? q.active : true
     };
 
+    const { error } = await supabase.from('questions').upsert(saved);
+    if (error) throw new Error(`Gagal menyimpan soal: ${error.message}`);
+
     if (cacheState.questions.some(item => item.id === q.id || item.id === targetId)) {
       cacheState.questions = cacheState.questions.map(item => (item.id === q.id || item.id === targetId ? saved : item));
     } else {
       cacheState.questions.push(saved);
     }
 
-    supabase.from('questions').upsert(saved).then(({ error }) => {
-      if (error) console.error('Supabase saveQuestion error:', error.message);
-    });
-
     return saved;
   },
 
   deleteQuestion: async (id: string) => {
+    const { data: deleted, error } = await supabase.from('questions').delete().eq('id', id).select('id').maybeSingle();
+    if (error) throw new Error(`Gagal menghapus soal: ${error.message}`);
+    if (!deleted) throw new Error('Soal tidak ditemukan atau Anda tidak memiliki izin untuk menghapusnya.');
     cacheState.questions = cacheState.questions.filter(q => q.id !== id);
-    await supabase.from('questions').delete().eq('id', id);
   },
 
   saveQuestionsBulk: async (
@@ -446,15 +471,16 @@ export const StorageAPI = {
     return profilePayload;
   },
 
-  updateUserProfile: (id: string, updates: Partial<UserProfile>): UserProfile | null => {
+  updateUserProfile: async (id: string, updates: Partial<UserProfile>): Promise<UserProfile | null> => {
     const p = cacheState.profiles.find(item => item.id === id);
     if (!p) return null;
     const updated = { ...p, ...updates };
+    const { error } = await supabase.from('profiles').upsert(updated);
+    if (error) throw new Error(`Gagal memperbarui profil: ${error.message}`);
     cacheState.profiles = cacheState.profiles.map(item => (item.id === id ? updated : item));
     if (cacheState.currentUser?.id === id) {
       StorageAPI.setCurrentUser(updated);
     }
-    supabase.from('profiles').upsert(updated).then();
     return updated;
   },
 

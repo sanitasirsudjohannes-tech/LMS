@@ -17,6 +17,7 @@ export default function CertificatePage() {
   const [settings, setSettings] = useState<CertificateSettings | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareError, setShareError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,12 +71,18 @@ export default function CertificatePage() {
     window.print();
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!certificate) return;
     const url = `${window.location.origin}/verify/${certificate.verification_code}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setShareError('');
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+      setShareError('Tautan tidak dapat disalin otomatis. Pastikan izin clipboard browser diaktifkan.');
+    }
   };
 
   if (loading || !currentUser) {
@@ -108,6 +115,7 @@ export default function CertificatePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-2">
+      {shareError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{shareError}</div>}
       
       {/* Top Header & Actions */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">

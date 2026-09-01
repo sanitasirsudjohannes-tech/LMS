@@ -21,6 +21,7 @@ export default function PosttestPage() {
   
   const [lastAttemptScore, setLastAttemptScore] = useState<number | null>(null);
   const [isPassed, setIsPassed] = useState(false);
+  const [certificateIssued, setCertificateIssued] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -48,9 +49,14 @@ export default function PosttestPage() {
       // Validate if all materials are completed (PRD Section 12)
       const materials = StorageAPI.getMaterials().filter(m => m.active);
       const userProgress = StorageAPI.getMaterialProgress(user.id);
-      const completedMats = userProgress.filter(p => p.completed_at).map(p => p.material_id);
+      const materialIds = new Set(materials.map(material => material.id));
+      const completedMats = new Set(
+        userProgress
+          .filter(progress => progress.completed_at && materialIds.has(progress.material_id))
+          .map(progress => progress.material_id)
+      );
 
-      if (materials.length > 0 && completedMats.length < materials.length) {
+      if (materials.length > 0 && completedMats.size < materials.length) {
         setIsAccessAllowed(false);
         setAccessErrorMsg('Anda belum menyelesaikan seluruh materi pelatihan. Selesaikan semua materi untuk membuka Post-Test.');
         setLoading(false);
@@ -74,6 +80,7 @@ export default function PosttestPage() {
       if (existingAttempts.length > 0) {
         const passed = existingAttempts.some(a => a.score >= tr.passing_score);
         setIsPassed(passed);
+        setCertificateIssued(!!StorageAPI.getCertificateForUser(user.id, tr.id));
         setLastAttemptScore(existingAttempts[existingAttempts.length - 1].score);
 
         if (passed || existingAttempts.length >= tr.max_posttest_attempts) {
@@ -108,6 +115,7 @@ export default function PosttestPage() {
       if (newAttempt) setAttempts(prev => [...prev, newAttempt]);
       setLastAttemptScore(result.score);
       setIsPassed(result.passed);
+      setCertificateIssued(result.certificate_issued);
       setIsSubmitted(true);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Post-Test gagal dikirim.');
@@ -188,7 +196,9 @@ export default function PosttestPage() {
                 </span>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white pt-2">Selamat! Anda Lulus</h2>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Nilai Anda memenuhi passing grade ({training.passing_score}). Sertifikat pelatihan Anda telah resmi diterbitkan.
+                  {certificateIssued
+                    ? `Nilai Anda memenuhi passing grade (${training.passing_score}). Sertifikat pelatihan Anda telah resmi diterbitkan.`
+                    : `Nilai Anda memenuhi passing grade (${training.passing_score}). Sertifikat belum diterbitkan; hubungi admin untuk memeriksa pengaturan sertifikat.`}
                 </p>
               </div>
             </>
@@ -216,13 +226,21 @@ export default function PosttestPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            {isPassed ? (
+            {isPassed && certificateIssued ? (
               <Link
                 href="/certificate"
                 className="w-full sm:w-auto px-8 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-sm transition-all shadow-md inline-flex items-center justify-center gap-2"
               >
                 <Award className="w-5 h-5" />
                 <span>Lihat & Unduh Sertifikat</span>
+              </Link>
+            ) : isPassed ? (
+              <Link
+                href="/certificates"
+                className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold rounded-xl text-sm transition-all inline-flex items-center justify-center gap-2"
+              >
+                <Award className="w-4 h-4" />
+                <span>Cek Arsip Sertifikat</span>
               </Link>
             ) : remainingAttempts > 0 ? (
               <button

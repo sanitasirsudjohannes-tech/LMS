@@ -7,16 +7,37 @@ import { Users, FileCheck2, BookOpen, GraduationCap, Award, CheckCircle2, XCircl
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+const EMPTY_STATS: AdminStats = {
+  totalParticipants: 0,
+  completedPretest: 0,
+  inProgressMaterials: 0,
+  completedAllMaterials: 0,
+  completedPosttest: 0,
+  passed: 0,
+  failed: 0,
+  certificatesIssued: 0
+};
+
 export default function AdminOverviewPage() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [stats, setStats] = useState<AdminStats>(EMPTY_STATS);
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   async function loadStats(trainingId: string) {
-    setStats(null);
-    const { data, error } = await supabase.rpc('admin_training_stats', { p_training_id: trainingId });
-    if (error) throw new Error(`Gagal memuat statistik: ${error.message}`);
-    setStats(data as AdminStats);
+    setLoadingStats(true);
+    setLoadError('');
+    try {
+      const { data, error } = await supabase.rpc('admin_training_stats', { p_training_id: trainingId });
+      if (error) throw new Error(error.message);
+      setStats((data as AdminStats | null) || EMPTY_STATS);
+    } catch (error) {
+      setStats(EMPTY_STATS);
+      setLoadError(`Gagal memuat statistik: ${error instanceof Error ? error.message : 'terjadi kesalahan koneksi.'}`);
+    } finally {
+      setLoadingStats(false);
+    }
   }
 
   useEffect(() => {
@@ -41,8 +62,6 @@ export default function AdminOverviewPage() {
     await loadStats(tr.id);
   };
 
-  if (!stats) return null;
-
   const passingScore = selectedTraining?.passing_score ?? 80;
 
   const statCards = [
@@ -57,6 +76,16 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+          <strong>Ringkasan gagal dimuat.</strong> {loadError}
+          {selectedTraining && (
+            <button type="button" onClick={() => loadStats(selectedTraining.id)} className="ml-2 font-bold underline">
+              Coba lagi
+            </button>
+          )}
+        </div>
+      )}
       
       {/* Active Trainings Catalog in Admin */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
@@ -159,7 +188,7 @@ export default function AdminOverviewPage() {
 
             <div className="space-y-0.5">
               <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-900 dark:text-white">
-                {(card.count ?? 0).toLocaleString('id-ID')}
+                {loadingStats ? '…' : (card.count ?? 0).toLocaleString('id-ID')}
               </span>
               <p className="text-[11px] text-slate-400">{card.label}</p>
             </div>

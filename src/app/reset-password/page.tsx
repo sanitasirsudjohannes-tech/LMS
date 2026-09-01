@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Eye, EyeOff, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { StorageAPI } from '@/lib/storage';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -49,8 +50,9 @@ export default function ResetPasswordPage() {
       setError(updateError.message);
       return;
     }
+    await StorageAPI.logout();
     setSuccess(true);
-    window.setTimeout(() => router.push('/login'), 1800);
+    window.setTimeout(() => router.replace('/login'), 1800);
   };
 
   return (

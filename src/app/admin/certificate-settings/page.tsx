@@ -58,6 +58,12 @@ export default function CertificateSettingsAdminPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (signaturePreview.startsWith('blob:')) URL.revokeObjectURL(signaturePreview);
+    };
+  }, [signaturePreview]);
+
   const handleTrainingChange = (trainingId: string) => {
     StorageAPI.setSelectTraining(trainingId);
     setSelectedTrainingId(trainingId);

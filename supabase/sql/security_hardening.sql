@@ -334,9 +334,13 @@ BEGIN
   WHERE user_id = auth.uid() AND material_id = p_material_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Materi belum dimulai'; END IF;
 
-  SELECT minimum_duration_seconds INTO v_duration
-  FROM public.materials
-  WHERE id = p_material_id;
+  SELECT m.minimum_duration_seconds INTO v_duration
+  FROM public.materials m
+  JOIN public.trainings t ON t.id = m.training_id
+  WHERE m.id = p_material_id AND m.active AND t.active
+    AND (t.start_date IS NULL OR t.start_date <= now())
+    AND (t.end_date IS NULL OR t.end_date >= now());
+  IF NOT FOUND THEN RAISE EXCEPTION 'Materi tidak aktif atau di luar periode pelatihan'; END IF;
 
   IF v_progress.completed_at IS NULL
      AND now() < v_progress.started_at + make_interval(secs => GREATEST(v_duration, 0)) THEN
@@ -524,9 +528,12 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT c.certificate_number, c.verification_code, c.issued_at, c.posttest_score,
-         p.full_name, p.institution, t.title, t.jpl, t.start_date, t.end_date
+         COALESCE(NULLIF(p.full_name, ''), NULLIF(u.raw_user_meta_data ->> 'full_name', ''), NULLIF(split_part(COALESCE(u.email, ''), '@', 1), ''), 'Peserta'),
+         COALESCE(NULLIF(p.institution, ''), NULLIF(u.raw_user_meta_data ->> 'institution', ''), 'Belum diisi'),
+         t.title, t.jpl, t.start_date, t.end_date
   FROM public.certificates c
-  JOIN public.profiles p ON p.id = c.user_id
+  LEFT JOIN public.profiles p ON p.id = c.user_id
+  LEFT JOIN auth.users u ON u.id = c.user_id
   JOIN public.trainings t ON t.id = c.training_id
   WHERE c.verification_code = upper(trim(p_code))
   LIMIT 1;

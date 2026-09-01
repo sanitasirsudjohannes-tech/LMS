@@ -13,7 +13,8 @@ Urutan instalasi database wajib:
 5. Jalankan `supabase/sql/certificate_signature_storage.sql` untuk mengaktifkan unggah PNG tanda tangan direktur.
 6. Jalankan `supabase/sql/training_visibility_and_certificate_archive.sql` untuk memisahkan pelatihan aktif dari arsip sertifikat.
 7. Jalankan `supabase/sql/admin_pagination_and_bandwidth.sql` untuk mengaktifkan filter, statistik, dan pagination hemat bandwidth.
-8. Buat akun admin melalui Supabase Authentication, lalu ikuti `supabase/sql/create_admin.sql` untuk menetapkan perannya.
+8. Jalankan `supabase/sql/bugfix_stability_2026_09.sql` untuk perbaikan hasil tes, profil lama, verifikasi sertifikat, dan validasi periode materi.
+9. Buat akun admin melalui Supabase Authentication, lalu ikuti `supabase/sql/create_admin.sql` untuk menetapkan perannya.
 
 Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengguna tidak ditemukan”, jalankan `supabase/sql/fix_profile_access.sql` untuk memperbaiki izin helper RLS dan melengkapi profil akun lama.
 
@@ -24,8 +25,12 @@ Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengg
 Untuk deployment produksi, tambahkan environment variable berikut di Vercel:
 
 ```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
 NEXT_PUBLIC_APP_URL=https://lmsrsudjohannes.vercel.app
 ```
+
+Ketiganya wajib tersedia pada environment **Production**, **Preview**, dan **Development** yang digunakan, kemudian lakukan Redeploy. Aplikasi tidak lagi memakai URL/key fallback agar salah konfigurasi tidak diam-diam tersambung ke proyek Supabase lain.
 
 Di Supabase Authentication → URL Configuration, gunakan Site URL
 `https://lmsrsudjohannes.vercel.app` dan tambahkan Redirect URL

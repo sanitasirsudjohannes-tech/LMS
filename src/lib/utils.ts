@@ -29,13 +29,46 @@ export function formatDateIndonesian(dateString?: string | Date): string {
   if (!dateString) return '-';
   const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
   if (isNaN(d.getTime())) return '-';
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Makassar'
+  }).format(d);
+}
 
-  const months = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
+export function formatDateInputWita(dateString?: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Makassar'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+export function toWitaDateBoundary(date: string, boundary: 'start' | 'end'): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Format tanggal tidak valid.');
+  const time = boundary === 'start' ? '00:00:00.000' : '23:59:59.999';
+  const parsed = new Date(`${date}T${time}+08:00`);
+  if (Number.isNaN(parsed.getTime())) throw new Error('Tanggal tidak valid.');
+  return parsed.toISOString();
+}
+
+export function isTrainingAvailable(
+  training: { active: boolean; start_date?: string | null; end_date?: string | null },
+  now: Date = new Date()
+): boolean {
+  if (!training.active) return false;
+  const nowMs = now.getTime();
+  const startMs = training.start_date ? new Date(training.start_date).getTime() : Number.NEGATIVE_INFINITY;
+  const endMs = training.end_date ? new Date(training.end_date).getTime() : Number.POSITIVE_INFINITY;
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return false;
+  return startMs <= nowMs && endMs >= nowMs;
 }
 
 export function formatDuration(seconds: number): string {

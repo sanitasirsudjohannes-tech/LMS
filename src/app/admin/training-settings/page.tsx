@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Training } from '@/types';
 import { Plus, Edit2, Trash2, X, Award, Calendar } from 'lucide-react';
+import { formatDateInputWita, toWitaDateBoundary } from '@/lib/utils';
 
 export default function TrainingSettingsAdminPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
@@ -40,17 +41,12 @@ export default function TrainingSettingsAdminPage() {
   };
 
   const formatDateForInput = (isoString?: string) => {
-    if (!isoString) return '';
-    try {
-      return new Date(isoString).toISOString().split('T')[0];
-    } catch {
-      return '';
-    }
+    return formatDateInputWita(isoString);
   };
 
   const handleOpenCreate = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+    const today = formatDateInputWita(new Date().toISOString());
+    const nextMonth = formatDateInputWita(new Date(Date.now() + 30 * 86400000).toISOString());
 
     setEditingId(null);
     setTitle('');
@@ -93,8 +89,8 @@ export default function TrainingSettingsAdminPage() {
         id: editingId || undefined,
         title: title.trim(),
         description: description.trim(),
-        start_date: startDate ? new Date(startDate).toISOString() : undefined,
-        end_date: endDate ? new Date(endDate).toISOString() : undefined,
+        start_date: startDate ? toWitaDateBoundary(startDate, 'start') : undefined,
+        end_date: endDate ? toWitaDateBoundary(endDate, 'end') : undefined,
         passing_score: Number(passingScore),
         max_posttest_attempts: 5,
         jpl: Number(jpl),
@@ -175,8 +171,9 @@ export default function TrainingSettingsAdminPage() {
 
   const formatPeriodDisplay = (startIso?: string, endIso?: string) => {
     if (!startIso && !endIso) return 'Periode: Tidak Diatur';
-    const startStr = startIso ? new Date(startIso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Awal';
-    const endStr = endIso ? new Date(endIso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Selesai';
+    const dateOptions: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' };
+    const startStr = startIso ? new Date(startIso).toLocaleDateString('id-ID', dateOptions) : 'Awal';
+    const endStr = endIso ? new Date(endIso).toLocaleDateString('id-ID', dateOptions) : 'Selesai';
     return `${startStr} - ${endStr}`;
   };
 

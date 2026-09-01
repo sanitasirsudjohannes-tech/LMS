@@ -19,6 +19,7 @@ export default function CertificatesAdminPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -27,6 +28,7 @@ export default function CertificatesAdminPage() {
       const selected = StorageAPI.getTraining() || list[0] || null;
       setTrainings(list);
       setSelectedTrainingId(selected?.id || '');
+      if (!selected) setLoading(false);
     };
     load();
   }, []);
@@ -37,14 +39,26 @@ export default function CertificatesAdminPage() {
   }, [search]);
 
   useEffect(() => {
-    if (!selectedTrainingId) return;
+    if (!selectedTrainingId) {
+      return;
+    }
     let cancelled = false;
     const loadPage = async () => {
       setLoading(true);
+      setLoadError('');
       let matchingIds: string[] | null = null;
       if (debouncedSearch) {
         const safeSearch = debouncedSearch.replace(/[%_,().]/g, ' ');
-        const { data } = await supabase.from('profiles').select('id').or(`full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`).eq('role', 'peserta').limit(1000);
+        const { data, error: profileSearchError } = await supabase.from('profiles').select('id').or(`full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`).eq('role', 'peserta').limit(1000);
+        if (profileSearchError) {
+          if (!cancelled) {
+            setCertificates([]);
+            setTotalCount(0);
+            setLoadError(profileSearchError.message);
+            setLoading(false);
+          }
+          return;
+        }
         matchingIds = (data || []).map(item => item.id);
       }
       let query = supabase.from('certificates').select('*', { count: 'exact' }).eq('training_id', selectedTrainingId).order('issued_at', { ascending: false });
@@ -56,10 +70,17 @@ export default function CertificatesAdminPage() {
       const from = (currentPage - 1) * PAGE_SIZE;
       const { data, count, error } = await query.range(from, from + PAGE_SIZE - 1);
       if (cancelled) return;
-      if (error) { console.error(error); setCertificates([]); setTotalCount(0); setLoading(false); return; }
+      if (error) { console.error(error); setCertificates([]); setTotalCount(0); setLoadError(error.message); setLoading(false); return; }
       const certRows = (data || []) as Certificate[];
       const ids = [...new Set(certRows.map(cert => cert.user_id))];
-      const { data: profileRows } = ids.length ? await supabase.from('profiles').select('*').in('id', ids) : { data: [] };
+      const { data: profileRows, error: profileError } = ids.length ? await supabase.from('profiles').select('*').in('id', ids) : { data: [], error: null };
+      if (profileError) {
+        setCertificates([]);
+        setTotalCount(0);
+        setLoadError(profileError.message);
+        setLoading(false);
+        return;
+      }
       const profileMap = new Map(((profileRows || []) as UserProfile[]).map(profile => [profile.id, profile]));
       setCertificates(certRows.map(cert => ({ ...cert, user_name: profileMap.get(cert.user_id)?.full_name || 'Peserta', user_institution: profileMap.get(cert.user_id)?.institution || '' })));
       setTotalCount(count || 0); setLoading(false);
@@ -72,6 +93,7 @@ export default function CertificatesAdminPage() {
 
   return (
     <div className="space-y-6">
+      {loadError && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"><strong>Daftar sertifikat gagal dimuat.</strong> {loadError}</div>}
       
       <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-800 rounded-2xl p-5 shadow-sm space-y-3">
         <div><h2 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan</h2><p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Sertifikat dimuat per halaman untuk menghemat bandwidth.</p></div>
@@ -115,7 +137,7 @@ export default function CertificatesAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-              {loading ? <tr><td colSpan={6} className="p-8 text-center text-slate-400">Memuat data...</td></tr> : certificates.length > 0 ? (
+              {loading ? <tr><td colSpan={6} className="p-8 text-center text-slate-400">Memuat data...</td></tr> : loadError ? <tr><td colSpan={6} className="p-8 text-center text-red-600">Data gagal dimuat. Periksa pesan kesalahan di atas.</td></tr> : certificates.length > 0 ? (
                 certificates.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                     <td className="p-4">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Material, UserProfile, MaterialProgress } from '@/types';
@@ -23,6 +23,10 @@ export default function MaterialDetailPage() {
   const [accessErrorMsg, setAccessErrorMsg] = useState<string>('');
   const [isTimerCompleted, setIsTimerCompleted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const handleTimerComplete = useCallback(() => {
+    setIsTimerCompleted(true);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -239,7 +243,7 @@ export default function MaterialDetailPage() {
             <TimerWidget
               minimumDurationSeconds={material.minimum_duration_seconds}
               startedAtIso={progress.started_at}
-              onComplete={() => setIsTimerCompleted(true)}
+              onComplete={handleTimerComplete}
               isAlreadyCompleted={!!progress.completed_at}
             />
           </div>

@@ -13,6 +13,8 @@ export default function MaterialsAdminPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [operationError, setOperationError] = useState('');
 
   // Form State
   const [title, setTitle] = useState('');
@@ -51,6 +53,7 @@ export default function MaterialsAdminPage() {
   };
 
   const handleOpenCreate = () => {
+    setOperationError('');
     setEditingId(null);
     setTitle('');
     setDescription('');
@@ -63,6 +66,7 @@ export default function MaterialsAdminPage() {
   };
 
   const handleOpenEdit = (m: Material) => {
+    setOperationError('');
     setEditingId(m.id);
     setTitle(m.title);
     setDescription(m.description || '');
@@ -74,7 +78,7 @@ export default function MaterialsAdminPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const newMat: Partial<Material> = {
       id: editingId || undefined,
@@ -88,27 +92,50 @@ export default function MaterialsAdminPage() {
       active
     };
 
-    StorageAPI.saveMaterial(newMat);
-    setIsModalOpen(false);
-    reloadMaterials();
+    setSaving(true);
+    setOperationError('');
+    try {
+      await StorageAPI.saveMaterial(newMat);
+      setIsModalOpen(false);
+      reloadMaterials();
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Materi gagal disimpan.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm('Apakah Anda yakin ingin menghapus materi ini?')) {
-      await StorageAPI.deleteMaterial(id);
-      reloadMaterials();
+      setOperationError('');
+      try {
+        await StorageAPI.deleteMaterial(id);
+        reloadMaterials();
+      } catch (error) {
+        setOperationError(error instanceof Error ? error.message : 'Materi gagal dihapus.');
+      }
     }
   };
 
-  const handleToggleActive = (m: Material) => {
-    StorageAPI.saveMaterial({ ...m, active: !m.active });
-    reloadMaterials();
+  const handleToggleActive = async (m: Material) => {
+    setOperationError('');
+    try {
+      await StorageAPI.saveMaterial({ ...m, active: !m.active });
+      reloadMaterials();
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Status materi gagal diperbarui.');
+    }
   };
 
   const selectedTrainingObj = trainings.find(t => t.id === selectedTrainingId);
 
   return (
     <div className="space-y-6">
+      {operationError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+          {operationError}
+        </div>
+      )}
       
       {/* Header & Training Selector */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -229,6 +256,7 @@ export default function MaterialsAdminPage() {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
+              {operationError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800">{operationError}</div>}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Judul Materi</label>
                 <input
@@ -324,9 +352,10 @@ export default function MaterialsAdminPage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={saving}
                   className="px-5 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-bold"
                 >
-                  Simpan Materi
+                  {saving ? 'Menyimpan...' : 'Simpan Materi'}
                 </button>
               </div>
 

@@ -26,6 +26,7 @@ export default function ParticipantsAdminPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const selectedTraining = trainings.find(item => item.id === selectedTrainingId) || null;
 
   useEffect(() => {
@@ -49,12 +50,18 @@ export default function ParticipantsAdminPage() {
     let cancelled = false;
     const loadPage = async () => {
       setLoading(true);
+      setLoadError('');
       const { data, error } = await supabase.rpc('admin_training_participants', {
         p_training_id: selectedTrainingId, p_search: debouncedSearch, p_status: filterStatus,
         p_limit: PAGE_SIZE, p_offset: (currentPage - 1) * PAGE_SIZE
       });
       if (cancelled) return;
-      if (error) { console.error(error); setRows([]); setTotalCount(0); }
+      if (error) {
+        console.error(error);
+        setRows([]);
+        setTotalCount(0);
+        setLoadError(error.message);
+      }
       else {
         const result = (data || []) as ParticipantRow[];
         setRows(result);
@@ -92,6 +99,7 @@ export default function ParticipantsAdminPage() {
   };
 
   return <div className="space-y-6">
+    {loadError && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"><strong>Daftar peserta gagal dimuat.</strong> {loadError}</div>}
     <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-800 rounded-2xl p-5 shadow-sm space-y-3">
       <div><h2 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan</h2><p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Data dimuat per halaman agar lebih cepat dan hemat bandwidth.</p></div>
       <select value={selectedTrainingId} onChange={event => handleTrainingChange(event.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -108,7 +116,7 @@ export default function ParticipantsAdminPage() {
     </div>
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider"><tr><th className="p-4">Peserta & Instansi</th><th className="p-4 text-center">Pre-Test</th><th className="p-4 text-center">Post-Test</th><th className="p-4 text-center">Status</th><th className="p-4">No. Sertifikat</th></tr></thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">{loading ? <tr><td colSpan={5} className="p-8 text-center text-slate-400">Memuat data...</td></tr> : rows.length ? rows.map(row => <tr key={row.user_id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40"><td className="p-4"><p className="font-bold text-slate-900 dark:text-white text-sm">{row.full_name}</p><p className="text-slate-400 text-[11px]">{row.email} • {row.institution}</p></td><td className="p-4 text-center font-mono font-bold">{row.pre_score ?? '-'}</td><td className="p-4 text-center font-mono font-bold">{row.post_score ?? '-'}</td><td className="p-4 text-center">{row.status === 'Lulus' ? <span className="inline-flex items-center gap-1 text-emerald-700 font-bold"><CheckCircle2 className="w-3 h-3" />Lulus</span> : row.status === 'Belum Lulus' ? <span className="inline-flex items-center gap-1 text-red-700 font-bold"><XCircle className="w-3 h-3" />Belum Lulus</span> : <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{row.status}</span>}</td><td className="p-4 font-mono">{row.certificate_number || '-'}</td></tr>) : <tr><td colSpan={5} className="p-8 text-center text-slate-400">Tidak ada data peserta ditemukan.</td></tr>}</tbody></table></div>
+        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">{loading ? <tr><td colSpan={5} className="p-8 text-center text-slate-400">Memuat data...</td></tr> : loadError ? <tr><td colSpan={5} className="p-8 text-center text-red-600">Data gagal dimuat. Periksa pesan kesalahan di atas.</td></tr> : rows.length ? rows.map(row => <tr key={row.user_id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40"><td className="p-4"><p className="font-bold text-slate-900 dark:text-white text-sm">{row.full_name}</p><p className="text-slate-400 text-[11px]">{row.email} • {row.institution}</p></td><td className="p-4 text-center font-mono font-bold">{row.pre_score ?? '-'}</td><td className="p-4 text-center font-mono font-bold">{row.post_score ?? '-'}</td><td className="p-4 text-center">{row.status === 'Lulus' ? <span className="inline-flex items-center gap-1 text-emerald-700 font-bold"><CheckCircle2 className="w-3 h-3" />Lulus</span> : row.status === 'Belum Lulus' ? <span className="inline-flex items-center gap-1 text-red-700 font-bold"><XCircle className="w-3 h-3" />Belum Lulus</span> : <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{row.status}</span>}</td><td className="p-4 font-mono">{row.certificate_number || '-'}</td></tr>) : <tr><td colSpan={5} className="p-8 text-center text-slate-400">Tidak ada data peserta ditemukan.</td></tr>}</tbody></table></div>
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500"><span>Menampilkan {rows.length} dari {totalCount} peserta</span><div className="flex items-center gap-2"><button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || loading} className="p-1.5 rounded-lg border disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button><span className="font-semibold text-slate-900 dark:text-white">Halaman {currentPage} dari {totalPages}</span><button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || loading} className="p-1.5 rounded-lg border disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button></div></div>
     </div>
   </div>;

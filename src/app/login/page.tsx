@@ -42,16 +42,37 @@ export default function LoginPage() {
       }
 
       // 2. Ambil profil dari tabel profiles berdasarkan auth user id
-      const { data: profileData, error: profileError } = await supabase
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authData.user.id)
         .single();
 
       if (profileError || !profileData) {
-        setError('Profil pengguna tidak ditemukan. Hubungi administrator.');
-        setLoading(false);
-        return;
+        // Pulihkan profil peserta lama yang Auth-nya ada tetapi baris profiles-nya
+        // belum pernah terbentuk. Role selalu peserta agar metadata tidak dapat
+        // dipakai untuk menaikkan hak akses menjadi admin.
+        const metadata = authData.user.user_metadata || {};
+        const recoveryProfile = {
+          id: authData.user.id,
+          full_name: String(metadata.full_name || email.split('@')[0] || 'Peserta'),
+          email: authData.user.email || email.trim(),
+          institution: String(metadata.institution || ''),
+          nip_nik: String(metadata.nip_nik || ''),
+          phone: String(metadata.phone || ''),
+          role: 'peserta' as const,
+          created_at: authData.user.created_at || new Date().toISOString()
+        };
+        const recovered = await supabase.from('profiles').insert(recoveryProfile).select('*').single();
+        profileData = recovered.data;
+        profileError = recovered.error;
+
+        if (profileError || !profileData) {
+          await supabase.auth.signOut();
+          setError(`Profil pengguna tidak dapat dipulihkan: ${profileError?.message || 'data profil tidak tersedia'}. Hubungi administrator.`);
+          setLoading(false);
+          return;
+        }
       }
 
       // 3. Simpan user ke state & redirect berdasarkan role

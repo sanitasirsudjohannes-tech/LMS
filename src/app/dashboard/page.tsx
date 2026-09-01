@@ -17,6 +17,7 @@ import {
   Check,
   Building2
 } from 'lucide-react';
+import { isTrainingAvailable } from '@/lib/utils';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -61,7 +62,7 @@ export default function DashboardPage() {
       }
       setCurrentUser(user);
 
-      const listTr = StorageAPI.getTrainings().filter(t => t.active);
+      const listTr = StorageAPI.getTrainings().filter(training => isTrainingAvailable(training));
       setTrainings(listTr);
 
       const previouslySelected = StorageAPI.getTraining();
@@ -94,12 +95,12 @@ export default function DashboardPage() {
   const hasCompletedPretest = !!pretestAttempt;
   const completedMaterialIds = materialProgress.filter(p => p.completed_at).map(p => p.material_id);
   const completedMaterialsCount = materials.filter(m => completedMaterialIds.includes(m.id)).length;
-  const hasCompletedAllMaterials = materials.length > 0 && completedMaterialsCount === materials.length;
+  const hasCompletedAllMaterials = materials.length === 0 || completedMaterialsCount === materials.length;
   
   const bestPosttestScore = posttestAttempts.reduce((max, a) => Math.max(max, a.score), 0);
   const passingScore = selectedTraining?.passing_score || 80;
   const isPassedPosttest = posttestAttempts.some(a => a.score >= passingScore);
-  const hasCertificate = !!certificate || isPassedPosttest;
+  const hasCertificate = !!certificate;
 
   const totalSteps = 1 + materials.length + 2;
   let currentStepPoints = 0;
@@ -128,10 +129,14 @@ export default function DashboardPage() {
     ctaLink = '/posttest';
     ctaText = 'Mulai Post-Test';
     ctaSub = `Passing grade minimum: ${passingScore}`;
-  } else {
+  } else if (hasCertificate) {
     ctaLink = '/certificate';
     ctaText = 'Unduh Sertifikat PDF';
     ctaSub = 'Selamat! Pelatihan telah selesai diselesaikan';
+  } else {
+    ctaLink = '/certificates';
+    ctaText = 'Cek Arsip Sertifikat';
+    ctaSub = 'Anda lulus; sertifikat belum diterbitkan oleh sistem';
   }
 
   return (

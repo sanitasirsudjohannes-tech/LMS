@@ -20,6 +20,9 @@ export default function QuestionsAdminPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [operationError, setOperationError] = useState('');
 
   // Form State
   const [testType, setTestType] = useState<'pretest' | 'posttest'>('pretest');
@@ -39,7 +42,16 @@ export default function QuestionsAdminPage() {
       const current = StorageAPI.getTraining();
       const activeId = current ? current.id : (listTr[0]?.id || '');
       setSelectedTrainingId(activeId);
-      setQuestions(activeId ? StorageAPI.getQuestions(undefined, activeId) : []);
+      if (activeId) {
+        setLoadingQuestions(true);
+        try {
+          setQuestions(await StorageAPI.loadQuestionsForAdmin(activeId));
+        } catch (error) {
+          setOperationError(error instanceof Error ? error.message : 'Soal gagal dimuat.');
+        } finally {
+          setLoadingQuestions(false);
+        }
+      }
     };
     load();
   }, []);
@@ -52,13 +64,23 @@ export default function QuestionsAdminPage() {
     }
   };
 
-  const handleTrainingChange = (trId: string) => {
+  const handleTrainingChange = async (trId: string) => {
     setSelectedTrainingId(trId);
     StorageAPI.setSelectTraining(trId);
-    reloadQuestions(trId);
+    setLoadingQuestions(true);
+    setOperationError('');
+    try {
+      setQuestions(await StorageAPI.loadQuestionsForAdmin(trId));
+    } catch (error) {
+      setQuestions([]);
+      setOperationError(error instanceof Error ? error.message : 'Soal gagal dimuat.');
+    } finally {
+      setLoadingQuestions(false);
+    }
   };
 
   const handleOpenCreate = () => {
+    setOperationError('');
     setEditingId(null);
     setTestType(activeTab);
     setQuestionText('');
@@ -72,6 +94,7 @@ export default function QuestionsAdminPage() {
   };
 
   const handleOpenEdit = (q: Question) => {
+    setOperationError('');
     setEditingId(q.id);
     setTestType(q.test_type);
     setQuestionText(q.question);
@@ -84,7 +107,7 @@ export default function QuestionsAdminPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const newQ: Partial<Question> = {
       id: editingId || undefined,
@@ -99,15 +122,28 @@ export default function QuestionsAdminPage() {
       active
     };
 
-    StorageAPI.saveQuestion(newQ);
-    setIsModalOpen(false);
-    reloadQuestions();
+    setSaving(true);
+    setOperationError('');
+    try {
+      await StorageAPI.saveQuestion(newQ);
+      setIsModalOpen(false);
+      reloadQuestions();
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Soal gagal disimpan.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm('Apakah Anda yakin ingin menghapus soal ini?')) {
-      await StorageAPI.deleteQuestion(id);
-      reloadQuestions();
+      setOperationError('');
+      try {
+        await StorageAPI.deleteQuestion(id);
+        reloadQuestions();
+      } catch (error) {
+        setOperationError(error instanceof Error ? error.message : 'Soal gagal dihapus.');
+      }
     }
   };
 
@@ -179,6 +215,11 @@ export default function QuestionsAdminPage() {
 
   return (
     <div className="space-y-6">
+      {operationError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+          {operationError}
+        </div>
+      )}
       
       {/* Header & Controls */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -257,7 +298,11 @@ export default function QuestionsAdminPage() {
 
       {/* Questions List */}
       <div className="space-y-4">
-        {filteredQuestions.length > 0 ? (
+        {loadingQuestions ? (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-xs">
+            Memuat soal pelatihan...
+          </div>
+        ) : filteredQuestions.length > 0 ? (
           filteredQuestions.map((q, idx) => (
             <div
               key={q.id}
@@ -339,6 +384,7 @@ export default function QuestionsAdminPage() {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
+              {operationError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800">{operationError}</div>}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jenis Tes</label>
                 <select
@@ -424,9 +470,10 @@ export default function QuestionsAdminPage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={saving}
                   className="px-5 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-bold"
                 >
-                  Simpan Soal
+                  {saving ? 'Menyimpan...' : 'Simpan Soal'}
                 </button>
               </div>
 
