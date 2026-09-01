@@ -17,7 +17,7 @@ SELECT extensions.pgcrypto_version(); -- test agar extension aktif
 -- 1. Buka: Authentication → Users → "Add user" (tombol kanan atas)
 -- 2. Isi:
 --      Email    : admin@lms.id
---      Password : Admin1234!
+--      Password : gunakan password unik yang kuat (jangan simpan di repository)
 --      (centang "Auto confirm user")
 -- 3. Klik "Create user"
 -- 4. Salin UUID user yang baru dibuat

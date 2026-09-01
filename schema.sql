@@ -226,3 +226,44 @@ BEGIN
   RETURN jsonb_build_object('status', 'success', 'verification_code', v_code, 'certificate_number', v_cert_num);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Fail closed untuk instalasi baru. Policy/RPC least-privilege yang membuat
+-- aplikasi berfungsi dipasang oleh security_hardening.sql setelah schema ini.
+DROP POLICY "Allow public read trainings" ON public.trainings;
+DROP POLICY "Allow insert trainings" ON public.trainings;
+DROP POLICY "Allow update trainings" ON public.trainings;
+DROP POLICY "Allow delete trainings" ON public.trainings;
+DROP POLICY "Allow public read materials" ON public.materials;
+DROP POLICY "Allow insert materials" ON public.materials;
+DROP POLICY "Allow update materials" ON public.materials;
+DROP POLICY "Allow delete materials" ON public.materials;
+DROP POLICY "Allow public read questions" ON public.questions;
+DROP POLICY "Allow insert questions" ON public.questions;
+DROP POLICY "Allow update questions" ON public.questions;
+DROP POLICY "Allow delete questions" ON public.questions;
+DROP POLICY "Allow public read certificate_settings" ON public.certificate_settings;
+DROP POLICY "Allow insert certificate_settings" ON public.certificate_settings;
+DROP POLICY "Allow update certificate_settings" ON public.certificate_settings;
+DROP POLICY "Allow delete certificate_settings" ON public.certificate_settings;
+DROP POLICY "Allow read profiles" ON public.profiles;
+DROP POLICY "Allow insert profiles" ON public.profiles;
+DROP POLICY "Allow update profiles" ON public.profiles;
+DROP POLICY "Allow delete profiles" ON public.profiles;
+DROP POLICY "Allow read test_attempts" ON public.test_attempts;
+DROP POLICY "Allow insert test_attempts" ON public.test_attempts;
+DROP POLICY "Allow update test_attempts" ON public.test_attempts;
+DROP POLICY "Allow delete test_attempts" ON public.test_attempts;
+DROP POLICY "Allow read material_progress" ON public.material_progress;
+DROP POLICY "Allow insert material_progress" ON public.material_progress;
+DROP POLICY "Allow update material_progress" ON public.material_progress;
+DROP POLICY "Allow delete material_progress" ON public.material_progress;
+DROP POLICY "Allow read certificates" ON public.certificates;
+DROP POLICY "Allow insert certificates" ON public.certificates;
+DROP POLICY "Allow update certificates" ON public.certificates;
+DROP POLICY "Allow delete certificates" ON public.certificates;
+REVOKE ALL ON TABLE public.profiles, public.trainings, public.materials,
+  public.questions, public.test_attempts, public.material_progress,
+  public.certificate_settings, public.certificates FROM anon, authenticated;
+REVOKE ALL ON FUNCTION public.issue_certificate(UUID, UUID, NUMERIC)
+  FROM PUBLIC, anon, authenticated;
+DROP FUNCTION public.issue_certificate(UUID, UUID, NUMERIC);

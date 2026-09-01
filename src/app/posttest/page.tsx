@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { Question, UserProfile, Training, TestAttempt } from '@/types';
+import { ParticipantQuestion, UserProfile, Training, TestAttempt } from '@/types';
 import { GraduationCap, CheckCircle2, XCircle, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -12,7 +12,7 @@ export default function PosttestPage() {
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [training, setTraining] = useState<Training | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<ParticipantQuestion[]>([]);
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({});
   
@@ -23,6 +23,8 @@ export default function PosttestPage() {
   const [isPassed, setIsPassed] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -43,7 +45,7 @@ export default function PosttestPage() {
         return;
       }
 
-      const qList = StorageAPI.getQuestions('posttest');
+      const qList = await StorageAPI.loadQuestionsForTest(tr.id, 'posttest');
       setQuestions(qList);
 
       // Validate if all materials are completed (PRD Section 12)
@@ -82,7 +84,7 @@ export default function PosttestPage() {
     setAnswers(prev => ({ ...prev, [questionId]: option }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !training) return;
 
@@ -91,32 +93,19 @@ export default function PosttestPage() {
       return;
     }
 
-    let correctCount = 0;
-    questions.forEach(q => {
-      if (answers[q.id] === q.correct_answer) {
-        correctCount++;
-      }
-    });
-
-    const score = Math.round((correctCount / questions.length) * 100);
-    const passed = score >= training.passing_score;
-
-    const newAttempt = StorageAPI.saveTestAttempt({
-      user_id: currentUser.id,
-      training_id: training.id,
-      test_type: 'posttest',
-      score: score,
-      attempt_number: attempts.length + 1,
-      answers
-    });
-
-    setAttempts(prev => [...prev, newAttempt]);
-    setLastAttemptScore(score);
-    setIsPassed(passed);
-    setIsSubmitted(true);
-
-    if (passed) {
-      StorageAPI.issueCertificate(currentUser.id, score);
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const result = await StorageAPI.submitTestAttempt(training.id, 'posttest', answers);
+      const newAttempt = StorageAPI.getTestAttempts(currentUser.id, 'posttest', training.id).at(-1);
+      if (newAttempt) setAttempts(prev => [...prev, newAttempt]);
+      setLastAttemptScore(result.score);
+      setIsPassed(result.passed);
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Post-Test gagal dikirim.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -245,6 +234,7 @@ export default function PosttestPage() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
+          {submitError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">{submitError}</div>}
           {questions.map((q, qIdx) => (
             <div
               key={q.id}
@@ -300,10 +290,10 @@ export default function PosttestPage() {
 
             <button
               type="submit"
-              disabled={Object.keys(answers).length < questions.length}
+              disabled={submitting || Object.keys(answers).length < questions.length}
               className="w-full sm:w-auto px-8 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-bold rounded-xl text-sm transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <span>Kirim Jawaban Post-Test</span>
+              <span>{submitting ? 'Mengirim...' : 'Kirim Jawaban Post-Test'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

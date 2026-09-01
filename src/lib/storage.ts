@@ -7,9 +7,10 @@ import {
   MaterialProgress,
   CertificateSettings,
   Certificate,
-  AdminStats
+  AdminStats,
+  ParticipantQuestion,
+  SubmittedTestResult
 } from '@/types';
-import { generateVerificationCode, formatCertificateNumber } from './utils';
 import { supabase } from './supabase';
 
 const DEFAULT_CERT_SETTINGS: CertificateSettings = {
@@ -330,6 +331,18 @@ export const StorageAPI = {
     return list;
   },
 
+  loadQuestionsForTest: async (
+    trainingId: string,
+    testType: 'pretest' | 'posttest'
+  ): Promise<ParticipantQuestion[]> => {
+    const { data, error } = await supabase.rpc('get_test_questions', {
+      p_training_id: trainingId,
+      p_test_type: testType
+    });
+    if (error) throw new Error(`Gagal memuat soal: ${error.message}`);
+    return (data || []) as ParticipantQuestion[];
+  },
+
   saveQuestion: (q: Partial<Question>): Question => {
     const isNew = !q.id || q.id.startsWith('q-');
     const targetId = isNew ? crypto.randomUUID() : q.id!;
@@ -456,68 +469,57 @@ export const StorageAPI = {
     return list;
   },
 
-  saveTestAttempt: (attempt: Omit<TestAttempt, 'id' | 'started_at' | 'submitted_at'>): TestAttempt => {
-    const newAttempt: TestAttempt = {
-      ...attempt,
-      id: crypto.randomUUID(),
-      training_id: attempt.training_id || cacheState.training?.id || '',
-      started_at: new Date().toISOString(),
-      submitted_at: new Date().toISOString()
-    };
-    cacheState.testAttempts.push(newAttempt);
-    
-    // Save to Supabase (omit local 'answers' field if schema doesn't have it)
-    const dbPayload = {
-      id: newAttempt.id,
-      user_id: newAttempt.user_id,
-      training_id: newAttempt.training_id,
-      test_type: newAttempt.test_type,
-      score: newAttempt.score,
-      attempt_number: newAttempt.attempt_number,
-      started_at: newAttempt.started_at,
-      submitted_at: newAttempt.submitted_at
-    };
-    supabase.from('test_attempts').insert(dbPayload).then();
-
-    return newAttempt;
+  submitTestAttempt: async (
+    trainingId: string,
+    testType: 'pretest' | 'posttest',
+    answers: Record<string, string>
+  ): Promise<SubmittedTestResult> => {
+    const { data, error } = await supabase.rpc('submit_test_attempt', {
+      p_training_id: trainingId,
+      p_test_type: testType,
+      p_answers: answers
+    });
+    if (error) throw new Error(error.message);
+    const result = data as SubmittedTestResult;
+    const currentUserId = cacheState.currentUser?.id;
+    if (currentUserId) {
+      cacheState.testAttempts.push({
+        id: crypto.randomUUID(),
+        user_id: currentUserId,
+        training_id: trainingId,
+        test_type: testType,
+        score: result.score,
+        attempt_number: result.attempt_number,
+        started_at: new Date().toISOString(),
+        submitted_at: new Date().toISOString()
+      });
+    }
+    return result;
   },
 
   getMaterialProgress: (userId: string): MaterialProgress[] => {
     return cacheState.materialProgress.filter(p => p.user_id === userId);
   },
 
-  startMaterial: (userId: string, materialId: string): MaterialProgress => {
+  startMaterial: async (userId: string, materialId: string): Promise<MaterialProgress> => {
     const existing = cacheState.materialProgress.find(p => p.user_id === userId && p.material_id === materialId);
     if (existing) return existing;
 
-    const newProg: MaterialProgress = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      material_id: materialId,
-      started_at: new Date().toISOString()
-    };
+    const { data, error } = await supabase.rpc('start_material_progress', { p_material_id: materialId });
+    if (error) throw new Error(error.message);
+    const newProg = data as MaterialProgress;
     cacheState.materialProgress.push(newProg);
-    supabase.from('material_progress').insert(newProg).then();
     return newProg;
   },
 
-  completeMaterial: (userId: string, materialId: string): MaterialProgress => {
-    let p = cacheState.materialProgress.find(item => item.user_id === userId && item.material_id === materialId);
-    if (!p) {
-      p = {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        material_id: materialId,
-        started_at: new Date().toISOString(),
-        completed_at: new Date().toISOString()
-      };
-      cacheState.materialProgress.push(p);
-    } else {
-      p.completed_at = new Date().toISOString();
-    }
-
-    supabase.from('material_progress').upsert(p).then();
-    return p;
+  completeMaterial: async (userId: string, materialId: string): Promise<MaterialProgress> => {
+    const p = cacheState.materialProgress.find(item => item.user_id === userId && item.material_id === materialId);
+    const { data, error } = await supabase.rpc('complete_material_progress', { p_material_id: materialId });
+    if (error) throw new Error(error.message);
+    const completed = data as MaterialProgress;
+    if (p) Object.assign(p, completed);
+    else cacheState.materialProgress.push(completed);
+    return completed;
   },
 
   getCertificateSettings: (trainingId?: string): CertificateSettings => {
@@ -585,72 +587,10 @@ export const StorageAPI = {
     const normalizedCode = code.trim().toUpperCase();
     if (!normalizedCode) return null;
 
-    const { data: cert, error } = await supabase
-      .from('certificates')
-      .select('*')
-      .eq('verification_code', normalizedCode)
-      .maybeSingle();
+    const { data: rows, error } = await supabase.rpc('verify_certificate', { p_code: normalizedCode });
     if (error) throw new Error(`Verifikasi sertifikat gagal: ${error.message}`);
-    if (!cert) return null;
-
-    const [{ data: user }, { data: training }] = await Promise.all([
-      supabase.from('profiles').select('full_name, institution').eq('id', cert.user_id).maybeSingle(),
-      supabase.from('trainings').select('title').eq('id', cert.training_id).maybeSingle()
-    ]);
-
-    return {
-      ...cert,
-      user_name: user?.full_name || 'Peserta Pelatihan',
-      user_institution: user?.institution || '',
-      training_title: training?.title || 'Pelatihan LMS'
-    } as Certificate;
-  },
-
-  issueCertificate: (userId: string, posttestScore: number): Certificate => {
-    if (!cacheState.training) throw new Error('Pelatihan aktif tidak ditemukan.');
-    const existing = StorageAPI.getCertificateForUser(userId);
-    if (existing) return existing;
-
-    const user = cacheState.profiles.find(p => p.id === userId) || cacheState.currentUser;
-    const code = generateVerificationCode();
-    const certNum = formatCertificateNumber(
-      cacheState.certSettings.number_format,
-      cacheState.certSettings.current_number,
-      cacheState.certSettings.number_digits
-    );
-
-    const newCert: Certificate = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      training_id: cacheState.training.id,
-      certificate_number: certNum,
-      verification_code: code,
-      issued_at: new Date().toISOString(),
-      posttest_score: posttestScore,
-      user_name: user?.full_name || 'Peserta Pelatihan',
-      user_institution: user?.institution || '',
-      training_title: cacheState.training.title
-    };
-
-    cacheState.certificates.push(newCert);
-
-    // Save core certificate fields to Supabase
-    const dbPayload = {
-      id: newCert.id,
-      user_id: newCert.user_id,
-      training_id: newCert.training_id,
-      certificate_number: newCert.certificate_number,
-      verification_code: newCert.verification_code,
-      issued_at: newCert.issued_at,
-      posttest_score: newCert.posttest_score
-    };
-    supabase.from('certificates').insert(dbPayload).then();
-
-    // Increment current cert number
-    cacheState.certSettings.current_number += 1;
-    supabase.from('certificate_settings').upsert(cacheState.certSettings).then();
-
-    return newCert;
+    const cert = Array.isArray(rows) ? rows[0] : rows;
+    return cert ? cert as Certificate : null;
   },
 
   getAdminStats: (trainingId?: string): AdminStats => {

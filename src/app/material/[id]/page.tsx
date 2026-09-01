@@ -73,7 +73,7 @@ export default function MaterialDetailPage() {
       }
 
       // Record started_at
-      const p = StorageAPI.startMaterial(user.id, targetMat.id);
+      const p = await StorageAPI.startMaterial(user.id, targetMat.id);
       setProgress(p);
 
       // Unlock button immediately if already completed or no timer required
@@ -87,9 +87,14 @@ export default function MaterialDetailPage() {
     load();
   }, [materialId, router]);
 
-  const handleCompleteMaterial = () => {
+  const handleCompleteMaterial = async () => {
     if (!currentUser || !material) return;
-    StorageAPI.completeMaterial(currentUser.id, material.id);
+    try {
+      await StorageAPI.completeMaterial(currentUser.id, material.id);
+    } catch (error) {
+      setAccessErrorMsg(error instanceof Error ? error.message : 'Materi belum dapat diselesaikan.');
+      return;
+    }
 
     const idx = allMaterials.findIndex(m => m.id === material.id);
     if (idx >= 0 && idx < allMaterials.length - 1) {

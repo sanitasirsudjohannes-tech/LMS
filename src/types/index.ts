@@ -48,6 +48,17 @@ export interface Question {
   active: boolean;
 }
 
+export type TestOption = 'A' | 'B' | 'C' | 'D';
+
+export type ParticipantQuestion = Omit<Question, 'correct_answer'>;
+
+export interface SubmittedTestResult {
+  score: number;
+  attempt_number: number;
+  passed: boolean;
+  certificate_issued: boolean;
+}
+
 export interface TestAttempt {
   id: string;
   user_id: string;
