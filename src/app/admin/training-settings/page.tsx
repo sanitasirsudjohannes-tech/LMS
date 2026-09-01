@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Training } from '@/types';
 import { Plus, Edit2, Trash2, X, Award, Calendar } from 'lucide-react';
-import Swal from 'sweetalert2';
 
 export default function TrainingSettingsAdminPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
@@ -76,8 +75,9 @@ export default function TrainingSettingsAdminPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const { default: Swal } = await import('sweetalert2');
 
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       Swal.fire({
@@ -111,7 +111,8 @@ export default function TrainingSettingsAdminPage() {
     reloadTrainings();
   };
 
-  const handleDelete = (t: Training) => {
+  const handleDelete = async (t: Training) => {
+    const { default: Swal } = await import('sweetalert2');
     Swal.fire({
       title: 'Hapus Pelatihan?',
       text: `Apakah Anda yakin ingin menghapus "${t.title}" beserta seluruh materi dan soal di dalamnya?`,
@@ -153,7 +154,8 @@ export default function TrainingSettingsAdminPage() {
     });
   };
 
-  const handleSelectActive = (t: Training) => {
+  const handleSelectActive = async (t: Training) => {
+    const { default: Swal } = await import('sweetalert2');
     StorageAPI.setSelectTraining(t.id);
     setSelectedTraining(t);
     Swal.fire({

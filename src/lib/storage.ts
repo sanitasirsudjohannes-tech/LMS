@@ -43,6 +43,10 @@ const cacheState = {
   currentUser: null as UserProfile | null
 };
 
+let initInFlight: Promise<void> | null = null;
+let lastInitializedAt = 0;
+const CACHE_TTL_MS = 30_000;
+
 export async function initCurrentUser(): Promise<UserProfile | null> {
   if (typeof window === 'undefined') return null;
   if (cacheState.currentUser) return cacheState.currentUser;
@@ -73,7 +77,7 @@ export async function initCurrentUser(): Promise<UserProfile | null> {
 }
 
 // Initializer: Fetch real data directly from Supabase Database
-export async function initLocalStorage(): Promise<void> {
+async function fetchLmsData(): Promise<void> {
   if (typeof window === 'undefined') return;
 
   try {
@@ -91,16 +95,30 @@ export async function initLocalStorage(): Promise<void> {
       cacheState.training = null;
     }
 
-    // 2. Fetch Materials
-    const { data: dbMaterials } = await supabase.from('materials').select('*').order('order_number', { ascending: true });
-    cacheState.materials = dbMaterials || [];
+    const currentUserId = cacheState.currentUser?.id;
+    const isAdmin = cacheState.currentUser?.role === 'admin';
+    const userFilter = currentUserId && !isAdmin ? currentUserId : null;
 
-    // 3. Fetch Questions
-    const { data: dbQuestions } = await supabase.from('questions').select('*');
-    cacheState.questions = dbQuestions || [];
+    // Setelah pelatihan terpilih diketahui, seluruh data independen dimuat paralel.
+    const [materialsResult, questionsResult, settingsResult, profilesResult, attemptsResult, progressResult, certificatesResult] = await Promise.all([
+      supabase.from('materials').select('*').order('order_number', { ascending: true }),
+      isAdmin ? supabase.from('questions').select('*') : Promise.resolve({ data: [] as Question[] }),
+      supabase.from('certificate_settings').select('*'),
+      isAdmin ? supabase.from('profiles').select('*') : Promise.resolve({ data: cacheState.currentUser ? [cacheState.currentUser] : [] }),
+      userFilter
+        ? supabase.from('test_attempts').select('*').eq('user_id', userFilter)
+        : isAdmin ? supabase.from('test_attempts').select('*') : Promise.resolve({ data: [] as TestAttempt[] }),
+      userFilter
+        ? supabase.from('material_progress').select('*').eq('user_id', userFilter)
+        : isAdmin ? supabase.from('material_progress').select('*') : Promise.resolve({ data: [] as MaterialProgress[] }),
+      userFilter
+        ? supabase.from('certificates').select('*').eq('user_id', userFilter)
+        : isAdmin ? supabase.from('certificates').select('*') : Promise.resolve({ data: [] as Certificate[] })
+    ]);
 
-    // 4. Fetch Cert Settings
-    const { data: dbCertSettings } = await supabase.from('certificate_settings').select('*');
+    cacheState.materials = materialsResult.data || [];
+    cacheState.questions = questionsResult.data || [];
+    const dbCertSettings = settingsResult.data;
     if (dbCertSettings && dbCertSettings.length > 0) {
       cacheState.certSettingsList = dbCertSettings;
       cacheState.certSettings = dbCertSettings.find(setting => setting.training_id === cacheState.training?.id) || {
@@ -117,51 +135,23 @@ export async function initLocalStorage(): Promise<void> {
       };
     }
 
-    // 5. Fetch profiles only when required. Participants only need their own profile.
-    if (cacheState.currentUser?.role === 'admin') {
-      const { data: dbProfiles } = await supabase.from('profiles').select('*');
-      cacheState.profiles = dbProfiles || [];
-    } else {
-      cacheState.profiles = cacheState.currentUser ? [cacheState.currentUser] : [];
-    }
-
-    // Load user test attempts, material progress & certs
-    const currentUserId = cacheState.currentUser?.id;
-    if (currentUserId && cacheState.currentUser?.role !== 'admin') {
-      const { data: dbAttempts } = await supabase
-        .from('test_attempts')
-        .select('*')
-        .eq('user_id', currentUserId);
-      if (dbAttempts) cacheState.testAttempts = dbAttempts;
-
-      const { data: dbProgress } = await supabase
-        .from('material_progress')
-        .select('*')
-        .eq('user_id', currentUserId);
-      if (dbProgress) cacheState.materialProgress = dbProgress;
-
-      const { data: dbCerts } = await supabase
-        .from('certificates')
-        .select('*')
-        .eq('user_id', currentUserId);
-      if (dbCerts) cacheState.certificates = dbCerts;
-    } else if (cacheState.currentUser?.role === 'admin') {
-      const { data: dbAttempts } = await supabase.from('test_attempts').select('*');
-      if (dbAttempts) cacheState.testAttempts = dbAttempts;
-
-      const { data: dbProgress } = await supabase.from('material_progress').select('*');
-      if (dbProgress) cacheState.materialProgress = dbProgress;
-
-      const { data: dbCerts } = await supabase.from('certificates').select('*');
-      if (dbCerts) cacheState.certificates = dbCerts;
-    } else {
-      cacheState.testAttempts = [];
-      cacheState.materialProgress = [];
-      cacheState.certificates = [];
-    }
+    cacheState.profiles = profilesResult.data || [];
+    cacheState.testAttempts = attemptsResult.data || [];
+    cacheState.materialProgress = progressResult.data || [];
+    cacheState.certificates = certificatesResult.data || [];
+    lastInitializedAt = Date.now();
   } catch (err) {
     console.error('Supabase Direct Fetch Error:', err);
   }
+}
+
+// Dedup request bersamaan dan gunakan cache singkat saat berpindah halaman.
+export async function initLocalStorage(force = false): Promise<void> {
+  if (typeof window === 'undefined') return;
+  if (!force && lastInitializedAt > 0 && Date.now() - lastInitializedAt < CACHE_TTL_MS) return;
+  if (initInFlight) return initInFlight;
+  initInFlight = fetchLmsData().finally(() => { initInFlight = null; });
+  return initInFlight;
 }
 
 export const StorageAPI = {
@@ -180,6 +170,7 @@ export const StorageAPI = {
   },
 
   setCurrentUser: (user: UserProfile | null) => {
+    if (cacheState.currentUser?.id !== user?.id) lastInitializedAt = 0;
     cacheState.currentUser = user;
     if (typeof window !== 'undefined') {
       if (user) {
@@ -195,6 +186,7 @@ export const StorageAPI = {
     cacheState.testAttempts = [];
     cacheState.materialProgress = [];
     cacheState.certificates = [];
+    lastInitializedAt = 0;
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('lms_current_user');
       sessionStorage.removeItem('lms_selected_training_id');
@@ -491,6 +483,7 @@ export const StorageAPI = {
     });
     if (error) throw new Error(error.message);
     const result = data as SubmittedTestResult;
+    if (result.certificate_issued) lastInitializedAt = 0;
     const currentUserId = cacheState.currentUser?.id;
     if (currentUserId) {
       cacheState.testAttempts.push({

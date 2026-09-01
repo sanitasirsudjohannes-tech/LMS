@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import confetti from 'canvas-confetti';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Certificate, CertificateSettings, UserProfile } from '@/types';
 import CertificateTemplate from '@/components/CertificateTemplate';
@@ -38,6 +37,7 @@ export default function CertificatePage() {
 
       if (cert) {
         try {
+          const { default: confetti } = await import('canvas-confetti');
           confetti({
             particleCount: 80,
             spread: 70,

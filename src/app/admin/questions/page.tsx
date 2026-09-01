@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Question, Training } from '@/types';
 import { Plus, Edit2, Trash2, X, Sliders, Upload, Download, LoaderCircle } from 'lucide-react';
-import Swal from 'sweetalert2';
 import {
   downloadQuestionImportTemplate,
   readQuestionImportFile,
@@ -116,6 +115,7 @@ export default function QuestionsAdminPage() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    const { default: Swal } = await import('sweetalert2');
     if (!selectedTrainingId) {
       await Swal.fire('Pilih Pelatihan', 'Pilih pelatihan tujuan sebelum mengimpor soal.', 'warning');
       return;

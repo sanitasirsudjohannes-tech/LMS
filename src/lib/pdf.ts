@@ -1,11 +1,14 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
 export async function generateCertificatePDF(elementId: string, filename: string = 'sertifikat-pelatihan.pdf'): Promise<void> {
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error('Elemen sertifikat tidak ditemukan.');
   }
+
+  // Library PDF cukup besar; muat hanya saat tombol unduh ditekan.
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf')
+  ]);
 
   // Render HTML element to high-res canvas
   const canvas = await html2canvas(element, {

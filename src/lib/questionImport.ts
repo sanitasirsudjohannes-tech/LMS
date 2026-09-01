@@ -1,4 +1,3 @@
-import { readSheet } from 'read-excel-file/browser';
 import { Question } from '@/types';
 
 export type QuestionImportRow = Omit<Question, 'id' | 'training_id'>;
@@ -85,7 +84,10 @@ const questionKey = (row: Pick<QuestionImportRow, 'test_type' | 'question'>) =>
 
 export async function readQuestionImportFile(file: File): Promise<unknown[][]> {
   const extension = file.name.split('.').pop()?.toLowerCase();
-  if (extension === 'xlsx') return readSheet(file);
+  if (extension === 'xlsx') {
+    const { readSheet } = await import('read-excel-file/browser');
+    return readSheet(file);
+  }
   if (extension === 'csv') return parseCsv(await file.text());
   throw new Error('Format file tidak didukung. Gunakan file .xlsx atau .csv.');
 }
