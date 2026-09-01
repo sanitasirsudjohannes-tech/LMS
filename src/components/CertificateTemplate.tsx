@@ -125,10 +125,19 @@ export default function CertificateTemplate({ certificate, settings, previewMode
         {/* Signatory */}
         <div className="text-right space-y-1">
           <p className="text-xs text-slate-500">Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}</p>
-          <div className="h-12 flex items-center justify-end pr-4">
-            <span className="font-serif italic text-lg font-bold text-slate-700 tracking-widest border-b border-slate-400 px-4">
-              {signatoryName}
-            </span>
+          <div className="h-16 flex items-center justify-end pr-4">
+            {settings?.signatory_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={settings.signatory_image_url}
+                alt={`Tanda tangan ${signatoryName}`}
+                className="max-w-[180px] max-h-16 object-contain"
+              />
+            ) : (
+              <span className="font-serif italic text-lg font-bold text-slate-700 tracking-widest border-b border-slate-400 px-4">
+                {signatoryName}
+              </span>
+            )}
           </div>
           <p className="text-xs font-bold text-slate-900">{signatoryName}</p>
           <p className="text-[11px] text-slate-500">{signatoryTitle}</p>

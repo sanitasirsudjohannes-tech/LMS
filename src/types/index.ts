@@ -92,6 +92,7 @@ export interface CertificateSettings {
   show_posttest_score: boolean;
   signatory_name: string;
   signatory_title: string;
+  signatory_image_url?: string | null;
   updated_at: string;
 }
 

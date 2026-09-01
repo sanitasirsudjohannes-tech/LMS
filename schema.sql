@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS public.certificate_settings (
   show_posttest_score BOOLEAN DEFAULT TRUE,
   signatory_name TEXT DEFAULT 'Nama Direktur',
   signatory_title TEXT DEFAULT 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang',
+  signatory_image_url TEXT,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
