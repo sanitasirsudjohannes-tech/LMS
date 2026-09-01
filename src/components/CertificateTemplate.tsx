@@ -151,7 +151,7 @@ export default function CertificateTemplate({ certificate, settings, previewMode
                 <img
                   src={settings.stamp_image_url}
                   alt="Cap Direktur"
-                  className="absolute z-0 left-1/2 bottom-[-13px] h-[88px] w-[88px] -translate-x-[72%] object-contain opacity-90"
+                  className="absolute z-0 left-1/2 bottom-[-22px] h-[106px] w-[106px] -translate-x-[72%] object-contain opacity-90"
                 />
               )}
               {settings?.signatory_image_url ? (
