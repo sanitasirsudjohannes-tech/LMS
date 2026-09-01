@@ -14,10 +14,12 @@ export default function CertificateSettingsAdminPage() {
   const [numberDigits, setNumberDigits] = useState(4);
   const [currentNumber, setCurrentNumber] = useState(1);
   const [showPosttestScore, setShowPosttestScore] = useState(true);
-  const [signatoryName, setSignatoryName] = useState('Dr. Johanes, Sp.A');
-  const [signatoryTitle, setSignatoryTitle] = useState('Direktur Pelatihan');
+  const [signatoryName, setSignatoryName] = useState('Nama Direktur');
+  const [signatoryTitle, setSignatoryTitle] = useState('Direktur RSUD Prof. Dr. W.Z. Johannes Kupang');
 
   const [savedMsg, setSavedMsg] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -36,22 +38,29 @@ export default function CertificateSettingsAdminPage() {
     load();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    StorageAPI.updateCertificateSettings({
-      certificate_enabled: certificateEnabled,
-      numbering_enabled: numberingEnabled,
-      number_format: numberFormat.trim(),
-      start_number: Number(startNumber),
-      number_digits: Number(numberDigits),
-      current_number: Number(currentNumber),
-      show_posttest_score: showPosttestScore,
-      signatory_name: signatoryName.trim(),
-      signatory_title: signatoryTitle.trim()
-    });
-
-    setSavedMsg(true);
-    setTimeout(() => setSavedMsg(false), 3000);
+    setSaving(true);
+    setSaveError('');
+    try {
+      await StorageAPI.updateCertificateSettings({
+        certificate_enabled: certificateEnabled,
+        numbering_enabled: numberingEnabled,
+        number_format: numberFormat.trim(),
+        start_number: Number(startNumber),
+        number_digits: Number(numberDigits),
+        current_number: Number(currentNumber),
+        show_posttest_score: showPosttestScore,
+        signatory_name: signatoryName.trim(),
+        signatory_title: signatoryTitle.trim()
+      });
+      setSavedMsg(true);
+      setTimeout(() => setSavedMsg(false), 3000);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Pengaturan direktur gagal disimpan.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Live Preview Calculation (PRD Section 14.3 requirement)
@@ -77,6 +86,12 @@ export default function CertificateSettingsAdminPage() {
         <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
           <Check className="w-4 h-4 text-emerald-600" />
           <span>Pengaturan sertifikat berhasil diperbarui!</span>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 text-red-800 text-xs font-semibold">
+          {saveError}
         </div>
       )}
 
@@ -241,34 +256,34 @@ export default function CertificateSettingsAdminPage() {
         {/* Signatory Settings */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
-            3. Penandatangan Sertifikat
+            3. Direktur Rumah Sakit
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Nama Penandatangan
+                Nama Direktur Rumah Sakit
               </label>
               <input
                 type="text"
                 required
                 value={signatoryName}
                 onChange={(e) => setSignatoryName(e.target.value)}
-                placeholder="Dr. Johanes, Sp.A"
+                placeholder="Masukkan nama lengkap beserta gelar"
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Jabatan Penandatangan
+                Jabatan Direktur
               </label>
               <input
                 type="text"
                 required
                 value={signatoryTitle}
                 onChange={(e) => setSignatoryTitle(e.target.value)}
-                placeholder="Direktur Utama Pelatihan"
+                placeholder="Direktur RSUD Prof. Dr. W.Z. Johannes Kupang"
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium"
               />
             </div>
@@ -278,10 +293,11 @@ export default function CertificateSettingsAdminPage() {
         <div className="flex justify-end">
           <button
             type="submit"
+            disabled={saving}
             className="px-8 py-3.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-bold rounded-xl text-sm transition-all shadow-md inline-flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
-            <span>Simpan Pengaturan Sertifikat</span>
+            <span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Sertifikat'}</span>
           </button>
         </div>
 

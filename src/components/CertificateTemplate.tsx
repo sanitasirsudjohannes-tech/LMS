@@ -14,8 +14,13 @@ interface CertificateTemplateProps {
 
 export default function CertificateTemplate({ certificate, settings, previewMode = false }: CertificateTemplateProps) {
   const showScore = settings ? settings.show_posttest_score : true;
-  const signatoryName = settings?.signatory_name || 'Dr. Johanes, Sp.A';
-  const signatoryTitle = settings?.signatory_title || 'Direktur Pelatihan';
+  const signatoryName = settings?.signatory_name || 'Nama Direktur';
+  const signatoryTitle = settings?.signatory_title || 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang';
+  const trainingPeriod = certificate.training_start_date
+    ? certificate.training_end_date && certificate.training_end_date !== certificate.training_start_date
+      ? `${formatDateIndonesian(certificate.training_start_date)} sampai ${formatDateIndonesian(certificate.training_end_date)}`
+      : formatDateIndonesian(certificate.training_start_date)
+    : null;
 
   // Origin for QR Code verification URL
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://lms.pelatihan.id';
@@ -83,6 +88,12 @@ export default function CertificateTemplate({ certificate, settings, previewMode
         <p className="text-xs md:text-sm font-semibold text-slate-700 font-sans">
           Dengan beban pembelajaran {certificate.training_jpl || 1} Jam Pelajaran (JPL)
         </p>
+
+        {trainingPeriod && (
+          <p className="text-xs md:text-sm text-slate-600 font-sans">
+            Dilaksanakan pada {trainingPeriod}
+          </p>
+        )}
 
         {showScore && certificate.posttest_score !== undefined && (
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full font-sans text-xs font-semibold text-slate-700 border border-slate-200">

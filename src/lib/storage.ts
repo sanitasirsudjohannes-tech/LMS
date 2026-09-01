@@ -23,8 +23,8 @@ const DEFAULT_CERT_SETTINGS: CertificateSettings = {
   number_digits: 4,
   current_number: 1,
   show_posttest_score: true,
-  signatory_name: 'Dr. Johanes, Sp.A',
-  signatory_title: 'Direktur Pelatihan',
+  signatory_name: 'Nama Direktur',
+  signatory_title: 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang',
   updated_at: new Date().toISOString()
 };
 
@@ -530,13 +530,14 @@ export const StorageAPI = {
     return cacheState.certSettings;
   },
 
-  updateCertificateSettings: (updates: Partial<CertificateSettings>): CertificateSettings => {
+  updateCertificateSettings: async (updates: Partial<CertificateSettings>): Promise<CertificateSettings> => {
     const updated = { ...cacheState.certSettings, ...updates, updated_at: new Date().toISOString() };
     cacheState.certSettings = updated;
     const existingIndex = cacheState.certSettingsList.findIndex(setting => setting.training_id === updated.training_id);
     if (existingIndex >= 0) cacheState.certSettingsList[existingIndex] = updated;
     else cacheState.certSettingsList.push(updated);
-    supabase.from('certificate_settings').upsert(updated).then();
+    const { error } = await supabase.from('certificate_settings').upsert(updated);
+    if (error) throw new Error(`Gagal menyimpan pengaturan sertifikat: ${error.message}`);
     return updated;
   },
 
@@ -549,7 +550,9 @@ export const StorageAPI = {
         user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
         user_institution: cert.user_institution || user?.institution || '',
         training_title: cert.training_title || training?.title || 'Pelatihan LMS',
-        training_jpl: cert.training_jpl || training?.jpl || 1
+        training_jpl: cert.training_jpl || training?.jpl || 1,
+        training_start_date: cert.training_start_date || training?.start_date,
+        training_end_date: cert.training_end_date || training?.end_date
       };
     });
   },
@@ -567,7 +570,9 @@ export const StorageAPI = {
       user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
       user_institution: cert.user_institution || user?.institution || '',
       training_title: cert.training_title || training?.title || 'Pelatihan LMS',
-      training_jpl: cert.training_jpl || training?.jpl || 1
+      training_jpl: cert.training_jpl || training?.jpl || 1,
+      training_start_date: cert.training_start_date || training?.start_date,
+      training_end_date: cert.training_end_date || training?.end_date
     };
   },
 
@@ -583,7 +588,9 @@ export const StorageAPI = {
       user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
       user_institution: cert.user_institution || user?.institution || '',
       training_title: cert.training_title || training?.title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja',
-      training_jpl: cert.training_jpl || training?.jpl || 1
+      training_jpl: cert.training_jpl || training?.jpl || 1,
+      training_start_date: cert.training_start_date || training?.start_date,
+      training_end_date: cert.training_end_date || training?.end_date
     };
   },
 

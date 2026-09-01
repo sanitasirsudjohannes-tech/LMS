@@ -85,8 +85,8 @@ CREATE TABLE IF NOT EXISTS public.certificate_settings (
   number_digits INT DEFAULT 4,
   current_number INT DEFAULT 1,
   show_posttest_score BOOLEAN DEFAULT TRUE,
-  signatory_name TEXT DEFAULT 'Dr. Johanes, Sp.A',
-  signatory_title TEXT DEFAULT 'Direktur Pelatihan',
+  signatory_name TEXT DEFAULT 'Nama Direktur',
+  signatory_title TEXT DEFAULT 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang',
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -504,7 +504,9 @@ RETURNS TABLE (
   user_name TEXT,
   user_institution TEXT,
   training_title TEXT,
-  training_jpl INTEGER
+  training_jpl INTEGER,
+  training_start_date TIMESTAMPTZ,
+  training_end_date TIMESTAMPTZ
 )
 LANGUAGE SQL
 STABLE
@@ -512,7 +514,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT c.certificate_number, c.verification_code, c.issued_at, c.posttest_score,
-         p.full_name, p.institution, t.title, t.jpl
+         p.full_name, p.institution, t.title, t.jpl, t.start_date, t.end_date
   FROM public.certificates c
   JOIN public.profiles p ON p.id = c.user_id
   JOIN public.trainings t ON t.id = c.training_id

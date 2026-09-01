@@ -107,6 +107,8 @@ export interface Certificate {
   user_institution?: string;
   training_title?: string;
   training_jpl?: number;
+  training_start_date?: string;
+  training_end_date?: string;
 }
 
 export interface AdminStats {
