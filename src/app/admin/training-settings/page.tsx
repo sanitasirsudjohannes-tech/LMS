@@ -26,7 +26,9 @@ export default function TrainingSettingsAdminPage() {
   useEffect(() => {
     const load = async () => {
       await initLocalStorage();
-      reloadTrainings();
+      const list = StorageAPI.getTrainings();
+      setTrainings(list);
+      setSelectedTraining(StorageAPI.getTraining());
     };
     load();
   }, []);
@@ -139,11 +141,11 @@ export default function TrainingSettingsAdminPage() {
             timer: 2000,
             showConfirmButton: false
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           Swal.fire({
             icon: 'error',
             title: 'Gagal Hapus',
-            text: err?.message || 'Terjadi kesalahan saat menghapus pelatihan.'
+            text: err instanceof Error ? err.message : 'Terjadi kesalahan saat menghapus pelatihan.'
           });
         }
       }

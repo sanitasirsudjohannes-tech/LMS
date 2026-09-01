@@ -3,11 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { StorageAPI, initLocalStorage } from '@/lib/storage';
+import { initCurrentUser } from '@/lib/storage';
 import { UserProfile } from '@/types';
 import {
   BookOpen,
-  CheckCircle,
   FileCheck2,
   GraduationCap,
   Lock,
@@ -25,9 +24,10 @@ export default function Home() {
   const [verifyCodeInput, setVerifyCodeInput] = useState('');
 
   useEffect(() => {
-    initLocalStorage();
-    const user = StorageAPI.getCurrentUser();
-    setCurrentUser(user);
+    const load = async () => {
+      setCurrentUser(await initCurrentUser());
+    };
+    load();
   }, []);
 
   const handleVerifySubmit = (e: React.FormEvent) => {

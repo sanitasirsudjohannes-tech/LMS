@@ -2,13 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { CertificateSettings } from '@/types';
 import { formatCertificateNumber } from '@/lib/utils';
-import { Settings, Eye, Check, AlertCircle, Save } from 'lucide-react';
+import { Settings, Eye, Check, Save } from 'lucide-react';
 
 export default function CertificateSettingsAdminPage() {
-  const [settings, setSettings] = useState<CertificateSettings | null>(null);
-  
   // Form controls
   const [certificateEnabled, setCertificateEnabled] = useState(true);
   const [numberingEnabled, setNumberingEnabled] = useState(true);
@@ -23,24 +20,25 @@ export default function CertificateSettingsAdminPage() {
   const [savedMsg, setSavedMsg] = useState(false);
 
   useEffect(() => {
-    initLocalStorage();
-    const st = StorageAPI.getCertificateSettings();
-    setSettings(st);
-
-    setCertificateEnabled(st.certificate_enabled);
-    setNumberingEnabled(st.numbering_enabled);
-    setNumberFormat(st.number_format);
-    setStartNumber(st.start_number);
-    setNumberDigits(st.number_digits);
-    setCurrentNumber(st.current_number || st.start_number);
-    setShowPosttestScore(st.show_posttest_score);
-    setSignatoryName(st.signatory_name);
-    setSignatoryTitle(st.signatory_title);
+    const load = async () => {
+      await initLocalStorage();
+      const st = StorageAPI.getCertificateSettings();
+      setCertificateEnabled(st.certificate_enabled);
+      setNumberingEnabled(st.numbering_enabled);
+      setNumberFormat(st.number_format);
+      setStartNumber(st.start_number);
+      setNumberDigits(st.number_digits);
+      setCurrentNumber(st.current_number || st.start_number);
+      setShowPosttestScore(st.show_posttest_score);
+      setSignatoryName(st.signatory_name);
+      setSignatoryTitle(st.signatory_title);
+    };
+    load();
   }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = StorageAPI.updateCertificateSettings({
+    StorageAPI.updateCertificateSettings({
       certificate_enabled: certificateEnabled,
       numbering_enabled: numberingEnabled,
       number_format: numberFormat.trim(),
@@ -52,7 +50,6 @@ export default function CertificateSettingsAdminPage() {
       signatory_title: signatoryTitle.trim()
     });
 
-    setSettings(updated);
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 3000);
   };

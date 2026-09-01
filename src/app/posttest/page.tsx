@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Question, UserProfile, Training, TestAttempt } from '@/types';
-import { GraduationCap, CheckCircle2, XCircle, ArrowRight, Lock, RefreshCw, Award } from 'lucide-react';
+import { GraduationCap, CheckCircle2, XCircle, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PosttestPage() {
@@ -36,6 +36,12 @@ export default function PosttestPage() {
 
       const tr = StorageAPI.getTraining();
       setTraining(tr);
+      if (!tr) {
+        setIsAccessAllowed(false);
+        setAccessErrorMsg('Belum ada pelatihan aktif yang dapat diikuti.');
+        setLoading(false);
+        return;
+      }
 
       const qList = StorageAPI.getQuestions('posttest');
       setQuestions(qList);
@@ -140,6 +146,19 @@ export default function PosttestPage() {
               Kembali ke Dashboard
             </Link>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="max-w-md mx-auto py-12">
+        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-2xl p-6 text-center space-y-3">
+          <AlertCircle className="w-9 h-9 text-amber-500 mx-auto" />
+          <h2 className="text-base font-bold text-amber-900 dark:text-amber-200">Post-Test Belum Tersedia</h2>
+          <p className="text-xs text-amber-700 dark:text-amber-300">Admin belum menambahkan soal Post-Test untuk pelatihan ini.</p>
+          <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold">Kembali ke Dashboard</button>
         </div>
       </div>
     );
@@ -252,7 +271,7 @@ export default function PosttestPage() {
                     <button
                       key={opt.key}
                       type="button"
-                      onClick={() => handleSelect(q.id, opt.key as any)}
+                      onClick={() => handleSelect(q.id, opt.key as 'A' | 'B' | 'C' | 'D')}
                       className={`w-full p-3 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-center gap-3 ${
                         isSelected
                           ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 shadow-sm'

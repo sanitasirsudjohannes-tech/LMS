@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { TestAttempt, UserProfile } from '@/types';
 import { formatDateIndonesian } from '@/lib/utils';
-import { Search, FileCheck2, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export default function ResultsAdminPage() {
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
@@ -13,9 +13,12 @@ export default function ResultsAdminPage() {
   const [testTypeFilter, setTestTypeFilter] = useState<'all' | 'pretest' | 'posttest'>('all');
 
   useEffect(() => {
-    initLocalStorage();
-    setAttempts(StorageAPI.getTestAttempts());
-    setProfiles(StorageAPI.getProfiles());
+    const load = async () => {
+      await initLocalStorage();
+      setAttempts(StorageAPI.getTestAttempts());
+      setProfiles(StorageAPI.getProfiles());
+    };
+    load();
   }, []);
 
   const getProfile = (userId: string) => {

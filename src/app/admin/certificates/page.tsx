@@ -3,19 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { Certificate, UserProfile } from '@/types';
+import { Certificate } from '@/types';
 import { formatDateIndonesian } from '@/lib/utils';
-import { Search, Award, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Search, ExternalLink } from 'lucide-react';
 
 export default function CertificatesAdminPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    initLocalStorage();
-    setCertificates(StorageAPI.getCertificates());
-    setProfiles(StorageAPI.getProfiles());
+    const load = async () => {
+      await initLocalStorage();
+      setCertificates(StorageAPI.getCertificates());
+    };
+    load();
   }, []);
 
   const filtered = certificates.filter(c => {

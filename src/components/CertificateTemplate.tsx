@@ -24,7 +24,7 @@ export default function CertificateTemplate({ certificate, settings, previewMode
   return (
     <div
       id="certificate-render-target"
-      className="w-full max-w-4xl mx-auto bg-white text-slate-900 border-8 border-slate-900 p-8 md:p-12 relative shadow-2xl overflow-hidden font-serif"
+      className={`w-full max-w-4xl mx-auto bg-white text-slate-900 border-8 border-slate-900 p-8 md:p-12 relative overflow-hidden font-serif ${previewMode ? 'shadow-sm' : 'shadow-2xl'}`}
       style={{ minHeight: '560px' }}
     >
       {/* Decorative Minimalist Border Lines */}

@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   Lock,
   ArrowRight,
-  Sparkles,
   Sliders,
   Check,
   Building2
@@ -32,6 +31,25 @@ export default function DashboardPage() {
   const [materialProgress, setMaterialProgress] = useState<MaterialProgress[]>([]);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const loadTrainingDetails = (userId: string, tr: Training) => {
+    StorageAPI.setSelectTraining(tr.id);
+
+    const mats = StorageAPI.getMaterials(tr.id).filter(m => m.active);
+    setMaterials(mats);
+
+    const pre = StorageAPI.getTestAttempts(userId, 'pretest', tr.id);
+    setPretestAttempt(pre.length > 0 ? pre[0] : null);
+
+    const post = StorageAPI.getTestAttempts(userId, 'posttest', tr.id);
+    setPosttestAttempts(post);
+
+    const mp = StorageAPI.getMaterialProgress(userId);
+    setMaterialProgress(mp);
+
+    const cert = StorageAPI.getCertificateForUser(userId, tr.id);
+    setCertificate(cert);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -57,25 +75,6 @@ export default function DashboardPage() {
     };
     load();
   }, [router]);
-
-  const loadTrainingDetails = (userId: string, tr: Training) => {
-    StorageAPI.setSelectTraining(tr.id);
-
-    const mats = StorageAPI.getMaterials(tr.id).filter(m => m.active);
-    setMaterials(mats);
-
-    const pre = StorageAPI.getTestAttempts(userId, 'pretest');
-    setPretestAttempt(pre.length > 0 ? pre[0] : null);
-
-    const post = StorageAPI.getTestAttempts(userId, 'posttest');
-    setPosttestAttempts(post);
-
-    const mp = StorageAPI.getMaterialProgress(userId);
-    setMaterialProgress(mp);
-
-    const cert = StorageAPI.getCertificateForUser(userId);
-    setCertificate(cert);
-  };
 
   const handleSelectTraining = (tr: Training) => {
     if (!currentUser) return;

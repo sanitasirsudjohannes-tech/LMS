@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Material, Training } from '@/types';
-import { Plus, Edit2, Trash2, BookOpen, Clock, Check, X, Sliders, FileText, Video } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, X, Sliders, FileText, Video } from 'lucide-react';
 import { getMediaType } from '@/lib/mediaUtils';
 
 export default function MaterialsAdminPage() {
@@ -31,7 +31,7 @@ export default function MaterialsAdminPage() {
       const current = StorageAPI.getTraining();
       const activeId = current ? current.id : (listTr[0]?.id || '');
       setSelectedTrainingId(activeId);
-      reloadMaterials(activeId);
+      setMaterials(activeId ? StorageAPI.getMaterials(activeId) : []);
     };
     load();
   }, []);

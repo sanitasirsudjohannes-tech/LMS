@@ -1,6 +1,5 @@
 import {
   UserProfile,
-  UserRole,
   Training,
   Material,
   Question,
@@ -12,18 +11,6 @@ import {
 } from '@/types';
 import { generateVerificationCode, formatCertificateNumber } from './utils';
 import { supabase } from './supabase';
-
-const DEFAULT_TRAINING: Training = {
-  id: '00000000-0000-0000-0000-000000000001',
-  title: 'Pelatihan Standar Pelayanan & Keselamatan Kerja',
-  description: 'Pelatihan wajib untuk seluruh staf dalam meningkatkan mutu pelayanan dan penerapan SPO keselamatan.',
-  start_date: '2026-08-01T00:00:00.000Z',
-  end_date: '2026-12-31T23:59:59.000Z',
-  passing_score: 80,
-  max_posttest_attempts: 3,
-  active: true,
-  created_at: new Date().toISOString()
-};
 
 const DEFAULT_CERT_SETTINGS: CertificateSettings = {
   id: '00000000-0000-0000-0000-000000000301',
@@ -40,12 +27,13 @@ const DEFAULT_CERT_SETTINGS: CertificateSettings = {
   updated_at: new Date().toISOString()
 };
 
-let cacheState = {
-  training: null as any as Training,
+const cacheState = {
+  training: null as Training | null,
   trainings: [] as Training[],
   materials: [] as Material[],
   questions: [] as Question[],
   certSettings: DEFAULT_CERT_SETTINGS,
+  certSettingsList: [] as CertificateSettings[],
   profiles: [] as UserProfile[],
   testAttempts: [] as TestAttempt[],
   materialProgress: [] as MaterialProgress[],
@@ -53,38 +41,52 @@ let cacheState = {
   currentUser: null as UserProfile | null
 };
 
+export async function initCurrentUser(): Promise<UserProfile | null> {
+  if (typeof window === 'undefined') return null;
+  if (cacheState.currentUser) return cacheState.currentUser;
+
+  const cached = sessionStorage.getItem('lms_current_user');
+  if (cached) {
+    try {
+      cacheState.currentUser = JSON.parse(cached) as UserProfile;
+      return cacheState.currentUser;
+    } catch {
+      sessionStorage.removeItem('lms_current_user');
+    }
+  }
+
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  if (!authUser) return null;
+
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .single();
+  if (!profileData) return null;
+
+  cacheState.currentUser = profileData as UserProfile;
+  sessionStorage.setItem('lms_current_user', JSON.stringify(profileData));
+  return cacheState.currentUser;
+}
+
 // Initializer: Fetch real data directly from Supabase Database
 export async function initLocalStorage(): Promise<void> {
   if (typeof window === 'undefined') return;
 
   try {
-    // Restore current user from Supabase Auth session (persists across page navigations)
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser && !cacheState.currentUser) {
-      const cached = sessionStorage.getItem('lms_current_user');
-      if (cached) {
-        cacheState.currentUser = JSON.parse(cached);
-      } else {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-        if (profileData) {
-          cacheState.currentUser = profileData;
-          sessionStorage.setItem('lms_current_user', JSON.stringify(profileData));
-        }
-      }
-    }
+    // Restore current user without loading the rest of the LMS data.
+    await initCurrentUser();
 
     // 1. Fetch Trainings
     const { data: dbTrainings } = await supabase.from('trainings').select('*').order('created_at', { ascending: false });
     if (dbTrainings && dbTrainings.length > 0) {
       cacheState.trainings = dbTrainings;
-      cacheState.training = dbTrainings[0];
+      const selectedTrainingId = sessionStorage.getItem('lms_selected_training_id');
+      cacheState.training = dbTrainings.find(training => training.id === selectedTrainingId) || dbTrainings[0];
     } else {
       cacheState.trainings = [];
-      cacheState.training = null as any;
+      cacheState.training = null;
     }
 
     // 2. Fetch Materials
@@ -98,20 +100,24 @@ export async function initLocalStorage(): Promise<void> {
     // 4. Fetch Cert Settings
     const { data: dbCertSettings } = await supabase.from('certificate_settings').select('*');
     if (dbCertSettings && dbCertSettings.length > 0) {
-      cacheState.certSettings = dbCertSettings[0];
+      cacheState.certSettingsList = dbCertSettings;
+      cacheState.certSettings = dbCertSettings.find(setting => setting.training_id === cacheState.training?.id) || dbCertSettings[0];
     } else {
+      cacheState.certSettingsList = [];
       cacheState.certSettings = DEFAULT_CERT_SETTINGS;
     }
 
-    // 5. Fetch Profiles
-    const { data: dbProfiles } = await supabase.from('profiles').select('*');
-    if (dbProfiles) {
-      cacheState.profiles = dbProfiles;
+    // 5. Fetch profiles only when required. Participants only need their own profile.
+    if (cacheState.currentUser?.role === 'admin') {
+      const { data: dbProfiles } = await supabase.from('profiles').select('*');
+      cacheState.profiles = dbProfiles || [];
+    } else {
+      cacheState.profiles = cacheState.currentUser ? [cacheState.currentUser] : [];
     }
 
     // Load user test attempts, material progress & certs
     const currentUserId = cacheState.currentUser?.id;
-    if (currentUserId) {
+    if (currentUserId && cacheState.currentUser?.role !== 'admin') {
       const { data: dbAttempts } = await supabase
         .from('test_attempts')
         .select('*')
@@ -129,7 +135,7 @@ export async function initLocalStorage(): Promise<void> {
         .select('*')
         .eq('user_id', currentUserId);
       if (dbCerts) cacheState.certificates = dbCerts;
-    } else {
+    } else if (cacheState.currentUser?.role === 'admin') {
       const { data: dbAttempts } = await supabase.from('test_attempts').select('*');
       if (dbAttempts) cacheState.testAttempts = dbAttempts;
 
@@ -138,6 +144,10 @@ export async function initLocalStorage(): Promise<void> {
 
       const { data: dbCerts } = await supabase.from('certificates').select('*');
       if (dbCerts) cacheState.certificates = dbCerts;
+    } else {
+      cacheState.testAttempts = [];
+      cacheState.materialProgress = [];
+      cacheState.certificates = [];
     }
   } catch (err) {
     console.error('Supabase Direct Fetch Error:', err);
@@ -177,6 +187,7 @@ export const StorageAPI = {
     cacheState.certificates = [];
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('lms_current_user');
+      sessionStorage.removeItem('lms_selected_training_id');
       localStorage.clear();
     }
     await supabase.auth.signOut();
@@ -186,7 +197,7 @@ export const StorageAPI = {
     return cacheState.trainings;
   },
 
-  getTraining: (): Training => {
+  getTraining: (): Training | null => {
     return cacheState.training;
   },
 
@@ -194,15 +205,23 @@ export const StorageAPI = {
     const found = cacheState.trainings.find(t => t.id === id);
     if (found) {
       cacheState.training = found;
+      const settings = cacheState.certSettingsList.find(setting => setting.training_id === id);
+      cacheState.certSettings = settings || {
+        ...DEFAULT_CERT_SETTINGS,
+        id: crypto.randomUUID(),
+        training_id: id,
+        current_number: DEFAULT_CERT_SETTINGS.start_number,
+        updated_at: new Date().toISOString()
+      };
+      if (typeof window !== 'undefined') sessionStorage.setItem('lms_selected_training_id', id);
     }
   },
 
   saveTraining: (trData: Partial<Training>): Training => {
-    let saved: Training;
     const isNew = !trData.id;
     const targetId = isNew ? crypto.randomUUID() : trData.id!;
 
-    saved = {
+    const saved: Training = {
       id: targetId,
       title: trData.title || 'Pelatihan Baru',
       description: trData.description || '',
@@ -230,7 +249,7 @@ export const StorageAPI = {
   },
 
   updateTraining: (updates: Partial<Training>): Training => {
-    const updated = { ...cacheState.training, ...updates };
+    const updated = { ...(cacheState.training || {}), ...updates };
     return StorageAPI.saveTraining(updated);
   },
 
@@ -243,7 +262,11 @@ export const StorageAPI = {
     cacheState.certificates = cacheState.certificates.filter(c => c.training_id !== id);
 
     if (cacheState.training && cacheState.training.id === id) {
-      cacheState.training = cacheState.trainings[0] || DEFAULT_TRAINING;
+      cacheState.training = cacheState.trainings[0] || null;
+      if (typeof window !== 'undefined') {
+        if (cacheState.training) sessionStorage.setItem('lms_selected_training_id', cacheState.training.id);
+        else sessionStorage.removeItem('lms_selected_training_id');
+      }
     }
 
     // Cascade delete related materials, questions, test_attempts, certificates in Supabase
@@ -262,11 +285,10 @@ export const StorageAPI = {
   },
 
   saveMaterial: (mat: Partial<Material>): Material => {
-    let saved: Material;
     const isNew = !mat.id || mat.id.startsWith('m-');
     const targetId = isNew ? crypto.randomUUID() : mat.id!;
 
-    saved = {
+    const saved: Material = {
       id: targetId,
       training_id: mat.training_id || cacheState.training?.id || '',
       title: mat.title || 'Materi Baru',
@@ -309,11 +331,10 @@ export const StorageAPI = {
   },
 
   saveQuestion: (q: Partial<Question>): Question => {
-    let saved: Question;
     const isNew = !q.id || q.id.startsWith('q-');
     const targetId = isNew ? crypto.randomUUID() : q.id!;
 
-    saved = {
+    const saved: Question = {
       id: targetId,
       training_id: q.training_id || cacheState.training?.id || '',
       test_type: q.test_type || 'pretest',
@@ -344,14 +365,34 @@ export const StorageAPI = {
     await supabase.from('questions').delete().eq('id', id);
   },
 
+  saveQuestionsBulk: async (
+    questions: Array<Omit<Question, 'id' | 'training_id'>>,
+    trainingId: string
+  ): Promise<Question[]> => {
+    if (!trainingId) throw new Error('Pilih pelatihan sebelum mengimpor soal.');
+    if (questions.length === 0) return [];
+
+    const payload: Question[] = questions.map(question => ({
+      ...question,
+      id: crypto.randomUUID(),
+      training_id: trainingId
+    }));
+    const { data, error } = await supabase.from('questions').insert(payload).select('*');
+    if (error) throw new Error(`Impor soal gagal: ${error.message}`);
+
+    const saved = (data || payload) as Question[];
+    cacheState.questions.push(...saved);
+    return saved;
+  },
+
   getProfiles: (): UserProfile[] => {
     return cacheState.profiles;
   },
 
-  registerUserAsync: async (userData: Omit<UserProfile, 'id' | 'created_at'> & { password?: string }): Promise<UserProfile> => {
+  registerUserAsync: async (userData: Omit<UserProfile, 'id' | 'created_at'> & { password: string }): Promise<UserProfile> => {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: userData.email.trim(),
-      password: userData.password || 'DefaultPassword123!',
+      password: userData.password,
       options: {
         data: {
           full_name: userData.full_name,
@@ -404,7 +445,7 @@ export const StorageAPI = {
   },
 
   getTestAttempts: (userId?: string, testType?: 'pretest' | 'posttest', trainingId?: string): TestAttempt[] => {
-    const targetTrainingId = trainingId || cacheState.training.id;
+    const targetTrainingId = trainingId || cacheState.training?.id || '';
     let list = cacheState.testAttempts.filter(a => a.training_id === targetTrainingId);
     if (userId) {
       list = list.filter(a => a.user_id === userId);
@@ -419,14 +460,23 @@ export const StorageAPI = {
     const newAttempt: TestAttempt = {
       ...attempt,
       id: crypto.randomUUID(),
-      training_id: attempt.training_id || cacheState.training.id,
+      training_id: attempt.training_id || cacheState.training?.id || '',
       started_at: new Date().toISOString(),
       submitted_at: new Date().toISOString()
     };
     cacheState.testAttempts.push(newAttempt);
     
     // Save to Supabase (omit local 'answers' field if schema doesn't have it)
-    const { answers, ...dbPayload } = newAttempt;
+    const dbPayload = {
+      id: newAttempt.id,
+      user_id: newAttempt.user_id,
+      training_id: newAttempt.training_id,
+      test_type: newAttempt.test_type,
+      score: newAttempt.score,
+      attempt_number: newAttempt.attempt_number,
+      started_at: newAttempt.started_at,
+      submitted_at: newAttempt.submitted_at
+    };
     supabase.from('test_attempts').insert(dbPayload).then();
 
     return newAttempt;
@@ -470,23 +520,38 @@ export const StorageAPI = {
     return p;
   },
 
-  getCertificateSettings: (): CertificateSettings => {
+  getCertificateSettings: (trainingId?: string): CertificateSettings => {
+    if (trainingId) {
+      return cacheState.certSettingsList.find(setting => setting.training_id === trainingId) || cacheState.certSettings;
+    }
     return cacheState.certSettings;
   },
 
   updateCertificateSettings: (updates: Partial<CertificateSettings>): CertificateSettings => {
     const updated = { ...cacheState.certSettings, ...updates, updated_at: new Date().toISOString() };
     cacheState.certSettings = updated;
+    const existingIndex = cacheState.certSettingsList.findIndex(setting => setting.training_id === updated.training_id);
+    if (existingIndex >= 0) cacheState.certSettingsList[existingIndex] = updated;
+    else cacheState.certSettingsList.push(updated);
     supabase.from('certificate_settings').upsert(updated).then();
     return updated;
   },
 
   getCertificates: (): Certificate[] => {
-    return cacheState.certificates;
+    return cacheState.certificates.map(cert => {
+      const user = cacheState.profiles.find(profile => profile.id === cert.user_id);
+      const training = cacheState.trainings.find(item => item.id === cert.training_id);
+      return {
+        ...cert,
+        user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
+        user_institution: cert.user_institution || user?.institution || '',
+        training_title: cert.training_title || training?.title || 'Pelatihan LMS'
+      };
+    });
   },
 
   getCertificateForUser: (userId: string, trainingId?: string): Certificate | null => {
-    const targetTrainingId = trainingId || cacheState.training.id;
+    const targetTrainingId = trainingId || cacheState.training?.id || '';
     const cert = cacheState.certificates.find(c => c.user_id === userId && c.training_id === targetTrainingId);
     if (!cert) return null;
 
@@ -497,7 +562,7 @@ export const StorageAPI = {
       ...cert,
       user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
       user_institution: cert.user_institution || user?.institution || '',
-      training_title: cert.training_title || training.title || 'Pelatihan LMS'
+      training_title: cert.training_title || training?.title || 'Pelatihan LMS'
     };
   },
 
@@ -512,11 +577,37 @@ export const StorageAPI = {
       ...cert,
       user_name: cert.user_name || user?.full_name || 'Peserta Pelatihan',
       user_institution: cert.user_institution || user?.institution || '',
-      training_title: cert.training_title || training.title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja'
+      training_title: cert.training_title || training?.title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja'
     };
   },
 
+  findCertificateByVerificationCode: async (code: string): Promise<Certificate | null> => {
+    const normalizedCode = code.trim().toUpperCase();
+    if (!normalizedCode) return null;
+
+    const { data: cert, error } = await supabase
+      .from('certificates')
+      .select('*')
+      .eq('verification_code', normalizedCode)
+      .maybeSingle();
+    if (error) throw new Error(`Verifikasi sertifikat gagal: ${error.message}`);
+    if (!cert) return null;
+
+    const [{ data: user }, { data: training }] = await Promise.all([
+      supabase.from('profiles').select('full_name, institution').eq('id', cert.user_id).maybeSingle(),
+      supabase.from('trainings').select('title').eq('id', cert.training_id).maybeSingle()
+    ]);
+
+    return {
+      ...cert,
+      user_name: user?.full_name || 'Peserta Pelatihan',
+      user_institution: user?.institution || '',
+      training_title: training?.title || 'Pelatihan LMS'
+    } as Certificate;
+  },
+
   issueCertificate: (userId: string, posttestScore: number): Certificate => {
+    if (!cacheState.training) throw new Error('Pelatihan aktif tidak ditemukan.');
     const existing = StorageAPI.getCertificateForUser(userId);
     if (existing) return existing;
 
@@ -544,7 +635,15 @@ export const StorageAPI = {
     cacheState.certificates.push(newCert);
 
     // Save core certificate fields to Supabase
-    const { user_name, user_institution, training_title, ...dbPayload } = newCert;
+    const dbPayload = {
+      id: newCert.id,
+      user_id: newCert.user_id,
+      training_id: newCert.training_id,
+      certificate_number: newCert.certificate_number,
+      verification_code: newCert.verification_code,
+      issued_at: newCert.issued_at,
+      posttest_score: newCert.posttest_score
+    };
     supabase.from('certificates').insert(dbPayload).then();
 
     // Increment current cert number

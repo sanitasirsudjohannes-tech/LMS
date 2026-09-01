@@ -59,9 +59,9 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Surface exact Supabase error message for debugging
-      const msg = err?.message || JSON.stringify(err) || 'Gagal mendaftar.';
+      const msg = err instanceof Error ? err.message : 'Gagal mendaftar.';
       setError(`Gagal mendaftar: ${msg}`);
       console.error('Registration Error:', err);
       setLoading(false);

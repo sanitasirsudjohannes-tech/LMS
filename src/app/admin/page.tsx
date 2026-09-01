@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { AdminStats, Training } from '@/types';
-import { Users, FileCheck2, BookOpen, GraduationCap, Award, CheckCircle2, XCircle, ArrowRight, Sliders, Check } from 'lucide-react';
+import { Users, FileCheck2, BookOpen, GraduationCap, Award, CheckCircle2, XCircle, ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminOverviewPage() {

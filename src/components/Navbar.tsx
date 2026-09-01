@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserProfile } from '@/types';
-import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { BookOpen, LogOut, Shield, User, Menu, X, Award, CheckCircle } from 'lucide-react';
+import { StorageAPI, initCurrentUser } from '@/lib/storage';
+import { BookOpen, LogOut, Shield, User, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -14,9 +14,10 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    initLocalStorage();
-    const user = StorageAPI.getCurrentUser();
-    setCurrentUser(user);
+    const load = async () => {
+      setCurrentUser(await initCurrentUser());
+    };
+    load();
   }, [pathname]);
 
   const handleLogout = async () => {

@@ -22,8 +22,6 @@ export default function TimerWidget({
 
   useEffect(() => {
     if (isAlreadyCompleted || minimumDurationSeconds <= 0) {
-      setIsCompleted(true);
-      setRemainingSeconds(0);
       return;
     }
 
@@ -40,10 +38,13 @@ export default function TimerWidget({
       }
     };
 
-    checkTime();
+    const initialCheck = window.setTimeout(checkTime, 0);
     const interval = setInterval(checkTime, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialCheck);
+      clearInterval(interval);
+    };
   }, [minimumDurationSeconds, startedAtIso, isAlreadyCompleted, onComplete]);
 
   if (minimumDurationSeconds <= 0) return null;

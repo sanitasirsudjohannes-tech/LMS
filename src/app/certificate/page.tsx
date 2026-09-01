@@ -7,7 +7,7 @@ import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Certificate, CertificateSettings, UserProfile } from '@/types';
 import CertificateTemplate from '@/components/CertificateTemplate';
 import { generateCertificatePDF } from '@/lib/pdf';
-import { Download, Printer, Share2, Award, Lock, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Download, Printer, Share2, Lock, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CertificatePage() {
@@ -43,7 +43,7 @@ export default function CertificatePage() {
             spread: 70,
             origin: { y: 0.6 }
           });
-        } catch (e) {
+        } catch {
           // ignore
         }
       }
@@ -59,8 +59,8 @@ export default function CertificatePage() {
     try {
       const filename = `Sertifikat_${(certificate.user_name || 'Peserta').replace(/\s+/g, '_')}.pdf`;
       await generateCertificatePDF('certificate-render-target', filename);
-    } catch (err: any) {
-      alert('Gagal mengunduh PDF: ' + err.message);
+    } catch (err: unknown) {
+      alert('Gagal mengunduh PDF: ' + (err instanceof Error ? err.message : 'Tidak diketahui'));
     } finally {
       setDownloading(false);
     }

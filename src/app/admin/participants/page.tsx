@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { UserProfile, TestAttempt, MaterialProgress, Certificate, Training } from '@/types';
+import { UserProfile, TestAttempt, Certificate, Training } from '@/types';
 import { formatDateIndonesian } from '@/lib/utils';
-import { Search, Download, Filter, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, ShieldCheck } from 'lucide-react';
+import { Search, Download, Filter, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export default function ParticipantsAdminPage() {
   const [participants, setParticipants] = useState<UserProfile[]>([]);
@@ -14,7 +14,6 @@ export default function ParticipantsAdminPage() {
   const pageSize = 10;
 
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
-  const [progresses, setProgresses] = useState<MaterialProgress[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [training, setTraining] = useState<Training | null>(null);
 
@@ -40,7 +39,7 @@ export default function ParticipantsAdminPage() {
     const pre = attempts.find(a => a.user_id === userId && a.test_type === 'pretest');
     const postAttempts = attempts.filter(a => a.user_id === userId && a.test_type === 'posttest');
     const bestPostScore = postAttempts.reduce((max, a) => Math.max(max, a.score), 0);
-    const cert = certificates.find(c => c.user_id === userId);
+    const cert = certificates.find(c => c.user_id === userId && c.training_id === training?.id);
 
     const isPassed = postAttempts.some(a => a.score >= (training?.passing_score || 80));
     
@@ -100,7 +99,7 @@ export default function ParticipantsAdminPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Laporan_Peserta_LMS_${Date.now()}.csv`);
+    link.setAttribute('download', 'Laporan_Peserta_LMS.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

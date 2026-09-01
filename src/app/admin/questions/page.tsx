@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Question, Training } from '@/types';
-import { Plus, Edit2, Trash2, X, Sliders } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Sliders, Upload, Download, LoaderCircle } from 'lucide-react';
+import Swal from 'sweetalert2';
+import {
+  downloadQuestionImportTemplate,
+  readQuestionImportFile,
+  validateQuestionRows
+} from '@/lib/questionImport';
 
 export default function QuestionsAdminPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
@@ -14,6 +20,7 @@ export default function QuestionsAdminPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Form State
   const [testType, setTestType] = useState<'pretest' | 'posttest'>('pretest');
@@ -33,7 +40,7 @@ export default function QuestionsAdminPage() {
       const current = StorageAPI.getTraining();
       const activeId = current ? current.id : (listTr[0]?.id || '');
       setSelectedTrainingId(activeId);
-      reloadQuestions(activeId);
+      setQuestions(activeId ? StorageAPI.getQuestions(undefined, activeId) : []);
     };
     load();
   }, []);
@@ -105,6 +112,68 @@ export default function QuestionsAdminPage() {
     }
   };
 
+  const handleImportQuestions = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!selectedTrainingId) {
+      await Swal.fire('Pilih Pelatihan', 'Pilih pelatihan tujuan sebelum mengimpor soal.', 'warning');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const rows = await readQuestionImportFile(file);
+      const result = validateQuestionRows(rows, questions);
+
+      if (result.errors.length > 0) {
+        const details = result.errors.slice(0, 10)
+          .map(error => `<li><b>Baris ${error.row}:</b> ${error.message}</li>`)
+          .join('');
+        await Swal.fire({
+          icon: 'error',
+          title: 'File Belum Valid',
+          html: `<p class="text-sm mb-2">Perbaiki data berikut lalu impor kembali:</p><ul class="text-left text-xs space-y-1">${details}</ul>${result.errors.length > 10 ? `<p class="text-xs mt-2">Dan ${result.errors.length - 10} kesalahan lainnya.</p>` : ''}`,
+          confirmButtonText: 'Mengerti'
+        });
+        return;
+      }
+
+      if (result.validRows.length === 0) {
+        await Swal.fire('Tidak Ada Soal Baru', 'Semua soal dalam file sudah ada atau file tidak berisi data.', 'info');
+        return;
+      }
+
+      const confirmation = await Swal.fire({
+        icon: 'question',
+        title: 'Impor Soal?',
+        html: `<p><b>${result.validRows.length}</b> soal valid akan ditambahkan ke <b>${selectedTrainingObj?.title || 'pelatihan terpilih'}</b>.</p>${result.duplicateCount > 0 ? `<p class="text-xs mt-2">${result.duplicateCount} soal duplikat akan dilewati.</p>` : ''}`,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Impor',
+        cancelButtonText: 'Batal'
+      });
+      if (!confirmation.isConfirmed) return;
+
+      await StorageAPI.saveQuestionsBulk(result.validRows, selectedTrainingId);
+      reloadQuestions(selectedTrainingId);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Impor Berhasil',
+        text: `${result.validRows.length} soal berhasil ditambahkan.`,
+        timer: 2200,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Impor Gagal',
+        text: error instanceof Error ? error.message : 'File tidak dapat diproses.'
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const filteredQuestions = questions.filter(q => q.test_type === activeTab);
   const selectedTrainingObj = trainings.find(t => t.id === selectedTrainingId);
 
@@ -155,8 +224,30 @@ export default function QuestionsAdminPage() {
           </div>
 
           <button
+            type="button"
+            onClick={downloadQuestionImportTemplate}
+            className="px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            <Download className="w-4 h-4" />
+            <span>Template</span>
+          </button>
+
+          <label className={`px-3 py-2 border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${isImporting || !selectedTrainingId ? 'opacity-50 pointer-events-none' : 'hover:bg-emerald-100 dark:hover:bg-emerald-950/70'}`}>
+            {isImporting ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            <span>{isImporting ? 'Memproses...' : 'Impor Soal'}</span>
+            <input
+              type="file"
+              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+              onChange={handleImportQuestions}
+              className="sr-only"
+              disabled={isImporting || !selectedTrainingId}
+            />
+          </label>
+
+          <button
             onClick={handleOpenCreate}
-            className="px-4 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1"
+            disabled={!selectedTrainingId}
+            className="px-4 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1 disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Soal</span>
@@ -252,7 +343,7 @@ export default function QuestionsAdminPage() {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jenis Tes</label>
                 <select
                   value={testType}
-                  onChange={(e) => setTestType(e.target.value as any)}
+                  onChange={(e) => setTestType(e.target.value as 'pretest' | 'posttest')}
                   className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                 >
                   <option value="pretest">Pre-Test</option>
@@ -313,7 +404,7 @@ export default function QuestionsAdminPage() {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jawaban Benar</label>
                 <select
                   value={correctAnswer}
-                  onChange={(e) => setCorrectAnswer(e.target.value as any)}
+                  onChange={(e) => setCorrectAnswer(e.target.value as 'A' | 'B' | 'C' | 'D')}
                   className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400"
                 >
                   <option value="A">Pilihan A</option>

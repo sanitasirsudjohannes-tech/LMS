@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Material, UserProfile, MaterialProgress } from '@/types';
 import TimerWidget from '@/components/TimerWidget';
-import { BookOpen, ArrowLeft, ArrowRight, Lock, CheckCircle2, Video, FileText } from 'lucide-react';
+import { BookOpen, ArrowLeft, ArrowRight, Lock, Video, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { getMediaType, formatGoogleDriveEmbedUrl } from '@/lib/mediaUtils';
 

@@ -16,12 +16,12 @@ export default function VerifyCertificatePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initLocalStorage();
-    if (code) {
-      const cert = StorageAPI.getCertificateByVerificationCode(code);
-      setCertificate(cert);
-    }
-    setLoading(false);
+    const load = async () => {
+      await initLocalStorage();
+      if (code) setCertificate(await StorageAPI.findCertificateByVerificationCode(code));
+      setLoading(false);
+    };
+    load();
   }, [code]);
 
   if (loading) {

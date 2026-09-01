@@ -14,14 +14,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initLocalStorage();
-    const user = StorageAPI.getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      router.push('/login');
-      return;
-    }
-    setCurrentUser(user);
-    setLoading(false);
+    const load = async () => {
+      await initLocalStorage();
+      const user = StorageAPI.getCurrentUser();
+      if (!user || user.role !== 'admin') {
+        router.push('/login');
+        return;
+      }
+      setCurrentUser(user);
+      setLoading(false);
+    };
+    load();
   }, [router]);
 
   if (loading || !currentUser) {
