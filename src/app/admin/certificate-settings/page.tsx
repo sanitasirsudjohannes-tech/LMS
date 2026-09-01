@@ -3,9 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { formatCertificateNumber } from '@/lib/utils';
-import { Settings, Eye, Check, Save, Upload } from 'lucide-react';
+import { Training } from '@/types';
+import { Settings, Eye, Check, Save, Upload, GraduationCap } from 'lucide-react';
 
 export default function CertificateSettingsAdminPage() {
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [selectedTrainingId, setSelectedTrainingId] = useState('');
   // Form controls
   const [certificateEnabled, setCertificateEnabled] = useState(true);
   const [numberingEnabled, setNumberingEnabled] = useState(true);
@@ -24,24 +27,44 @@ export default function CertificateSettingsAdminPage() {
   const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const applySettings = (trainingId: string) => {
+    const st = StorageAPI.getCertificateSettings(trainingId);
+    setCertificateEnabled(st.certificate_enabled);
+    setNumberingEnabled(st.numbering_enabled);
+    setNumberFormat(st.number_format);
+    setStartNumber(st.start_number);
+    setNumberDigits(st.number_digits);
+    setCurrentNumber(st.current_number || st.start_number);
+    setShowPosttestScore(st.show_posttest_score);
+    setSignatoryName(st.signatory_name);
+    setSignatoryTitle(st.signatory_title);
+    setSignatoryImageUrl(st.signatory_image_url || '');
+    setSignaturePreview(st.signatory_image_url || '');
+    setSignatureFile(null);
+  };
+
   useEffect(() => {
     const load = async () => {
       await initLocalStorage();
-      const st = StorageAPI.getCertificateSettings();
-      setCertificateEnabled(st.certificate_enabled);
-      setNumberingEnabled(st.numbering_enabled);
-      setNumberFormat(st.number_format);
-      setStartNumber(st.start_number);
-      setNumberDigits(st.number_digits);
-      setCurrentNumber(st.current_number || st.start_number);
-      setShowPosttestScore(st.show_posttest_score);
-      setSignatoryName(st.signatory_name);
-      setSignatoryTitle(st.signatory_title);
-      setSignatoryImageUrl(st.signatory_image_url || '');
-      setSignaturePreview(st.signatory_image_url || '');
+      const trainingList = StorageAPI.getTrainings();
+      const currentTraining = StorageAPI.getTraining() || trainingList[0];
+      setTrainings(trainingList);
+      if (currentTraining) {
+        StorageAPI.setSelectTraining(currentTraining.id);
+        setSelectedTrainingId(currentTraining.id);
+        applySettings(currentTraining.id);
+      }
     };
     load();
   }, []);
+
+  const handleTrainingChange = (trainingId: string) => {
+    StorageAPI.setSelectTraining(trainingId);
+    setSelectedTrainingId(trainingId);
+    setSavedMsg(false);
+    setSaveError('');
+    applySettings(trainingId);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +117,7 @@ export default function CertificateSettingsAdminPage() {
   const previewNumberSample1 = formatCertificateNumber(numberFormat, currentNumber, numberDigits);
   const previewNumberSample2 = formatCertificateNumber(numberFormat, currentNumber + 1, numberDigits);
   const previewNumberSample3 = formatCertificateNumber(numberFormat, currentNumber + 2, numberDigits);
+  const selectedTraining = trainings.find(training => training.id === selectedTrainingId);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -107,6 +131,45 @@ export default function CertificateSettingsAdminPage() {
         <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-bold shrink-0">
           <Settings className="w-5 h-5" />
         </div>
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-800 rounded-2xl p-5 shadow-sm space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan yang Akan Diatur</h3>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Setiap pelatihan memiliki nomor, direktur, dan tanda tangan sertifikat masing-masing.</p>
+          </div>
+        </div>
+
+        <select
+          value={selectedTrainingId}
+          onChange={(event) => handleTrainingChange(event.target.value)}
+          disabled={trainings.length === 0}
+          className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {trainings.length === 0 && <option value="">Belum ada pelatihan</option>}
+          {trainings.map(training => (
+            <option key={training.id} value={training.id}>
+              {training.active ? 'AKTIF' : 'NONAKTIF'} — {training.title}
+            </option>
+          ))}
+        </select>
+
+        {selectedTraining && (
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className={`px-2.5 py-1 rounded-full font-bold ${
+              selectedTraining.active
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+            }`}>
+              {selectedTraining.active ? 'AKTIF • Tampil di Peserta' : 'NONAKTIF • Disembunyikan'}
+            </span>
+            <span className="text-blue-700 dark:text-blue-300">Pengaturan di bawah berlaku untuk: <strong>{selectedTraining.title}</strong></span>
+          </div>
+        )}
       </div>
 
       {savedMsg && (
@@ -123,6 +186,9 @@ export default function CertificateSettingsAdminPage() {
       )}
 
       <form onSubmit={handleSave} className="space-y-6">
+        <div className="px-4 py-3 rounded-xl bg-slate-900 text-white text-xs">
+          Sedang mengatur sertifikat: <strong>{selectedTraining?.title || 'Belum ada pelatihan dipilih'}</strong>
+        </div>
         
         {/* Toggle General Certificate */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
