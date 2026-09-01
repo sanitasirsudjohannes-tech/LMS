@@ -1,0 +1,212 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { StorageAPI, initLocalStorage } from '@/lib/storage';
+import { Question, UserProfile, Training } from '@/types';
+import { FileCheck2, CheckCircle2, ArrowRight, AlertCircle, HelpCircle } from 'lucide-react';
+
+export default function PretestPage() {
+  const router = useRouter();
+
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [training, setTraining] = useState<Training | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({});
+  
+  const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      await initLocalStorage();
+      const user = StorageAPI.getCurrentUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      setCurrentUser(user);
+
+      const tr = StorageAPI.getTraining();
+      setTraining(tr);
+
+      const qList = StorageAPI.getQuestions('pretest');
+      setQuestions(qList);
+
+      // Check if already completed
+      const existing = StorageAPI.getTestAttempts(user.id, 'pretest');
+      if (existing.length > 0) {
+        setSubmitted(true);
+        setScore(existing[0].score);
+      }
+
+      setLoading(false);
+    };
+    load();
+  }, [router]);
+
+  const handleSelect = (questionId: string, option: 'A' | 'B' | 'C' | 'D') => {
+    if (submitted) return;
+    setAnswers(prev => ({ ...prev, [questionId]: option }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !training) return;
+
+    if (Object.keys(answers).length < questions.length) {
+      alert('Mohon jawab seluruh pertanyaan sebelum mengirimkan Pre-Test.');
+      return;
+    }
+
+    let correctCount = 0;
+    questions.forEach(q => {
+      if (answers[q.id] === q.correct_answer) {
+        correctCount++;
+      }
+    });
+
+    const calculatedScore = Math.round((correctCount / questions.length) * 100);
+
+    StorageAPI.saveTestAttempt({
+      user_id: currentUser.id,
+      training_id: training.id,
+      test_type: 'pretest',
+      score: calculatedScore,
+      attempt_number: 1,
+      answers
+    });
+
+    setScore(calculatedScore);
+    setSubmitted(true);
+  };
+
+  const handleContinueToMaterial = () => {
+    const materials = StorageAPI.getMaterials().filter(m => m.active);
+    if (materials.length > 0) {
+      router.push(`/material/${materials[0].id}`);
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  if (loading || !currentUser) {
+    return <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm">Memuat soal Pre-Test...</div>;
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6 py-2">
+      
+      {/* Header */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Tahap 1</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Pre-Test Pelatihan</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Uji kemampuan awal sebelum mempelajari materi.</p>
+        </div>
+        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white shrink-0 font-bold">
+          <FileCheck2 className="w-5 h-5" />
+        </div>
+      </div>
+
+      {/* Result Display if Submitted */}
+      {submitted && score !== null ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Pre-Test Selesai!</h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Terima kasih telah menyelesaikan tes awal. Nilai ini tidak menggugurkan Anda dan digunakan untuk mengukur peningkatan kompetensi.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 inline-block w-full max-w-xs">
+            <span className="text-xs text-slate-500 uppercase font-semibold block">Nilai Pre-Test Anda</span>
+            <span className="text-4xl font-bold text-slate-900 dark:text-white font-mono">{score}</span>
+            <span className="text-xs text-slate-400 block font-mono">/ 100</span>
+          </div>
+
+          <div>
+            <button
+              onClick={handleContinueToMaterial}
+              className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-bold rounded-xl text-sm transition-all shadow-md inline-flex items-center justify-center gap-2"
+            >
+              <span>Lanjut ke Materi 1</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Questions Form */
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {questions.map((q, qIdx) => (
+            <div
+              key={q.id}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4"
+            >
+              <div className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-md bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  {qIdx + 1}
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
+                  {q.question}
+                </h3>
+              </div>
+
+              <div className="space-y-2 pt-1 pl-9">
+                {[
+                  { key: 'A', text: q.option_a },
+                  { key: 'B', text: q.option_b },
+                  { key: 'C', text: q.option_c },
+                  { key: 'D', text: q.option_d }
+                ].map((opt) => {
+                  const isSelected = answers[q.id] === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => handleSelect(q.id, opt.key as any)}
+                      className={`w-full p-3 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-center gap-3 ${
+                        isSelected
+                          ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 shadow-sm'
+                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      <span className={`w-6 h-6 rounded-full border text-xs font-bold flex items-center justify-center shrink-0 ${
+                        isSelected
+                          ? 'border-white text-white dark:border-slate-900 dark:text-slate-900 bg-white/20'
+                          : 'border-slate-300 dark:border-slate-600 text-slate-500'
+                      }`}>
+                        {opt.key}
+                      </span>
+                      <span>{opt.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs text-slate-500">
+              {Object.keys(answers).length} dari {questions.length} soal telah dijawab.
+            </span>
+
+            <button
+              type="submit"
+              disabled={Object.keys(answers).length < questions.length}
+              className="w-full sm:w-auto px-8 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-bold rounded-xl text-sm transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <span>Kirim Jawaban Pre-Test</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
