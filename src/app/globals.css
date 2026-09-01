@@ -35,20 +35,38 @@ body {
   body {
     width: 297mm !important;
     height: 210mm !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
     background: #fff !important;
   }
 
-  /* Hapus seluruh elemen non-sertifikat dari alur layout agar browser HP
-     tidak membuat halaman kosong kedua. */
+  /* Root layout Next.js: saat mencetak sertifikat, navbar/footer benar-benar
+     dikeluarkan dari layout. Visibility:hidden saja masih menyisakan ruang. */
+  body > :not(main) {
+    display: none !important;
+  }
+
+  body > main {
+    position: fixed !important;
+    inset: 0 !important;
+    display: block !important;
+    width: 297mm !important;
+    height: 210mm !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
   .certificate-screen-actions {
     display: none !important;
   }
 
   .certificate-page {
-    position: fixed !important;
+    position: absolute !important;
     inset: 0 !important;
     width: 297mm !important;
     height: 210mm !important;
