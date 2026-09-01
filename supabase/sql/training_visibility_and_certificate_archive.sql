@@ -20,4 +20,3 @@ USING (
 );
 
 COMMIT;
-

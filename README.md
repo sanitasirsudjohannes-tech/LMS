@@ -6,17 +6,18 @@ Learning Management System internal milik RSUD Prof. Dr. W.Z. Johannes Kupang.
 
 Urutan instalasi database wajib:
 
-1. Jalankan `schema.sql` di Supabase SQL Editor.
-2. Jalankan `security_hardening.sql` segera sesudahnya.
-3. Jalankan `training_jpl_and_attempt_limit.sql` untuk mengaktifkan JPL dan batas Post-Test 5 kali.
-4. Jalankan `certificate_training_dates.sql` agar periode pelatihan tersedia pada verifikasi sertifikat.
-5. Jalankan `certificate_signature_storage.sql` untuk mengaktifkan unggah PNG tanda tangan direktur.
-6. Jalankan `training_visibility_and_certificate_archive.sql` untuk memisahkan pelatihan aktif dari arsip sertifikat.
-7. Buat akun admin melalui Supabase Authentication, lalu ikuti `create_admin.sql` untuk menetapkan perannya.
+1. Jalankan `supabase/sql/schema.sql` di Supabase SQL Editor.
+2. Jalankan `supabase/sql/security_hardening.sql` segera sesudahnya.
+3. Jalankan `supabase/sql/training_jpl_and_attempt_limit.sql` untuk mengaktifkan JPL dan batas Post-Test 5 kali.
+4. Jalankan `supabase/sql/certificate_training_dates.sql` agar periode pelatihan tersedia pada verifikasi sertifikat.
+5. Jalankan `supabase/sql/certificate_signature_storage.sql` untuk mengaktifkan unggah PNG tanda tangan direktur.
+6. Jalankan `supabase/sql/training_visibility_and_certificate_archive.sql` untuk memisahkan pelatihan aktif dari arsip sertifikat.
+7. Jalankan `supabase/sql/admin_pagination_and_bandwidth.sql` untuk mengaktifkan filter, statistik, dan pagination hemat bandwidth.
+8. Buat akun admin melalui Supabase Authentication, lalu ikuti `supabase/sql/create_admin.sql` untuk menetapkan perannya.
 
-Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengguna tidak ditemukan”, jalankan `fix_profile_access.sql` untuk memperbaiki izin helper RLS dan melengkapi profil akun lama.
+Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengguna tidak ditemukan”, jalankan `supabase/sql/fix_profile_access.sql` untuk memperbaiki izin helper RLS dan melengkapi profil akun lama.
 
-`security_hardening.sql` memasang Row Level Security berbasis kepemilikan/admin, menyembunyikan kunci jawaban dari peserta, menilai tes di server, memvalidasi timer materi di server, dan menerbitkan sertifikat secara atomik. Jangan deploy frontend baru sebelum migrasi ini berhasil.
+`supabase/sql/security_hardening.sql` memasang Row Level Security berbasis kepemilikan/admin, menyembunyikan kunci jawaban dari peserta, menilai tes di server, memvalidasi timer materi di server, dan menerbitkan sertifikat secara atomik. Jangan deploy frontend baru sebelum migrasi ini berhasil.
 
 ## Menjalankan aplikasi
 
