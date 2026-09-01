@@ -185,7 +185,7 @@ export default function CertificatePage() {
             className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5"
           >
             <Printer className="w-4 h-4" />
-            <span>Cetak Lanskap</span>
+            <span>Cetak</span>
           </button>
 
           <button
@@ -199,15 +199,16 @@ export default function CertificatePage() {
       </div>
 
       <div className="certificate-print-area p-1.5 sm:p-2 bg-slate-200/50 dark:bg-slate-950 rounded-xl sm:rounded-2xl border border-slate-300 dark:border-slate-800 overflow-hidden">
-        <div ref={previewRef} className="w-full overflow-hidden">
+        <div ref={previewRef} className="certificate-preview-viewport w-full overflow-hidden">
           <div
-            className="relative mx-auto"
+            className="certificate-preview-stage relative mx-auto"
             style={{
               width: `${CERTIFICATE_WIDTH * previewScale}px`,
               height: `${CERTIFICATE_HEIGHT * previewScale}px`
             }}
           >
             <div
+              className="certificate-preview-scale"
               style={{
                 width: `${CERTIFICATE_WIDTH}px`,
                 height: `${CERTIFICATE_HEIGHT}px`,
