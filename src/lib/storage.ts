@@ -28,6 +28,7 @@ const DEFAULT_CERT_SETTINGS: CertificateSettings = {
   signatory_name: 'Nama Direktur',
   signatory_title: 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang',
   signatory_image_url: null,
+  stamp_image_url: null,
   updated_at: new Date().toISOString()
 };
 
@@ -780,6 +781,28 @@ export const StorageAPI = {
       .from('certificate-assets')
       .upload(path, file, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
     if (error) throw new Error(`Gagal mengunggah tanda tangan: ${error.message}`);
+
+    const { data } = supabase.storage.from('certificate-assets').getPublicUrl(path);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  },
+
+  uploadDirectorStamp: async (file: File): Promise<string> => {
+    const trainingId = cacheState.training?.id;
+    if (!trainingId) throw new Error('Pilih pelatihan terlebih dahulu.');
+    if (file.type !== 'image/png') throw new Error('Cap harus menggunakan format PNG.');
+    if (file.size > 2 * 1024 * 1024) throw new Error('Ukuran PNG maksimal 2 MB.');
+
+    const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    const pngHeader = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (!pngHeader.every((byte, index) => signature[index] === byte)) {
+      throw new Error('Isi file cap bukan gambar PNG yang valid.');
+    }
+
+    const path = `${trainingId}/director-stamp.png`;
+    const { error } = await supabase.storage
+      .from('certificate-assets')
+      .upload(path, file, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
+    if (error) throw new Error(`Gagal mengunggah cap: ${error.message}`);
 
     const { data } = supabase.storage.from('certificate-assets').getPublicUrl(path);
     return `${data.publicUrl}?v=${Date.now()}`;

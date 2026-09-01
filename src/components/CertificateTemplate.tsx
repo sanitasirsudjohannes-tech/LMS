@@ -145,16 +145,24 @@ export default function CertificateTemplate({ certificate, settings, previewMode
             <p className="text-[12px] font-semibold text-[#315f8c] leading-tight mb-1">
               Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}
             </p>
-            <div className="h-[66px] w-full flex items-end justify-center -mb-2 relative z-10">
+            <div className="h-[66px] w-full flex items-end justify-center -mb-2 relative">
+              {settings?.stamp_image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={settings.stamp_image_url}
+                  alt="Cap Direktur"
+                  className="absolute z-0 left-1/2 bottom-[-13px] h-[88px] w-[88px] -translate-x-[72%] object-contain opacity-90"
+                />
+              )}
               {settings?.signatory_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={settings.signatory_image_url}
                   alt={`Tanda tangan ${signatoryName}`}
-                  className="max-w-[220px] max-h-[66px] object-contain object-center"
+                  className="relative z-10 max-w-[220px] max-h-[66px] object-contain object-center"
                 />
               ) : (
-                <span className="font-serif italic text-lg font-bold text-[#123d6a] tracking-wide px-3">{signatoryName}</span>
+                <span className="relative z-10 font-serif italic text-lg font-bold text-[#123d6a] tracking-wide px-3">{signatoryName}</span>
               )}
             </div>
             <div className="relative z-0 min-w-[240px] max-w-full">

@@ -22,6 +22,9 @@ export default function CertificateSettingsAdminPage() {
   const [signatoryImageUrl, setSignatoryImageUrl] = useState('');
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signaturePreview, setSignaturePreview] = useState('');
+  const [stampImageUrl, setStampImageUrl] = useState('');
+  const [stampFile, setStampFile] = useState<File | null>(null);
+  const [stampPreview, setStampPreview] = useState('');
 
   const [savedMsg, setSavedMsg] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -41,6 +44,9 @@ export default function CertificateSettingsAdminPage() {
     setSignatoryImageUrl(st.signatory_image_url || '');
     setSignaturePreview(st.signatory_image_url || '');
     setSignatureFile(null);
+    setStampImageUrl(st.stamp_image_url || '');
+    setStampPreview(st.stamp_image_url || '');
+    setStampFile(null);
   };
 
   useEffect(() => {
@@ -65,8 +71,9 @@ export default function CertificateSettingsAdminPage() {
   useEffect(() => {
     return () => {
       if (signaturePreview.startsWith('blob:')) URL.revokeObjectURL(signaturePreview);
+      if (stampPreview.startsWith('blob:')) URL.revokeObjectURL(stampPreview);
     };
-  }, [signaturePreview]);
+  }, [signaturePreview, stampPreview]);
 
   const handleTrainingChange = (trainingId: string) => {
     StorageAPI.setSelectTraining(trainingId);
@@ -105,6 +112,9 @@ export default function CertificateSettingsAdminPage() {
       const uploadedImageUrl = signatureFile
         ? await StorageAPI.uploadDirectorSignature(signatureFile)
         : signatoryImageUrl;
+      const uploadedStampUrl = stampFile
+        ? await StorageAPI.uploadDirectorStamp(stampFile)
+        : stampImageUrl;
       const savedSettings = await StorageAPI.updateCertificateSettings({
         certificate_enabled: certificateEnabled,
         numbering_enabled: numberingEnabled,
@@ -115,12 +125,16 @@ export default function CertificateSettingsAdminPage() {
         show_posttest_score: showPosttestScore,
         signatory_name: signatoryName.trim(),
         signatory_title: signatoryTitle.trim(),
-        signatory_image_url: uploadedImageUrl || null
+        signatory_image_url: uploadedImageUrl || null,
+        stamp_image_url: uploadedStampUrl || null
       });
       setCurrentNumber(savedSettings.current_number);
       setSignatoryImageUrl(uploadedImageUrl);
       setSignaturePreview(uploadedImageUrl);
       setSignatureFile(null);
+      setStampImageUrl(uploadedStampUrl);
+      setStampPreview(uploadedStampUrl);
+      setStampFile(null);
       setSavedMsg(true);
       setTimeout(() => setSavedMsg(false), 3000);
     } catch (error) {
@@ -143,6 +157,21 @@ export default function CertificateSettingsAdminPage() {
     }
     setSignatureFile(file);
     setSignaturePreview(URL.createObjectURL(file));
+  };
+
+  const handleStampFile = (file?: File) => {
+    setSaveError('');
+    if (!file) return;
+    if (file.type !== 'image/png') {
+      setSaveError('Cap harus berupa file PNG.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setSaveError('Ukuran cap maksimal 2 MB.');
+      return;
+    }
+    setStampFile(file);
+    setStampPreview(URL.createObjectURL(file));
   };
 
   // Live Preview Calculation (PRD Section 14.3 requirement)
@@ -441,6 +470,33 @@ export default function CertificateSettingsAdminPage() {
               </label>
             </div>
             <p className="text-[10px] text-slate-400">Gunakan PNG transparan, maksimal 2 MB. Klik Simpan untuk mengunggah dan menerapkannya.</p>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Cap Direktur / Rumah Sakit (PNG)
+            </label>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="w-32 h-32 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                {stampPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={stampPreview} alt="Pratinjau cap direktur" className="max-w-full max-h-full object-contain p-2" />
+                ) : (
+                  <span className="text-[11px] text-slate-400 text-center px-3">Belum ada cap</span>
+                )}
+              </div>
+              <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold cursor-pointer">
+                <Upload className="w-4 h-4" />
+                <span>Pilih File Cap PNG</span>
+                <input
+                  type="file"
+                  accept="image/png,.png"
+                  className="hidden"
+                  onChange={(event) => handleStampFile(event.target.files?.[0])}
+                />
+              </label>
+            </div>
+            <p className="text-[10px] text-slate-400">Gunakan PNG transparan berbentuk cap, maksimal 2 MB. Cap akan ditempatkan proporsional di belakang tanda tangan Direktur.</p>
           </div>
         </div>
 

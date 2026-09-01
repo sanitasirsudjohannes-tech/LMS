@@ -23,6 +23,7 @@ Jalankan berkas di Supabase **SQL Editor** satu per satu dan tunggu status berha
 7. `migrations/007_admin_pagination_and_bandwidth.sql`
 8. `migrations/008_bugfix_stability_2026_09.sql`
 9. `migrations/009_test_sessions_autosave_shuffle.sql`
+10. `migrations/010_certificate_stamp_storage.sql`
 
 Setelah itu:
 

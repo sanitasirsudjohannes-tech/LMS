@@ -111,6 +111,7 @@ export interface CertificateSettings {
   signatory_name: string;
   signatory_title: string;
   signatory_image_url?: string | null;
+  stamp_image_url?: string | null;
   updated_at: string;
 }
 
