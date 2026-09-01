@@ -91,21 +91,20 @@ export default function CertificateTemplate({ certificate, settings, previewMode
             </div>
           </div>
 
-          {/* Blok pengesahan dibuat terpusat agar tanda tangan tepat di atas nama direktur. */}
           <div className="flex flex-col items-center text-center min-w-0 px-3">
-            <p className="text-[12px] font-semibold text-slate-700 leading-tight mb-1.5">
+            <p className="text-[12px] font-semibold text-slate-700 leading-tight mb-1">
               Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}
             </p>
-            <div className="h-12 w-full flex items-end justify-center -mb-1 relative z-10">
+            <div className="h-[66px] w-full flex items-end justify-center -mb-2 relative z-10">
               {settings?.signatory_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={settings.signatory_image_url}
                   alt={`Tanda tangan ${signatoryName}`}
-                  className="max-w-[170px] max-h-12 object-contain object-center"
+                  className="max-w-[220px] max-h-[66px] object-contain object-center"
                 />
               ) : (
-                <span className="font-serif italic text-base font-bold text-slate-700 tracking-wide px-3">{signatoryName}</span>
+                <span className="font-serif italic text-lg font-bold text-slate-700 tracking-wide px-3">{signatoryName}</span>
               )}
             </div>
             <div className="relative z-0 min-w-[240px] max-w-full">
