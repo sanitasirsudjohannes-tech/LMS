@@ -84,14 +84,20 @@ export default function CertificatePage() {
     if (!preview) return;
 
     const updateScale = () => {
-      const availableWidth = preview.clientWidth;
-      setPreviewScale(Math.min(1, availableWidth / CERTIFICATE_WIDTH));
+      const availableWidth = Math.max(0, preview.getBoundingClientRect().width);
+      const nextScale = Math.min(1, availableWidth / CERTIFICATE_WIDTH);
+      setPreviewScale(Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1);
     };
 
     updateScale();
     const observer = new ResizeObserver(updateScale);
     observer.observe(preview);
-    return () => observer.disconnect();
+    window.addEventListener('orientationchange', updateScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', updateScale);
+    };
   }, [certificate]);
 
   const handleDownloadPDF = async () => {
@@ -158,57 +164,57 @@ export default function CertificatePage() {
   }
 
   return (
-    <div className="certificate-page max-w-5xl mx-auto space-y-6 py-2">
+    <div className="certificate-page w-full max-w-[1040px] mx-auto space-y-4 sm:space-y-6 py-1 sm:py-2 overflow-x-hidden">
       {shareError && <div className="certificate-screen-actions rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{shareError}</div>}
 
-      <div className="certificate-screen-actions bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="w-full md:w-auto">
+      <div className="certificate-screen-actions bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="min-w-0 w-full md:w-auto">
           <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Sertifikat Resmi Pelatihan
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Sertifikat Resmi Pelatihan
           </span>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Sertifikat Kelulusan</h1>
           <p className="text-xs text-slate-500 mt-0.5 break-all">Kode Verifikasi: <strong className="font-mono">{certificate.verification_code}</strong></p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto">
+        <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:min-w-[330px]">
           <button
             onClick={handleDownloadPDF}
             disabled={downloading}
-            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition-colors shadow-sm inline-flex items-center justify-center gap-2"
+            className="min-w-0 px-2 sm:px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-[11px] sm:text-xs transition-colors shadow-sm inline-flex items-center justify-center gap-1.5"
           >
-            <Download className="w-4 h-4" />
-            <span>{downloading ? 'Mengunduh...' : 'Unduh PDF'}</span>
+            <Download className="w-4 h-4 shrink-0" />
+            <span className="truncate">{downloading ? 'Mengunduh...' : 'Unduh PDF'}</span>
           </button>
 
           <button
             onClick={handlePrint}
-            className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5"
+            className="min-w-0 px-2 sm:px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-[11px] sm:text-xs transition-colors inline-flex items-center justify-center gap-1.5"
           >
-            <Printer className="w-4 h-4" />
+            <Printer className="w-4 h-4 shrink-0" />
             <span>Cetak</span>
           </button>
 
           <button
             onClick={handleShare}
-            className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5"
+            className="min-w-0 px-2 sm:px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-[11px] sm:text-xs transition-colors inline-flex items-center justify-center gap-1.5"
           >
-            <Share2 className="w-4 h-4" />
-            <span>{copied ? 'Tautan Disalin! ✓' : 'Bagikan Link'}</span>
+            <Share2 className="w-4 h-4 shrink-0" />
+            <span className="truncate">{copied ? 'Disalin ✓' : 'Bagikan'}</span>
           </button>
         </div>
       </div>
 
-      <div className="certificate-print-area p-1.5 sm:p-2 bg-slate-200/50 dark:bg-slate-950 rounded-xl sm:rounded-2xl border border-slate-300 dark:border-slate-800 overflow-hidden">
-        <div ref={previewRef} className="certificate-preview-viewport w-full overflow-hidden">
+      <div className="certificate-print-area w-full p-1 sm:p-2 bg-slate-200/50 dark:bg-slate-950 rounded-lg sm:rounded-2xl border border-slate-300 dark:border-slate-800 overflow-hidden">
+        <div ref={previewRef} className="certificate-preview-viewport w-full max-w-[1000px] mx-auto overflow-hidden">
           <div
-            className="certificate-preview-stage relative mx-auto"
+            className="certificate-preview-stage relative mx-auto overflow-hidden"
             style={{
               width: `${CERTIFICATE_WIDTH * previewScale}px`,
               height: `${CERTIFICATE_HEIGHT * previewScale}px`
             }}
           >
             <div
-              className="certificate-preview-scale"
+              className="certificate-preview-scale absolute left-0 top-0"
               style={{
                 width: `${CERTIFICATE_WIDTH}px`,
                 height: `${CERTIFICATE_HEIGHT}px`,
