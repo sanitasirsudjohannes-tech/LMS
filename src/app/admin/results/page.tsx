@@ -2,21 +2,27 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { TestAttempt, UserProfile } from '@/types';
+import { TestAttempt, Training, UserProfile } from '@/types';
 import { formatDateIndonesian } from '@/lib/utils';
 import { Search } from 'lucide-react';
 
 export default function ResultsAdminPage() {
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [selectedTrainingId, setSelectedTrainingId] = useState('');
   const [search, setSearch] = useState('');
   const [testTypeFilter, setTestTypeFilter] = useState<'all' | 'pretest' | 'posttest'>('all');
 
   useEffect(() => {
     const load = async () => {
       await initLocalStorage();
-      setAttempts(StorageAPI.getTestAttempts());
+      setAttempts(StorageAPI.getAllTestAttempts());
       setProfiles(StorageAPI.getProfiles());
+      const trainingList = StorageAPI.getTrainings();
+      const selectedTraining = StorageAPI.getTraining() || trainingList[0] || null;
+      setTrainings(trainingList);
+      setSelectedTrainingId(selectedTraining?.id || '');
     };
     load();
   }, []);
@@ -25,7 +31,9 @@ export default function ResultsAdminPage() {
     return profiles.find(p => p.id === userId);
   };
 
-  const filtered = attempts.filter(a => {
+  const trainingAttempts = attempts.filter(a => a.training_id === selectedTrainingId);
+
+  const filtered = trainingAttempts.filter(a => {
     const prof = getProfile(a.user_id);
     const matchesSearch = !search || (prof && (
       prof.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -35,11 +43,34 @@ export default function ResultsAdminPage() {
     if (!matchesSearch) return false;
     if (testTypeFilter !== 'all' && a.test_type !== testTypeFilter) return false;
     return true;
-  });
+  }).sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+
+  const handleTrainingChange = (trainingId: string) => {
+    setSelectedTrainingId(trainingId);
+    if (trainingId) StorageAPI.setSelectTraining(trainingId);
+  };
 
   return (
     <div className="space-y-6">
       
+      <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-800 rounded-2xl p-5 shadow-sm space-y-3">
+        <div>
+          <h2 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan</h2>
+          <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Riwayat dan nilai tes di bawah hanya berasal dari pelatihan yang dipilih.</p>
+        </div>
+        <select
+          value={selectedTrainingId}
+          onChange={(event) => handleTrainingChange(event.target.value)}
+          className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {trainings.length === 0 && <option value="">Belum ada pelatihan</option>}
+          {trainings.map(training => (
+            <option key={training.id} value={training.id}>{training.active ? 'AKTIF' : 'NONAKTIF'} — {training.title}</option>
+          ))}
+        </select>
+        <p className="text-[11px] text-blue-700 dark:text-blue-300">Ditemukan <strong>{trainingAttempts.length}</strong> riwayat pengerjaan tes.</p>
+      </div>
+
       {/* Controls */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         
@@ -61,7 +92,7 @@ export default function ResultsAdminPage() {
               testTypeFilter === 'all' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
-            Semua Tes ({attempts.length})
+            Semua Tes ({trainingAttempts.length})
           </button>
           <button
             onClick={() => setTestTypeFilter('pretest')}
@@ -69,7 +100,7 @@ export default function ResultsAdminPage() {
               testTypeFilter === 'pretest' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
-            Pre-Test
+            Pre-Test ({trainingAttempts.filter(attempt => attempt.test_type === 'pretest').length})
           </button>
           <button
             onClick={() => setTestTypeFilter('posttest')}
@@ -77,7 +108,7 @@ export default function ResultsAdminPage() {
               testTypeFilter === 'posttest' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
-            Post-Test
+            Post-Test ({trainingAttempts.filter(attempt => attempt.test_type === 'posttest').length})
           </button>
         </div>
 
