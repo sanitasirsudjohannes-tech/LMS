@@ -68,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div>
           <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider block">Panel Pengelola</span>
           <h1 className="text-xl sm:text-2xl font-bold">Admin LONTAR</h1>
-          <p className="text-xs text-slate-300 mt-0.5">LMS Online & Pelatihan Terpadu RSUD Johannes</p>
+          <p className="text-xs text-slate-300 mt-0.5">LMS Online & Pelatihan Terpadu RSUD Prof. Dr. W.Z. Johannes Kupang</p>
         </div>
       </div>
 

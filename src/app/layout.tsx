@@ -4,8 +4,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'LONTAR - LMS Online & Pelatihan Terpadu RSUD Johannes',
-  description: 'LMS Online & Pelatihan Terpadu RSUD Prof. Dr. W. Z. Johannes Kupang untuk materi, evaluasi, dan sertifikat digital.',
+  title: 'LONTAR - LMS Online & Pelatihan Terpadu RSUD Prof. Dr. W.Z. Johannes Kupang',
+  description: 'LMS Online & Pelatihan Terpadu RSUD Prof. Dr. W.Z. Johannes Kupang untuk materi, evaluasi, dan sertifikat digital.',
   applicationName: 'LONTAR',
   icons: { icon: '/lontar-logo.jpg', apple: '/lontar-logo.jpg' },
 };

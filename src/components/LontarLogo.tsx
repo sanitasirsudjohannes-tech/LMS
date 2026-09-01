@@ -11,7 +11,7 @@ export default function LontarLogo({ variant = 'mark', priority = false, classNa
     return (
       <Image
         src="/lontar-logo.jpg"
-        alt="LONTAR - LMS Online & Pelatihan Terpadu RSUD Johannes"
+        alt="LONTAR - LMS Online & Pelatihan Terpadu RSUD Prof. Dr. W.Z. Johannes Kupang"
         width={1536}
         height={838}
         priority={priority}

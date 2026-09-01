@@ -55,7 +55,7 @@ export default function Home() {
         </h1>
 
         <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-          <strong>LMS Online & Pelatihan Terpadu RSUD Johannes</strong> untuk memfasilitasi pembelajaran, evaluasi, dan penerbitan sertifikat digital bagi peserta.
+          <strong>LMS Online & Pelatihan Terpadu RSUD Prof. Dr. W.Z. Johannes Kupang</strong> untuk memfasilitasi pembelajaran, evaluasi, dan penerbitan sertifikat digital bagi peserta.
         </p>
 
         {/* CTA Buttons */}
