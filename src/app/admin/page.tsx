@@ -5,11 +5,19 @@ import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { AdminStats, Training } from '@/types';
 import { Users, FileCheck2, BookOpen, GraduationCap, Award, CheckCircle2, XCircle, ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
+
+  async function loadStats(trainingId: string) {
+    setStats(null);
+    const { data, error } = await supabase.rpc('admin_training_stats', { p_training_id: trainingId });
+    if (error) throw new Error(`Gagal memuat statistik: ${error.message}`);
+    setStats(data as AdminStats);
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -22,17 +30,15 @@ export default function AdminOverviewPage() {
       const initial = currentTr || listTr[0];
       setSelectedTraining(initial);
 
-      const st = StorageAPI.getAdminStats();
-      setStats(st);
+      if (initial) await loadStats(initial.id);
     };
     load();
   }, []);
 
-  const handleSelectTraining = (tr: Training) => {
+  const handleSelectTraining = async (tr: Training) => {
     StorageAPI.setSelectTraining(tr.id);
     setSelectedTraining(tr);
-    const st = StorageAPI.getAdminStats();
-    setStats(st);
+    await loadStats(tr.id);
   };
 
   if (!stats) return null;

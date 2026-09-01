@@ -3,34 +3,84 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { Certificate } from '@/types';
+import { Certificate, Training, UserProfile } from '@/types';
 import { formatDateIndonesian } from '@/lib/utils';
-import { Search, ExternalLink } from 'lucide-react';
+import { Search, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+
+const PAGE_SIZE = 20;
 
 export default function CertificatesAdminPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [selectedTrainingId, setSelectedTrainingId] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       await initLocalStorage();
-      setCertificates(StorageAPI.getCertificates());
+      const list = StorageAPI.getTrainings();
+      const selected = StorageAPI.getTraining() || list[0] || null;
+      setTrainings(list);
+      setSelectedTrainingId(selected?.id || '');
     };
     load();
   }, []);
 
-  const filtered = certificates.filter(c => {
-    const name = c.user_name || '';
-    const code = c.verification_code || '';
-    const num = c.certificate_number || '';
-    return name.toLowerCase().includes(search.toLowerCase()) ||
-           code.toLowerCase().includes(search.toLowerCase()) ||
-           num.toLowerCase().includes(search.toLowerCase());
-  });
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    if (!selectedTrainingId) return;
+    let cancelled = false;
+    const loadPage = async () => {
+      setLoading(true);
+      let matchingIds: string[] | null = null;
+      if (debouncedSearch) {
+        const safeSearch = debouncedSearch.replace(/[%_,().]/g, ' ');
+        const { data } = await supabase.from('profiles').select('id').or(`full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`).eq('role', 'peserta').limit(1000);
+        matchingIds = (data || []).map(item => item.id);
+      }
+      let query = supabase.from('certificates').select('*', { count: 'exact' }).eq('training_id', selectedTrainingId).order('issued_at', { ascending: false });
+      if (debouncedSearch) {
+        const safeSearch = debouncedSearch.replace(/[%_,().]/g, ' ');
+        const profileFilter = matchingIds?.length ? `,user_id.in.(${matchingIds.join(',')})` : '';
+        query = query.or(`verification_code.ilike.%${safeSearch}%,certificate_number.ilike.%${safeSearch}%${profileFilter}`);
+      }
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const { data, count, error } = await query.range(from, from + PAGE_SIZE - 1);
+      if (cancelled) return;
+      if (error) { console.error(error); setCertificates([]); setTotalCount(0); setLoading(false); return; }
+      const certRows = (data || []) as Certificate[];
+      const ids = [...new Set(certRows.map(cert => cert.user_id))];
+      const { data: profileRows } = ids.length ? await supabase.from('profiles').select('*').in('id', ids) : { data: [] };
+      const profileMap = new Map(((profileRows || []) as UserProfile[]).map(profile => [profile.id, profile]));
+      setCertificates(certRows.map(cert => ({ ...cert, user_name: profileMap.get(cert.user_id)?.full_name || 'Peserta', user_institution: profileMap.get(cert.user_id)?.institution || '' })));
+      setTotalCount(count || 0); setLoading(false);
+    };
+    loadPage();
+    return () => { cancelled = true; };
+  }, [selectedTrainingId, debouncedSearch, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
       
+      <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-800 rounded-2xl p-5 shadow-sm space-y-3">
+        <div><h2 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan</h2><p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Sertifikat dimuat per halaman untuk menghemat bandwidth.</p></div>
+        <select value={selectedTrainingId} onChange={event => { setSelectedTrainingId(event.target.value); StorageAPI.setSelectTraining(event.target.value); setCurrentPage(1); }} className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white">
+          {trainings.length === 0 && <option value="">Belum ada pelatihan</option>}
+          {trainings.map(training => <option key={training.id} value={training.id}>{training.active ? 'AKTIF' : 'NONAKTIF'} — {training.title}</option>)}
+        </select>
+      </div>
+
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
@@ -44,7 +94,7 @@ export default function CertificatesAdminPage() {
             type="text"
             placeholder="Cari nama, kode, nomor sertifikat..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
           />
         </div>
@@ -65,8 +115,8 @@ export default function CertificatesAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-              {filtered.length > 0 ? (
-                filtered.map((c) => (
+              {loading ? <tr><td colSpan={6} className="p-8 text-center text-slate-400">Memuat data...</td></tr> : certificates.length > 0 ? (
+                certificates.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                     <td className="p-4">
                       <p className="font-bold text-slate-900 dark:text-white">{c.user_name || 'Peserta'}</p>
@@ -99,6 +149,11 @@ export default function CertificatesAdminPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-slate-500">
+        <span>Menampilkan {certificates.length} dari {totalCount} sertifikat</span>
+        <div className="flex items-center gap-2"><button onClick={() => setCurrentPage(page => Math.max(1, page - 1))} disabled={currentPage === 1 || loading} className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button><span className="font-semibold text-slate-900 dark:text-white">Halaman {currentPage} dari {totalPages}</span><button onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages || loading} className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button></div>
       </div>
 
     </div>

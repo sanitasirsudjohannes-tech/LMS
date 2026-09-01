@@ -104,16 +104,16 @@ async function fetchLmsData(): Promise<void> {
       supabase.from('materials').select('*').order('order_number', { ascending: true }),
       isAdmin ? supabase.from('questions').select('*') : Promise.resolve({ data: [] as Question[] }),
       supabase.from('certificate_settings').select('*'),
-      isAdmin ? supabase.from('profiles').select('*') : Promise.resolve({ data: cacheState.currentUser ? [cacheState.currentUser] : [] }),
+      Promise.resolve({ data: cacheState.currentUser ? [cacheState.currentUser] : [] }),
       userFilter
         ? supabase.from('test_attempts').select('*').eq('user_id', userFilter)
-        : isAdmin ? supabase.from('test_attempts').select('*') : Promise.resolve({ data: [] as TestAttempt[] }),
+        : Promise.resolve({ data: [] as TestAttempt[] }),
       userFilter
         ? supabase.from('material_progress').select('*').eq('user_id', userFilter)
-        : isAdmin ? supabase.from('material_progress').select('*') : Promise.resolve({ data: [] as MaterialProgress[] }),
+        : Promise.resolve({ data: [] as MaterialProgress[] }),
       userFilter
         ? supabase.from('certificates').select('*').eq('user_id', userFilter)
-        : isAdmin ? supabase.from('certificates').select('*') : Promise.resolve({ data: [] as Certificate[] })
+        : Promise.resolve({ data: [] as Certificate[] })
     ]);
 
     cacheState.materials = materialsResult.data || [];
