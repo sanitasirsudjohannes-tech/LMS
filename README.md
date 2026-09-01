@@ -12,6 +12,8 @@ Urutan instalasi database wajib:
 4. Jalankan `certificate_training_dates.sql` agar periode pelatihan tersedia pada verifikasi sertifikat.
 5. Buat akun admin melalui Supabase Authentication, lalu ikuti `create_admin.sql` untuk menetapkan perannya.
 
+Jika login berhasil di Supabase Auth tetapi aplikasi menampilkan “Profil pengguna tidak ditemukan”, jalankan `fix_profile_access.sql` untuk memperbaiki izin helper RLS dan melengkapi profil akun lama.
+
 `security_hardening.sql` memasang Row Level Security berbasis kepemilikan/admin, menyembunyikan kunci jawaban dari peserta, menilai tes di server, memvalidasi timer materi di server, dan menerbitkan sertifikat secara atomik. Jangan deploy frontend baru sebelum migrasi ini berhasil.
 
 ## Menjalankan aplikasi

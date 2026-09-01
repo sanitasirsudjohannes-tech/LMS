@@ -26,6 +26,10 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION private.is_lms_admin(UUID) FROM PUBLIC, anon, authenticated;
+-- Fungsi tidak terekspos melalui Data API karena schema private tidak masuk
+-- exposed schemas, tetapi authenticated tetap memerlukan izin untuk evaluasi RLS.
+GRANT USAGE ON SCHEMA private TO authenticated;
+GRANT EXECUTE ON FUNCTION private.is_lms_admin(UUID) TO authenticated;
 
 -- Cegah pengguna menaikkan perannya sendiri menjadi admin.
 CREATE OR REPLACE FUNCTION private.protect_profile_role()
