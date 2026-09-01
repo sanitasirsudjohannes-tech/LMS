@@ -4,7 +4,7 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Certificate, CertificateSettings } from '@/types';
 import { formatDateIndonesian } from '@/lib/utils';
-import { Award, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 interface CertificateTemplateProps {
   certificate: Certificate;
@@ -30,69 +30,112 @@ export default function CertificateTemplate({ certificate, settings, previewMode
       id="certificate-render-target"
       className={`certificate-canvas h-[707px] w-[1000px] max-w-none shrink-0 bg-white text-slate-900 relative overflow-hidden font-serif ${previewMode ? 'shadow-sm' : 'shadow-2xl'}`}
     >
-      <div className="absolute inset-7 border-[6px] border-slate-900 pointer-events-none" />
-      <div className="absolute inset-[34px] border border-slate-300 pointer-events-none" />
-      <div className="absolute top-7 right-7 w-32 h-32 bg-slate-900/5 rounded-bl-full pointer-events-none" />
+      {/* Panel biru bernuansa rumah sakit, hanya pada sisi kiri. */}
+      <div
+        className="absolute inset-y-0 left-0 w-[185px] overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #0b3b75 0%, #1261a8 48%, #2f8fd1 100%)' }}
+      >
+        <div className="absolute -right-[78px] top-[-45px] h-[320px] w-[160px] rounded-[50%] border-[18px] border-white/15" />
+        <div className="absolute -right-[98px] bottom-[-55px] h-[340px] w-[185px] rounded-[50%] border-[22px] border-white/10" />
+        <div className="absolute inset-y-0 right-0 w-[5px] bg-white/30" />
 
-      <div className="absolute left-[54px] right-[54px] top-[48px] bottom-[74px] flex flex-col">
-        <div className="text-center space-y-2 relative z-10 shrink-0">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 text-white mb-2 shadow-md">
-            <Award className="w-7 h-7" />
-          </div>
-          <h1 className="text-4xl font-bold tracking-widest text-slate-900 uppercase font-sans">Sertifikat Kelulusan</h1>
-          <p className="text-sm tracking-wider text-slate-500 uppercase font-sans">Certificate of Completion</p>
+        {/* Motif medis abstrak tanpa logo/gambar. */}
+        <div className="absolute left-10 top-20 h-12 w-12 opacity-20">
+          <div className="absolute left-[17px] top-0 h-12 w-[14px] rounded-sm bg-white" />
+          <div className="absolute left-0 top-[17px] h-[14px] w-12 rounded-sm bg-white" />
+        </div>
+        <div className="absolute left-[92px] top-[162px] h-8 w-8 opacity-15">
+          <div className="absolute left-[11px] top-0 h-8 w-[10px] rounded-sm bg-white" />
+          <div className="absolute left-0 top-[11px] h-[10px] w-8 rounded-sm bg-white" />
+        </div>
+        <div className="absolute left-8 bottom-[185px] h-9 w-9 opacity-15">
+          <div className="absolute left-[12px] top-0 h-9 w-[11px] rounded-sm bg-white" />
+          <div className="absolute left-0 top-[12px] h-[11px] w-9 rounded-sm bg-white" />
+        </div>
+
+        <div className="absolute left-7 top-[265px] flex items-center gap-1 opacity-30">
+          <span className="block h-px w-7 bg-white" />
+          <span className="block h-3 w-px rotate-[35deg] bg-white" />
+          <span className="block h-6 w-px -rotate-[25deg] bg-white" />
+          <span className="block h-3 w-px rotate-[30deg] bg-white" />
+          <span className="block h-px w-7 bg-white" />
+        </div>
+
+        <div className="absolute left-8 bottom-[86px] right-8 text-white font-sans">
+          <p className="text-[10px] uppercase tracking-[0.32em] opacity-70">LMS Online</p>
+          <p className="mt-1 text-lg font-bold tracking-[0.16em]">LONTAR</p>
+          <div className="mt-3 h-px w-14 bg-white/60" />
+          <p className="mt-3 text-[9px] leading-relaxed opacity-75">Pelatihan Terpadu<br />RSUD Johannes</p>
+        </div>
+      </div>
+
+      {/* Bingkai formal mengikuti area kertas, dengan aksen biru. */}
+      <div className="absolute inset-7 border-[5px] border-[#123d6a] pointer-events-none" />
+      <div className="absolute inset-[34px] border border-[#8fb9db] pointer-events-none" />
+
+      {/* Konten utama digeser ke kanan agar tidak bertabrakan dengan panel biru. */}
+      <div className="absolute left-[208px] right-[54px] top-[46px] bottom-[68px] flex flex-col">
+        <div className="text-center relative z-10 shrink-0 font-sans">
+          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#315f8c]">
+            RSUD Prof Dr. W.Z. Johannes Kupang
+          </p>
+          <div className="mx-auto mt-2 h-[3px] w-16 rounded-full bg-[#2f8fd1]" />
+          <h1 className="mt-3 text-[36px] font-bold tracking-[0.16em] text-[#123d6a] uppercase">
+            Sertifikat
+          </h1>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.24em] text-slate-500">Certificate of Completion</p>
 
           {certificate.certificate_number ? (
-            <div className="pt-2 font-mono text-sm font-semibold tracking-wide text-slate-700">No: {certificate.certificate_number}</div>
+            <div className="mt-2 font-mono text-[11px] font-semibold tracking-wide text-slate-600">No: {certificate.certificate_number}</div>
           ) : (
-            <div className="pt-1 text-[11px] font-mono text-slate-400 italic">[Tanpa Penomoran Sertifikat]</div>
+            <div className="mt-2 text-[10px] font-mono text-slate-400 italic">[Tanpa Penomoran Sertifikat]</div>
           )}
         </div>
 
-        <div className="my-3.5 text-center space-y-2 relative z-10 shrink-0">
-          <p className="text-sm text-slate-600 font-sans">Diberikan secara sah kepada:</p>
+        <div className="my-3 text-center space-y-1.5 relative z-10 shrink-0">
+          <p className="text-[12px] text-slate-500 font-sans">Diberikan secara sah kepada:</p>
 
-          <div className="py-1.5 border-b-2 border-slate-900 max-w-xl mx-auto">
-            <h2 className="text-3xl font-bold text-slate-900 tracking-wide font-sans">{certificate.user_name || 'Nama Peserta'}</h2>
+          <div className="py-1.5 border-b-2 border-[#2f8fd1] max-w-[560px] mx-auto">
+            <h2 className="text-[30px] font-bold text-[#123d6a] tracking-wide font-sans">{certificate.user_name || 'Nama Peserta'}</h2>
             {certificate.user_institution && (
-              <p className="text-sm text-slate-600 font-sans mt-1 italic">{certificate.user_institution}</p>
+              <p className="text-[12px] text-slate-600 font-sans mt-1 italic">{certificate.user_institution}</p>
             )}
           </div>
 
-          <p className="text-sm text-slate-700 leading-relaxed font-sans max-w-2xl mx-auto pt-1">
-            Telah berhasil menyelesaikan seluruh rangkaian program dan dinyatakan <strong className="text-slate-900 font-bold uppercase">LULUS</strong> pada:
+          <p className="text-[12px] text-slate-700 leading-relaxed font-sans max-w-[620px] mx-auto pt-1">
+            Telah berhasil menyelesaikan seluruh rangkaian program dan dinyatakan <strong className="text-[#123d6a] font-bold uppercase">LULUS</strong> pada:
           </p>
 
-          <h3 className="text-xl font-bold text-slate-900 font-sans tracking-tight max-w-3xl mx-auto">
+          <h3 className="text-[18px] font-bold text-slate-900 font-sans tracking-tight max-w-[650px] mx-auto">
             {certificate.training_title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja'}
           </h3>
 
-          <p className="text-sm font-semibold text-slate-700 font-sans">Dengan beban pembelajaran {certificate.training_jpl || 1} Jam Pelajaran (JPL)</p>
+          <p className="text-[12px] font-semibold text-slate-700 font-sans">Dengan beban pembelajaran {certificate.training_jpl || 1} Jam Pelajaran (JPL)</p>
 
-          {trainingPeriod && <p className="text-sm text-slate-600 font-sans">Dilaksanakan pada {trainingPeriod}</p>}
+          {trainingPeriod && <p className="text-[11px] text-slate-600 font-sans">Dilaksanakan pada {trainingPeriod}</p>}
 
           {showScore && certificate.posttest_score !== undefined && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full font-sans text-xs font-semibold text-slate-700 border border-slate-200">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eef6fc] rounded-full font-sans text-[11px] font-semibold text-[#123d6a] border border-[#b9d8ed]">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#2479b8]" />
               <span>Nilai Post-Test: {certificate.posttest_score} / 100</span>
             </div>
           )}
         </div>
 
-        <div className="mt-auto pt-2.5 border-t border-slate-200 grid grid-cols-[0.9fr_1.1fr] items-end gap-8 relative z-10 font-sans shrink-0">
-          <div className="flex items-center gap-3 min-w-0 pl-1">
-            <div className="p-1 bg-white border border-slate-300 rounded shrink-0">
-              <QRCodeSVG value={verifyUrl} size={56} level="M" />
+        <div className="mt-auto pt-2.5 border-t border-[#d3e4f1] grid grid-cols-[0.8fr_1.2fr] items-end gap-6 relative z-10 font-sans shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1 bg-white border border-[#9fc5df] rounded shrink-0">
+              <QRCodeSVG value={verifyUrl} size={54} level="M" />
             </div>
             <div className="min-w-0">
-              <span className="text-[9px] text-slate-400 block uppercase font-semibold">Kode Verifikasi</span>
-              <span className="font-mono text-[11px] font-bold text-slate-900 tracking-wide block break-all leading-tight">{certificate.verification_code}</span>
-              <span className="text-[9px] text-slate-500 block mt-0.5 leading-tight">Pindai QR untuk verifikasi keaslian</span>
+              <span className="text-[8px] text-[#47789e] block uppercase font-semibold tracking-wide">Kode Verifikasi</span>
+              <span className="font-mono text-[10px] font-bold text-[#123d6a] tracking-wide block break-all leading-tight">{certificate.verification_code}</span>
+              <span className="text-[8px] text-slate-500 block mt-0.5 leading-tight">Pindai QR untuk verifikasi keaslian</span>
             </div>
           </div>
 
-          <div className="flex flex-col items-center text-center min-w-0 px-3">
-            <p className="text-[12px] font-semibold text-slate-700 leading-tight mb-1">
+          <div className="flex flex-col items-center text-center min-w-0 px-2">
+            <p className="text-[12px] font-semibold text-[#315f8c] leading-tight mb-1">
               Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}
             </p>
             <div className="h-[66px] w-full flex items-end justify-center -mb-2 relative z-10">
@@ -104,11 +147,11 @@ export default function CertificateTemplate({ certificate, settings, previewMode
                   className="max-w-[220px] max-h-[66px] object-contain object-center"
                 />
               ) : (
-                <span className="font-serif italic text-lg font-bold text-slate-700 tracking-wide px-3">{signatoryName}</span>
+                <span className="font-serif italic text-lg font-bold text-[#123d6a] tracking-wide px-3">{signatoryName}</span>
               )}
             </div>
             <div className="relative z-0 min-w-[240px] max-w-full">
-              <p className="text-[12px] font-bold text-slate-900 leading-tight border-b border-slate-400 pb-0.5 break-words">{signatoryName}</p>
+              <p className="text-[12px] font-bold text-[#123d6a] leading-tight border-b border-[#739fc0] pb-0.5 break-words">{signatoryName}</p>
               <p className="text-[10px] leading-tight text-slate-600 mt-1 break-words">{signatoryTitle}</p>
             </div>
           </div>
