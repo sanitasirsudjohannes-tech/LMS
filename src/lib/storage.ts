@@ -470,6 +470,10 @@ export const StorageAPI = {
     return list;
   },
 
+  getAllTestAttempts: (): TestAttempt[] => {
+    return [...cacheState.testAttempts];
+  },
+
   submitTestAttempt: async (
     trainingId: string,
     testType: 'pretest' | 'posttest',
@@ -499,7 +503,8 @@ export const StorageAPI = {
     return result;
   },
 
-  getMaterialProgress: (userId: string): MaterialProgress[] => {
+  getMaterialProgress: (userId?: string): MaterialProgress[] => {
+    if (!userId) return [...cacheState.materialProgress];
     return cacheState.materialProgress.filter(p => p.user_id === userId);
   },
 

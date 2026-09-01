@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { UserProfile, TestAttempt, Certificate, Training } from '@/types';
+import { UserProfile, TestAttempt, Certificate, Training, MaterialProgress, Material } from '@/types';
 import { formatDateIndonesian } from '@/lib/utils';
 import { Search, Download, Filter, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
@@ -15,6 +15,10 @@ export default function ParticipantsAdminPage() {
 
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [progress, setProgress] = useState<MaterialProgress[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [selectedTrainingId, setSelectedTrainingId] = useState('');
   const [training, setTraining] = useState<Training | null>(null);
 
   useEffect(() => {
@@ -23,23 +27,29 @@ export default function ParticipantsAdminPage() {
       const profiles = StorageAPI.getProfiles().filter(p => p.role === 'peserta');
       setParticipants(profiles);
 
-      const atts = StorageAPI.getTestAttempts();
+      const atts = StorageAPI.getAllTestAttempts();
       setAttempts(atts);
 
       const certs = StorageAPI.getCertificates();
       setCertificates(certs);
 
-      const tr = StorageAPI.getTraining();
+      setProgress(StorageAPI.getMaterialProgress());
+      const trainingList = StorageAPI.getTrainings();
+      setMaterials(trainingList.flatMap(item => StorageAPI.getMaterials(item.id)));
+      const tr = StorageAPI.getTraining() || trainingList[0] || null;
+      setTrainings(trainingList);
       setTraining(tr);
+      setSelectedTrainingId(tr?.id || '');
     };
     load();
   }, []);
 
   const getParticipantStats = (userId: string) => {
-    const pre = attempts.find(a => a.user_id === userId && a.test_type === 'pretest');
-    const postAttempts = attempts.filter(a => a.user_id === userId && a.test_type === 'posttest');
+    const trainingAttempts = attempts.filter(a => a.user_id === userId && a.training_id === selectedTrainingId);
+    const pre = trainingAttempts.find(a => a.test_type === 'pretest');
+    const postAttempts = trainingAttempts.filter(a => a.test_type === 'posttest');
     const bestPostScore = postAttempts.reduce((max, a) => Math.max(max, a.score), 0);
-    const cert = certificates.find(c => c.user_id === userId && c.training_id === training?.id);
+    const cert = certificates.find(c => c.user_id === userId && c.training_id === selectedTrainingId);
 
     const isPassed = postAttempts.some(a => a.score >= (training?.passing_score || 80));
     
@@ -57,8 +67,25 @@ export default function ParticipantsAdminPage() {
     };
   };
 
+  const participantHasTrainingActivity = (userId: string) => {
+    const materialIds = new Set(materials.filter(material => material.training_id === selectedTrainingId).map(material => material.id));
+    return attempts.some(attempt => attempt.user_id === userId && attempt.training_id === selectedTrainingId)
+      || certificates.some(certificate => certificate.user_id === userId && certificate.training_id === selectedTrainingId)
+      || progress.some(item => item.user_id === userId && materialIds.has(item.material_id));
+  };
+
+  const handleTrainingChange = (trainingId: string) => {
+    const selected = trainings.find(item => item.id === trainingId) || null;
+    setSelectedTrainingId(trainingId);
+    setTraining(selected);
+    if (selected) StorageAPI.setSelectTraining(selected.id);
+    setCurrentPage(1);
+    setFilterStatus('all');
+  };
+
   // Filter & Search Logic
   const filtered = participants.filter(p => {
+    if (!selectedTrainingId || !participantHasTrainingActivity(p.id)) return false;
     const matchesSearch = p.full_name.toLowerCase().includes(search.toLowerCase()) ||
                           p.email.toLowerCase().includes(search.toLowerCase()) ||
                           p.institution.toLowerCase().includes(search.toLowerCase());
@@ -72,43 +99,66 @@ export default function ParticipantsAdminPage() {
     if (filterStatus === 'not_started' && stats.status !== 'Belum Mulai') return false;
 
     return true;
-  });
+  }).sort((a, b) => a.full_name.localeCompare(b.full_name, 'id'));
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // CSV Export (PRD Section 20)
   const handleExportCSV = () => {
-    const headers = ['Nama Peserta', 'Email', 'Instansi', 'NIP/NIK', 'Nilai Pre-Test', 'Nilai Post-Test', 'Status Kelulusan', 'Nomor Sertifikat', 'Tanggal Registrasi'];
+    const csvCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+    const headers = ['Pelatihan', 'Nama Peserta', 'Email', 'Instansi', 'NIP/NIK', 'Nilai Pre-Test', 'Nilai Post-Test', 'Status Kelulusan', 'Nomor Sertifikat', 'Tanggal Registrasi'];
     const rows = filtered.map(p => {
       const stats = getParticipantStats(p.id);
       return [
-        `"${p.full_name}"`,
-        `"${p.email}"`,
-        `"${p.institution}"`,
-        `"${p.nip_nik || ''}"`,
-        stats.preScore,
-        stats.postScore,
-        `"${stats.status}"`,
-        `"${stats.certNumber}"`,
-        `"${formatDateIndonesian(p.created_at)}"`
+        csvCell(training?.title || ''),
+        csvCell(p.full_name),
+        csvCell(p.email),
+        csvCell(p.institution),
+        csvCell(p.nip_nik || ''),
+        csvCell(stats.preScore),
+        csvCell(stats.postScore),
+        csvCell(stats.status),
+        csvCell(stats.certNumber),
+        csvCell(formatDateIndonesian(p.created_at))
       ].join(',');
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.map(csvCell).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'Laporan_Peserta_LMS.csv');
+    const safeTrainingName = (training?.title || 'Pelatihan').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Daftar_Peserta_${safeTrainingName}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div className="space-y-6">
       
       {/* Action Bar */}
+      <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-800 rounded-2xl p-5 shadow-sm space-y-3">
+        <div>
+          <h2 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan</h2>
+          <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Tabel dan file ekspor hanya menampilkan peserta yang sudah memiliki aktivitas pada pelatihan terpilih.</p>
+        </div>
+        <select
+          value={selectedTrainingId}
+          onChange={(event) => handleTrainingChange(event.target.value)}
+          className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {trainings.length === 0 && <option value="">Belum ada pelatihan</option>}
+          {trainings.map(item => (
+            <option key={item.id} value={item.id}>{item.active ? 'AKTIF' : 'NONAKTIF'} — {item.title}</option>
+          ))}
+        </select>
+        {training && <p className="text-[11px] text-blue-700 dark:text-blue-300">Menampilkan <strong>{filtered.length}</strong> peserta pada: <strong>{training.title}</strong></p>}
+      </div>
+
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         
         {/* Search */}
@@ -142,10 +192,11 @@ export default function ParticipantsAdminPage() {
 
           <button
             onClick={handleExportCSV}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors shadow-sm inline-flex items-center gap-1.5"
+            disabled={!selectedTrainingId || filtered.length === 0}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors shadow-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
-            <span>Export CSV</span>
+            <span>Ekspor Peserta Pelatihan ({filtered.length})</span>
           </button>
         </div>
 
