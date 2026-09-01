@@ -219,11 +219,6 @@ export default function TrainingSettingsAdminPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[220px] sm:max-w-xs">{t.title}</h3>
-                      {isCurrentActive && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900">
-                          Sedang Dikelola
-                        </span>
-                      )}
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                         t.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300' : 'bg-slate-100 text-slate-500'
                       }`}>
