@@ -34,27 +34,18 @@ export default function CertificateTemplate({ certificate, settings, previewMode
       <div className="absolute inset-[34px] border border-slate-300 pointer-events-none" />
       <div className="absolute top-7 right-7 w-32 h-32 bg-slate-900/5 rounded-bl-full pointer-events-none" />
 
-      {/* Ruang aman lebih besar di bawah agar footer selalu berada di dalam bingkai. */}
       <div className="absolute left-[54px] right-[54px] top-[48px] bottom-[74px] flex flex-col">
         <div className="text-center space-y-2 relative z-10 shrink-0">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 text-white mb-2 shadow-md">
             <Award className="w-7 h-7" />
           </div>
-          <h1 className="text-4xl font-bold tracking-widest text-slate-900 uppercase font-sans">
-            Sertifikat Kelulusan
-          </h1>
-          <p className="text-sm tracking-wider text-slate-500 uppercase font-sans">
-            Certificate of Completion
-          </p>
+          <h1 className="text-4xl font-bold tracking-widest text-slate-900 uppercase font-sans">Sertifikat Kelulusan</h1>
+          <p className="text-sm tracking-wider text-slate-500 uppercase font-sans">Certificate of Completion</p>
 
           {certificate.certificate_number ? (
-            <div className="pt-2 font-mono text-sm font-semibold tracking-wide text-slate-700">
-              No: {certificate.certificate_number}
-            </div>
+            <div className="pt-2 font-mono text-sm font-semibold tracking-wide text-slate-700">No: {certificate.certificate_number}</div>
           ) : (
-            <div className="pt-1 text-[11px] font-mono text-slate-400 italic">
-              [Tanpa Penomoran Sertifikat]
-            </div>
+            <div className="pt-1 text-[11px] font-mono text-slate-400 italic">[Tanpa Penomoran Sertifikat]</div>
           )}
         </div>
 
@@ -62,9 +53,7 @@ export default function CertificateTemplate({ certificate, settings, previewMode
           <p className="text-sm text-slate-600 font-sans">Diberikan secara sah kepada:</p>
 
           <div className="py-1.5 border-b-2 border-slate-900 max-w-xl mx-auto">
-            <h2 className="text-3xl font-bold text-slate-900 tracking-wide font-sans">
-              {certificate.user_name || 'Nama Peserta'}
-            </h2>
+            <h2 className="text-3xl font-bold text-slate-900 tracking-wide font-sans">{certificate.user_name || 'Nama Peserta'}</h2>
             {certificate.user_institution && (
               <p className="text-sm text-slate-600 font-sans mt-1 italic">{certificate.user_institution}</p>
             )}
@@ -78,13 +67,9 @@ export default function CertificateTemplate({ certificate, settings, previewMode
             {certificate.training_title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja'}
           </h3>
 
-          <p className="text-sm font-semibold text-slate-700 font-sans">
-            Dengan beban pembelajaran {certificate.training_jpl || 1} Jam Pelajaran (JPL)
-          </p>
+          <p className="text-sm font-semibold text-slate-700 font-sans">Dengan beban pembelajaran {certificate.training_jpl || 1} Jam Pelajaran (JPL)</p>
 
-          {trainingPeriod && (
-            <p className="text-sm text-slate-600 font-sans">Dilaksanakan pada {trainingPeriod}</p>
-          )}
+          {trainingPeriod && <p className="text-sm text-slate-600 font-sans">Dilaksanakan pada {trainingPeriod}</p>}
 
           {showScore && certificate.posttest_score !== undefined && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full font-sans text-xs font-semibold text-slate-700 border border-slate-200">
@@ -101,31 +86,32 @@ export default function CertificateTemplate({ certificate, settings, previewMode
             </div>
             <div className="min-w-0">
               <span className="text-[9px] text-slate-400 block uppercase font-semibold">Kode Verifikasi</span>
-              <span className="font-mono text-[11px] font-bold text-slate-900 tracking-wide block break-all leading-tight">
-                {certificate.verification_code}
-              </span>
+              <span className="font-mono text-[11px] font-bold text-slate-900 tracking-wide block break-all leading-tight">{certificate.verification_code}</span>
               <span className="text-[9px] text-slate-500 block mt-0.5 leading-tight">Pindai QR untuk verifikasi keaslian</span>
             </div>
           </div>
 
-          <div className="text-right space-y-0.5 min-w-0 pr-1">
-            <p className="text-[9px] text-slate-500 leading-tight">Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}</p>
-            <div className="h-10 flex items-center justify-end">
+          {/* Blok pengesahan dibuat terpusat agar tanda tangan tepat di atas nama direktur. */}
+          <div className="flex flex-col items-center text-center min-w-0 px-3">
+            <p className="text-[12px] font-semibold text-slate-700 leading-tight mb-1.5">
+              Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}
+            </p>
+            <div className="h-12 w-full flex items-end justify-center -mb-1 relative z-10">
               {settings?.signatory_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={settings.signatory_image_url}
                   alt={`Tanda tangan ${signatoryName}`}
-                  className="max-w-[140px] max-h-10 object-contain"
+                  className="max-w-[170px] max-h-12 object-contain object-center"
                 />
               ) : (
-                <span className="font-serif italic text-sm font-bold text-slate-700 tracking-wide border-b border-slate-400 px-3">
-                  {signatoryName}
-                </span>
+                <span className="font-serif italic text-base font-bold text-slate-700 tracking-wide px-3">{signatoryName}</span>
               )}
             </div>
-            <p className="text-[10px] font-bold text-slate-900 leading-tight break-words">{signatoryName}</p>
-            <p className="text-[9px] leading-tight text-slate-500 max-w-[320px] ml-auto break-words">{signatoryTitle}</p>
+            <div className="relative z-0 min-w-[240px] max-w-full">
+              <p className="text-[12px] font-bold text-slate-900 leading-tight border-b border-slate-400 pb-0.5 break-words">{signatoryName}</p>
+              <p className="text-[10px] leading-tight text-slate-600 mt-1 break-words">{signatoryTitle}</p>
+            </div>
           </div>
         </div>
       </div>
