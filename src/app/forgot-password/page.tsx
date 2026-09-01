@@ -15,7 +15,8 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lmsrsudjohannes.vercel.app';
+    const redirectTo = `${appUrl.replace(/\/$/, '')}/reset-password`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     setLoading(false);
     if (resetError) {

@@ -15,6 +15,16 @@ Urutan instalasi database wajib:
 
 ## Menjalankan aplikasi
 
+Untuk deployment produksi, tambahkan environment variable berikut di Vercel:
+
+```env
+NEXT_PUBLIC_APP_URL=https://lmsrsudjohannes.vercel.app
+```
+
+Di Supabase Authentication → URL Configuration, gunakan Site URL
+`https://lmsrsudjohannes.vercel.app` dan tambahkan Redirect URL
+`https://lmsrsudjohannes.vercel.app/reset-password`.
+
 First, run the development server:
 
 ```bash
