@@ -33,8 +33,14 @@ export default function PretestPage() {
       const tr = StorageAPI.getTraining();
       setTraining(tr);
 
-      const qList = tr ? await StorageAPI.loadQuestionsForTest(tr.id, 'pretest') : [];
-      setQuestions(qList);
+      try {
+        const qList = tr ? await StorageAPI.loadQuestionsForTest(tr.id, 'pretest') : [];
+        setQuestions(qList);
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : 'Pre-Test belum dapat dibuka.');
+        setLoading(false);
+        return;
+      }
 
       // Check if already completed
       const existing = StorageAPI.getTestAttempts(user.id, 'pretest');
@@ -94,7 +100,9 @@ export default function PretestPage() {
         <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-2xl p-6 text-center space-y-3">
           <AlertCircle className="w-9 h-9 text-amber-500 mx-auto" />
           <h2 className="text-base font-bold text-amber-900 dark:text-amber-200">Pre-Test Belum Tersedia</h2>
-          <p className="text-xs text-amber-700 dark:text-amber-300">Admin belum mengaktifkan pelatihan atau belum menambahkan soal Pre-Test.</p>
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            {submitError || 'Admin belum mengaktifkan pelatihan atau belum menambahkan soal Pre-Test.'}
+          </p>
           <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold">Kembali ke Dashboard</button>
         </div>
       </div>

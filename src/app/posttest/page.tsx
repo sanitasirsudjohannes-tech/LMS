@@ -45,9 +45,6 @@ export default function PosttestPage() {
         return;
       }
 
-      const qList = await StorageAPI.loadQuestionsForTest(tr.id, 'posttest');
-      setQuestions(qList);
-
       // Validate if all materials are completed (PRD Section 12)
       const materials = StorageAPI.getMaterials().filter(m => m.active);
       const userProgress = StorageAPI.getMaterialProgress(user.id);
@@ -56,6 +53,16 @@ export default function PosttestPage() {
       if (materials.length > 0 && completedMats.length < materials.length) {
         setIsAccessAllowed(false);
         setAccessErrorMsg('Anda belum menyelesaikan seluruh materi pelatihan. Selesaikan semua materi untuk membuka Post-Test.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const qList = await StorageAPI.loadQuestionsForTest(tr.id, 'posttest');
+        setQuestions(qList);
+      } catch (error) {
+        setIsAccessAllowed(false);
+        setAccessErrorMsg(error instanceof Error ? error.message : 'Post-Test belum dapat dibuka.');
         setLoading(false);
         return;
       }
