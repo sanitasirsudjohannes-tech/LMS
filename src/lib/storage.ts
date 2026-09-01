@@ -102,10 +102,18 @@ export async function initLocalStorage(): Promise<void> {
     const { data: dbCertSettings } = await supabase.from('certificate_settings').select('*');
     if (dbCertSettings && dbCertSettings.length > 0) {
       cacheState.certSettingsList = dbCertSettings;
-      cacheState.certSettings = dbCertSettings.find(setting => setting.training_id === cacheState.training?.id) || dbCertSettings[0];
+      cacheState.certSettings = dbCertSettings.find(setting => setting.training_id === cacheState.training?.id) || {
+        ...DEFAULT_CERT_SETTINGS,
+        id: crypto.randomUUID(),
+        training_id: cacheState.training?.id || DEFAULT_CERT_SETTINGS.training_id
+      };
     } else {
       cacheState.certSettingsList = [];
-      cacheState.certSettings = DEFAULT_CERT_SETTINGS;
+      cacheState.certSettings = {
+        ...DEFAULT_CERT_SETTINGS,
+        id: crypto.randomUUID(),
+        training_id: cacheState.training?.id || DEFAULT_CERT_SETTINGS.training_id
+      };
     }
 
     // 5. Fetch profiles only when required. Participants only need their own profile.
@@ -524,20 +532,39 @@ export const StorageAPI = {
   },
 
   getCertificateSettings: (trainingId?: string): CertificateSettings => {
-    if (trainingId) {
-      return cacheState.certSettingsList.find(setting => setting.training_id === trainingId) || cacheState.certSettings;
-    }
+    const targetTrainingId = trainingId || cacheState.training?.id;
+    if (!targetTrainingId) return cacheState.certSettings;
+    const existing = cacheState.certSettingsList.find(setting => setting.training_id === targetTrainingId);
+    if (existing) return existing;
+    if (cacheState.certSettings.training_id === targetTrainingId) return cacheState.certSettings;
+    cacheState.certSettings = {
+      ...DEFAULT_CERT_SETTINGS,
+      id: crypto.randomUUID(),
+      training_id: targetTrainingId,
+      updated_at: new Date().toISOString()
+    };
     return cacheState.certSettings;
   },
 
   updateCertificateSettings: async (updates: Partial<CertificateSettings>): Promise<CertificateSettings> => {
-    const updated = { ...cacheState.certSettings, ...updates, updated_at: new Date().toISOString() };
+    const trainingId = cacheState.training?.id;
+    if (!trainingId) throw new Error('Pilih pelatihan terlebih dahulu.');
+    const existing = cacheState.certSettingsList.find(setting => setting.training_id === trainingId);
+    const base = existing || (cacheState.certSettings.training_id === trainingId
+      ? cacheState.certSettings
+      : { ...DEFAULT_CERT_SETTINGS, id: crypto.randomUUID(), training_id: trainingId });
+    const updated = {
+      ...base,
+      ...updates,
+      training_id: trainingId,
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await supabase.from('certificate_settings').upsert(updated);
+    if (error) throw new Error(`Gagal menyimpan pengaturan sertifikat: ${error.message}`);
     cacheState.certSettings = updated;
     const existingIndex = cacheState.certSettingsList.findIndex(setting => setting.training_id === updated.training_id);
     if (existingIndex >= 0) cacheState.certSettingsList[existingIndex] = updated;
     else cacheState.certSettingsList.push(updated);
-    const { error } = await supabase.from('certificate_settings').upsert(updated);
-    if (error) throw new Error(`Gagal menyimpan pengaturan sertifikat: ${error.message}`);
     return updated;
   },
 
