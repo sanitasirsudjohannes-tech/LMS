@@ -138,7 +138,7 @@ export default function CertificatePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 py-2">
+    <div className="max-w-5xl mx-auto space-y-6 py-2">
       {shareError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{shareError}</div>}
       
       {/* Top Header & Actions */}
@@ -166,7 +166,7 @@ export default function CertificatePage() {
             className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5"
           >
             <Printer className="w-4 h-4" />
-            <span>Cetak</span>
+            <span>Cetak Lanskap</span>
           </button>
 
           <button

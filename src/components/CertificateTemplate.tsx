@@ -29,8 +29,7 @@ export default function CertificateTemplate({ certificate, settings, previewMode
   return (
     <div
       id="certificate-render-target"
-      className={`w-full max-w-4xl mx-auto bg-white text-slate-900 border-8 border-slate-900 p-8 md:p-12 relative overflow-hidden font-serif ${previewMode ? 'shadow-sm' : 'shadow-2xl'}`}
-      style={{ minHeight: '560px' }}
+      className={`certificate-canvas h-[707px] w-[1000px] max-w-none shrink-0 bg-white text-slate-900 border-8 border-slate-900 p-10 relative overflow-hidden font-serif ${previewMode ? 'shadow-sm' : 'shadow-2xl'}`}
     >
       {/* Decorative Minimalist Border Lines */}
       <div className="absolute inset-2 border border-slate-300 pointer-events-none" />
@@ -41,16 +40,16 @@ export default function CertificateTemplate({ certificate, settings, previewMode
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 text-white mb-2 shadow-md">
           <Award className="w-7 h-7" />
         </div>
-        <h1 className="text-2xl md:text-4xl font-bold tracking-widest text-slate-900 uppercase font-sans">
+        <h1 className="text-4xl font-bold tracking-widest text-slate-900 uppercase font-sans">
           Sertifikat Kelulusan
         </h1>
-        <p className="text-xs md:text-sm tracking-wider text-slate-500 uppercase font-sans">
+        <p className="text-sm tracking-wider text-slate-500 uppercase font-sans">
           Certificate of Completion
         </p>
 
         {/* Certificate Number */}
         {certificate.certificate_number ? (
-          <div className="pt-2 font-mono text-xs md:text-sm font-semibold tracking-wide text-slate-700">
+          <div className="pt-2 font-mono text-sm font-semibold tracking-wide text-slate-700">
             No: {certificate.certificate_number}
           </div>
         ) : (
@@ -61,36 +60,36 @@ export default function CertificateTemplate({ certificate, settings, previewMode
       </div>
 
       {/* Main Body */}
-      <div className="my-8 text-center space-y-4 relative z-10">
-        <p className="text-xs md:text-sm text-slate-600 font-sans">
+      <div className="my-6 text-center space-y-3 relative z-10">
+        <p className="text-sm text-slate-600 font-sans">
           Diberikan secara sah kepada:
         </p>
 
         <div className="py-2 border-b-2 border-slate-900 max-w-xl mx-auto">
-          <h2 className="text-xl md:text-3xl font-bold text-slate-900 tracking-wide font-sans">
+          <h2 className="text-3xl font-bold text-slate-900 tracking-wide font-sans">
             {certificate.user_name || 'Nama Peserta'}
           </h2>
           {certificate.user_institution && (
-            <p className="text-xs md:text-sm text-slate-600 font-sans mt-1 italic">
+            <p className="text-sm text-slate-600 font-sans mt-1 italic">
               {certificate.user_institution}
             </p>
           )}
         </div>
 
-        <p className="text-xs md:text-sm text-slate-700 leading-relaxed font-sans max-w-2xl mx-auto pt-2">
+        <p className="text-sm text-slate-700 leading-relaxed font-sans max-w-2xl mx-auto pt-1">
           Telah berhasil menyelesaikan seluruh rangkaian program dan dinyatakan <strong className="text-slate-900 font-bold uppercase">LULUS</strong> pada:
         </p>
 
-        <h3 className="text-lg md:text-xl font-bold text-slate-900 font-sans tracking-tight max-w-2xl mx-auto">
+        <h3 className="text-xl font-bold text-slate-900 font-sans tracking-tight max-w-3xl mx-auto">
           {certificate.training_title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja'}
         </h3>
 
-        <p className="text-xs md:text-sm font-semibold text-slate-700 font-sans">
+        <p className="text-sm font-semibold text-slate-700 font-sans">
           Dengan beban pembelajaran {certificate.training_jpl || 1} Jam Pelajaran (JPL)
         </p>
 
         {trainingPeriod && (
-          <p className="text-xs md:text-sm text-slate-600 font-sans">
+          <p className="text-sm text-slate-600 font-sans">
             Dilaksanakan pada {trainingPeriod}
           </p>
         )}
@@ -104,7 +103,7 @@ export default function CertificateTemplate({ certificate, settings, previewMode
       </div>
 
       {/* Footer / Signatures & QR Code */}
-      <div className="mt-10 pt-6 border-t border-slate-200 grid grid-cols-2 items-end gap-4 relative z-10 font-sans">
+      <div className="mt-6 pt-4 border-t border-slate-200 grid grid-cols-2 items-end gap-4 relative z-10 font-sans">
         
         {/* Verification & QR Code */}
         <div className="flex items-center gap-4">
@@ -113,7 +112,7 @@ export default function CertificateTemplate({ certificate, settings, previewMode
           </div>
           <div>
             <span className="text-[10px] text-slate-400 block uppercase font-semibold">Kode Verifikasi</span>
-            <span className="font-mono text-xs md:text-sm font-bold text-slate-900 tracking-wider">
+            <span className="font-mono text-sm font-bold text-slate-900 tracking-wider">
               {certificate.verification_code}
             </span>
             <span className="text-[10px] text-slate-500 block mt-0.5">

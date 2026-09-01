@@ -28,7 +28,16 @@ body {
 @media print {
   @page {
     size: A4 landscape;
-    margin: 8mm;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 297mm !important;
+    height: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   body * {
@@ -41,21 +50,29 @@ body {
   }
 
   .certificate-print-area {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    width: 100%;
+    width: 297mm !important;
+    height: 210mm !important;
+    margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     background: #fff !important;
     border: 0 !important;
+    border-radius: 0 !important;
   }
 
   #certificate-render-target {
-    width: 100% !important;
+    width: 297mm !important;
+    height: 210mm !important;
     max-width: none !important;
     min-height: 0 !important;
+    margin: 0 !important;
     box-shadow: none !important;
-    break-inside: avoid;
+    box-sizing: border-box !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }

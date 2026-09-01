@@ -15,7 +15,11 @@ export async function generateCertificatePDF(elementId: string, filename: string
     scale: 2,
     useCORS: true,
     backgroundColor: '#ffffff',
-    logging: false
+    logging: false,
+    width: element.scrollWidth,
+    height: element.scrollHeight,
+    windowWidth: Math.max(document.documentElement.clientWidth, element.scrollWidth),
+    windowHeight: Math.max(document.documentElement.clientHeight, element.scrollHeight)
   });
 
   const imgData = canvas.toDataURL('image/png');
