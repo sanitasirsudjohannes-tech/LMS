@@ -27,6 +27,39 @@ function safeFilename(value: string): string {
     .slice(0, 80) || 'pelatihan';
 }
 
+async function addPublicStorageAssets(zip: JSZip, backup: TrainingBackup): Promise<void> {
+  const urls = new Set<string>();
+  const collect = (value: unknown) => {
+    if (typeof value === 'string' && value.includes('/storage/v1/object/public/')) urls.add(value);
+  };
+  collect(backup.certificate_settings?.signatory_image_url);
+  collect(backup.certificate_settings?.stamp_image_url);
+  for (const material of backup.materials) collect(material.content_url);
+  for (const certificate of backup.certificates) {
+    collect(certificate.signatory_image_url);
+    collect(certificate.stamp_image_url);
+  }
+
+  const usedNames = new Set<string>();
+  for (const rawUrl of urls) {
+    try {
+      const parsed = new URL(rawUrl);
+      const originalName = decodeURIComponent(parsed.pathname.split('/').pop() || 'file');
+      const filename = safeFilename(originalName.replace(/\.[^.]+$/, ''));
+      const extension = originalName.match(/\.[a-zA-Z0-9]+$/)?.[0] || '';
+      let candidate = `${filename}${extension}`;
+      let suffix = 2;
+      while (usedNames.has(candidate)) candidate = `${filename}-${suffix++}${extension}`;
+      const response = await fetch(rawUrl);
+      if (!response.ok) continue;
+      usedNames.add(candidate);
+      zip.file(`aset-storage/${candidate}`, await response.blob());
+    } catch {
+      // URL tetap tersedia pada JSON backup jika aset eksternal tidak dapat diambil.
+    }
+  }
+}
+
 export async function downloadTrainingBackupZip(backup: TrainingBackup): Promise<void> {
   const zip = new JSZip();
   const manifest = {
@@ -50,6 +83,8 @@ export async function downloadTrainingBackupZip(backup: TrainingBackup): Promise
   zip.file('materi.json', JSON.stringify(backup.materials, null, 2));
   zip.file('bank_soal.json', JSON.stringify(backup.questions, null, 2));
   zip.file('sesi_dan_jawaban.json', JSON.stringify(backup.test_sessions, null, 2));
+
+  await addPublicStorageAssets(zip, backup);
 
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
   const url = URL.createObjectURL(blob);
