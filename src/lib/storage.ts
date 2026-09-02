@@ -11,7 +11,10 @@ import {
   ParticipantQuestion,
   SubmittedTestResult,
   TestOption,
-  TestSession
+  TestSession,
+  TrainingMaintenance,
+  DatabaseUsage,
+  TrainingBackup
 } from '@/types';
 import { supabase } from './supabase';
 
@@ -300,6 +303,7 @@ export const StorageAPI = {
   saveTraining: async (trData: Partial<Training>): Promise<Training> => {
     const isNew = !trData.id;
     const targetId = isNew ? crypto.randomUUID() : trData.id!;
+    const existing = cacheState.trainings.find(training => training.id === targetId);
 
     const saved: Training = {
       id: targetId,
@@ -310,9 +314,11 @@ export const StorageAPI = {
       passing_score: trData.passing_score !== undefined ? Number(trData.passing_score) : 80,
       max_posttest_attempts: 5,
       jpl: trData.jpl !== undefined ? Number(trData.jpl) : 1,
-      active: trData.active !== undefined ? trData.active : true,
-      status: trData.status || (trData.active === false ? 'archived' : 'active'),
-      created_at: trData.created_at || new Date().toISOString()
+      active: trData.active !== undefined ? trData.active : existing?.active ?? true,
+      status: trData.status || existing?.status || (trData.active === false ? 'archived' : 'active'),
+      created_at: trData.created_at || existing?.created_at || new Date().toISOString(),
+      archived_at: trData.archived_at ?? existing?.archived_at ?? null,
+      operational_data_purged_at: trData.operational_data_purged_at ?? existing?.operational_data_purged_at ?? null
     };
 
     const { error } = await supabase.from('trainings').upsert(saved);
@@ -354,6 +360,51 @@ export const StorageAPI = {
       }
     }
 
+  },
+
+  getTrainingMaintenance: async (): Promise<TrainingMaintenance[]> => {
+    const { data, error } = await supabase.rpc('admin_training_maintenance_list');
+    if (error) throw new Error(`Status pemeliharaan gagal dimuat: ${error.message}`);
+    return (data || []) as TrainingMaintenance[];
+  },
+
+  getDatabaseUsage: async (): Promise<DatabaseUsage> => {
+    const { data, error } = await supabase.rpc('admin_database_usage');
+    if (error) throw new Error(`Ukuran database gagal dimuat: ${error.message}`);
+    if (!data) throw new Error('Informasi ukuran database tidak tersedia.');
+    return data as DatabaseUsage;
+  },
+
+  archiveTraining: async (id: string): Promise<void> => {
+    const { error } = await supabase.rpc('admin_archive_training', { p_training_id: id });
+    if (error) throw new Error(`Pelatihan gagal diarsipkan: ${error.message}`);
+    cacheState.trainings = cacheState.trainings.map(training => training.id === id
+      ? { ...training, status: 'archived', active: false, archived_at: training.archived_at || new Date().toISOString() }
+      : training);
+    if (cacheState.training?.id === id) {
+      cacheState.training = cacheState.trainings.find(training => training.id === id) || null;
+    }
+  },
+
+  exportTrainingBackup: async (id: string): Promise<TrainingBackup> => {
+    const { data, error } = await supabase.rpc('admin_export_training_backup', { p_training_id: id });
+    if (error) throw new Error(`Backup pelatihan gagal dibuat: ${error.message}`);
+    return data as TrainingBackup;
+  },
+
+  purgeArchivedTraining: async (id: string, backupId: string): Promise<Record<string, number | string>> => {
+    const { data, error } = await supabase.rpc('admin_purge_archived_training', {
+      p_training_id: id,
+      p_backup_id: backupId
+    });
+    if (error) throw new Error(`Data operasional gagal dibersihkan: ${error.message}`);
+    cacheState.materials = cacheState.materials.filter(material => material.training_id !== id);
+    cacheState.questions = cacheState.questions.filter(question => question.training_id !== id);
+    cacheState.testAttempts = cacheState.testAttempts.filter(attempt => attempt.training_id !== id);
+    cacheState.trainings = cacheState.trainings.map(training => training.id === id
+      ? { ...training, operational_data_purged_at: new Date().toISOString() }
+      : training);
+    return data as Record<string, number | string>;
   },
 
   getMaterials: (trainingId?: string): Material[] => {

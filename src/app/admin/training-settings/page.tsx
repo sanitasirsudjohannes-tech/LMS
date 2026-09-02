@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { Training, TrainingStatus } from '@/types';
-import { Plus, Edit2, Trash2, X, Award, Calendar, Archive } from 'lucide-react';
+import { DatabaseUsage, Training, TrainingMaintenance, TrainingStatus } from '@/types';
+import { Plus, Edit2, Trash2, X, Award, Calendar, Archive, Download, Database, Eraser, ShieldCheck } from 'lucide-react';
 import { formatDateInputWita, toWitaDateBoundary } from '@/lib/utils';
+import { downloadTrainingBackupZip } from '@/lib/trainingBackup';
 
 export default function TrainingSettingsAdminPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
@@ -22,7 +23,20 @@ export default function TrainingSettingsAdminPage() {
   const [passingScore, setPassingScore] = useState(80);
   const [jpl, setJpl] = useState(1);
   const [status, setStatus] = useState<TrainingStatus>('active');
+  const [editingPurged, setEditingPurged] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [maintenance, setMaintenance] = useState<Record<string, TrainingMaintenance>>({});
+  const [databaseUsage, setDatabaseUsage] = useState<DatabaseUsage | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const loadMaintenance = async () => {
+    const [rows, usage] = await Promise.all([
+      StorageAPI.getTrainingMaintenance(),
+      StorageAPI.getDatabaseUsage()
+    ]);
+    setMaintenance(Object.fromEntries(rows.map(row => [row.training_id, row])));
+    setDatabaseUsage(usage);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +45,7 @@ export default function TrainingSettingsAdminPage() {
         const list = StorageAPI.getTrainings();
         setTrainings(list);
         setSelectedTraining(StorageAPI.getTraining());
+        await loadMaintenance();
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : 'Daftar pelatihan gagal dimuat.');
       }
@@ -61,6 +76,7 @@ export default function TrainingSettingsAdminPage() {
     setPassingScore(80);
     setJpl(1);
     setStatus('draft');
+    setEditingPurged(false);
     setIsModalOpen(true);
   };
 
@@ -73,6 +89,7 @@ export default function TrainingSettingsAdminPage() {
     setPassingScore(t.passing_score);
     setJpl(t.jpl || 1);
     setStatus(t.status || (t.active ? 'active' : 'archived'));
+    setEditingPurged(Boolean(t.operational_data_purged_at));
     setIsModalOpen(true);
   };
 
@@ -102,6 +119,9 @@ export default function TrainingSettingsAdminPage() {
         active: status === 'active',
         status
       });
+      if (editingId && status === 'archived') {
+        await StorageAPI.archiveTraining(editingId);
+      }
 
       setIsModalOpen(false);
       await Swal.fire({
@@ -116,8 +136,95 @@ export default function TrainingSettingsAdminPage() {
         showConfirmButton: false
       });
       reloadTrainings();
+      await loadMaintenance();
     } catch (error) {
       await Swal.fire('Gagal Menyimpan', error instanceof Error ? error.message : 'Data pelatihan gagal disimpan.', 'error');
+    }
+  };
+
+  const handleArchive = async (training: Training) => {
+    const { default: Swal } = await import('sweetalert2');
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'Arsipkan Pelatihan?',
+      text: `"${training.title}" tidak lagi tampil kepada peserta. Data dan sertifikat tetap tersimpan.`,
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Arsipkan',
+      cancelButtonText: 'Batal'
+    });
+    if (!result.isConfirmed) return;
+    setProcessingId(training.id);
+    try {
+      await StorageAPI.archiveTraining(training.id);
+      reloadTrainings();
+      await loadMaintenance();
+      await Swal.fire('Berhasil', 'Pelatihan masuk ke Arsip dan statistiknya sudah disimpan.', 'success');
+    } catch (error) {
+      await Swal.fire('Gagal', error instanceof Error ? error.message : 'Pelatihan gagal diarsipkan.', 'error');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleBackup = async (training: Training) => {
+    const { default: Swal } = await import('sweetalert2');
+    setProcessingId(training.id);
+    try {
+      const backup = await StorageAPI.exportTrainingBackup(training.id);
+      await downloadTrainingBackupZip(backup);
+      await loadMaintenance();
+      await Swal.fire({
+        icon: 'success',
+        title: 'Backup Diunduh',
+        html: `Simpan ZIP di tempat aman.<br><small>Backup ID: <code>${backup.backup_id}</code></small>`
+      });
+    } catch (error) {
+      await Swal.fire('Backup Gagal', error instanceof Error ? error.message : 'Backup tidak dapat dibuat.', 'error');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handlePurge = async (training: Training) => {
+    const { default: Swal } = await import('sweetalert2');
+    const state = maintenance[training.id];
+    if (!state?.last_backup_id) {
+      await Swal.fire('Backup Diperlukan', 'Unduh Backup Pelatihan terlebih dahulu sebelum membersihkan data.', 'warning');
+      return;
+    }
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Bersihkan Data Operasional?',
+      html: 'Materi, soal, sesi, jawaban, progres, dan hasil percobaan akan dihapus.<br><b>Log, statistik, dan sertifikat tetap ada.</b>',
+      input: 'text',
+      inputLabel: `Ketik nama pelatihan: ${training.title}`,
+      inputPlaceholder: training.title,
+      showCancelButton: true,
+      confirmButtonText: 'Bersihkan Data',
+      confirmButtonColor: '#dc2626',
+      preConfirm: value => {
+        if (value !== training.title) {
+          Swal.showValidationMessage('Nama pelatihan belum sesuai.');
+          return false;
+        }
+        return true;
+      }
+    });
+    if (!result.isConfirmed) return;
+    setProcessingId(training.id);
+    try {
+      const removed = await StorageAPI.purgeArchivedTraining(training.id, state.last_backup_id);
+      reloadTrainings();
+      await loadMaintenance();
+      await Swal.fire({
+        icon: 'success',
+        title: 'Data Operasional Dibersihkan',
+        text: `${removed.attempts || 0} hasil tes, ${removed.sessions || 0} sesi, ${removed.progress || 0} progres, ${removed.questions || 0} soal, dan ${removed.materials || 0} materi dihapus. Sertifikat tetap tersimpan.`
+      });
+    } catch (error) {
+      await Swal.fire('Pembersihan Gagal', error instanceof Error ? error.message : 'Data tidak dapat dibersihkan.', 'error');
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -204,11 +311,32 @@ export default function TrainingSettingsAdminPage() {
         </button>
       </div>
 
+      {databaseUsage && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-blue-600" />
+              <div><h3 className="text-sm font-bold">Kapasitas Database</h3><p className="text-[11px] text-slate-500">Batas aman operasional ditetapkan 400 MB</p></div>
+            </div>
+            <strong className="text-sm font-mono">{databaseUsage.megabytes} MB</strong>
+          </div>
+          <div className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div
+              className={`h-full rounded-full ${databaseUsage.megabytes >= 350 ? 'bg-red-500' : databaseUsage.megabytes >= 300 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+              style={{ width: `${Math.min(100, databaseUsage.safe_usage_percent)}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-500">{databaseUsage.safe_usage_percent}% dari batas aman. Peringatan dimulai pada 300 MB.</p>
+        </div>
+      )}
+
       {/* Trainings List */}
       <div className="space-y-3">
         {trainings.length > 0 ? (
           trainings.map((t) => {
             const isCurrentActive = selectedTraining?.id === t.id;
+            const maintenanceState = maintenance[t.id];
+            const isProcessing = processingId === t.id;
             return (
               <div
                 key={t.id}
@@ -240,6 +368,15 @@ export default function TrainingSettingsAdminPage() {
                       <span>• Max Percobaan: {t.max_posttest_attempts}x</span>
                       <span>• {t.jpl || 1} JPL</span>
                     </div>
+                    {maintenanceState && (
+                      <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-slate-500">
+                        <span>{maintenanceState.participant_count} peserta</span>
+                        <span>• {maintenanceState.attempt_count} hasil tes</span>
+                        <span>• {maintenanceState.certificate_count} sertifikat</span>
+                        {maintenanceState.last_backup_at && <span className="text-emerald-700 dark:text-emerald-400">• Backup tersedia</span>}
+                        {maintenanceState.operational_data_purged_at && <span className="text-blue-700 dark:text-blue-400">• Data operasional sudah dibersihkan</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -260,14 +397,27 @@ export default function TrainingSettingsAdminPage() {
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => handleDelete(t)}
-                    title="Hapus Pelatihan"
-                    className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-600 dark:text-red-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Hapus</span>
-                  </button>
+                  {t.status !== 'draft' && (
+                    <button disabled={isProcessing} onClick={() => handleBackup(t)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
+                      <Download className="w-3.5 h-3.5" /> Backup
+                    </button>
+                  )}
+                  {t.status !== 'archived' && (
+                    <button disabled={isProcessing} onClick={() => handleArchive(t)} className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
+                      <Archive className="w-3.5 h-3.5" /> Arsipkan
+                    </button>
+                  )}
+                  {t.status === 'archived' && !maintenanceState?.operational_data_purged_at && (
+                    <button disabled={isProcessing} onClick={() => handlePurge(t)} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
+                      <Eraser className="w-3.5 h-3.5" /> Bersihkan
+                    </button>
+                  )}
+                  {t.status === 'draft' && (
+                    <button disabled={isProcessing} onClick={() => handleDelete(t)} title="Hapus Draf" className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
+                      <Trash2 className="w-3.5 h-3.5" /><span>Hapus Draf</span>
+                    </button>
+                  )}
+                  {maintenanceState?.operational_data_purged_at && <ShieldCheck className="w-5 h-5 text-emerald-600" aria-label="Log dan sertifikat terlindungi" />}
                 </div>
               </div>
             );
@@ -391,8 +541,8 @@ export default function TrainingSettingsAdminPage() {
                   onChange={(event) => setStatus(event.target.value as TrainingStatus)}
                   className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                 >
-                  <option value="draft">Draf — belum ditampilkan</option>
-                  <option value="active">Aktif — tampil kepada peserta</option>
+                  <option value="draft" disabled={editingPurged}>Draf — belum ditampilkan</option>
+                  <option value="active" disabled={editingPurged}>Aktif — tampil kepada peserta</option>
                   <option value="archived">Arsip — kegiatan selesai, sertifikat tetap ada</option>
                 </select>
                 <p className="text-[10px] text-slate-400">Gunakan Arsip setelah kegiatan selesai. Data lama tidak dimuat ke dashboard peserta, sedangkan sertifikat tetap tersedia dan dapat diverifikasi.</p>

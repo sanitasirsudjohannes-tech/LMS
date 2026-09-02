@@ -24,6 +24,8 @@ export interface Training {
   active: boolean;
   status: TrainingStatus;
   created_at: string;
+  archived_at?: string | null;
+  operational_data_purged_at?: string | null;
 }
 
 export interface Material {
@@ -147,4 +149,43 @@ export interface AdminStats {
   passed: number;
   failed: number;
   certificatesIssued: number;
+}
+
+export interface TrainingMaintenance {
+  training_id: string;
+  archived_at: string | null;
+  operational_data_purged_at: string | null;
+  last_backup_id: string | null;
+  last_backup_at: string | null;
+  participant_count: number;
+  attempt_count: number;
+  session_count: number;
+  certificate_count: number;
+}
+
+export interface DatabaseUsage {
+  bytes: number;
+  megabytes: number;
+  free_plan_limit_megabytes: number;
+  safe_limit_megabytes: number;
+  safe_usage_percent: number;
+}
+
+export interface TrainingBackup {
+  format: 'LONTAR_TRAINING_BACKUP';
+  version: number;
+  backup_id: string;
+  checksum: string;
+  exported_at: string;
+  training: Training;
+  summary: Record<string, unknown>;
+  certificate_settings: CertificateSettings | null;
+  participants: Array<Record<string, unknown>>;
+  materials: Array<Record<string, unknown>>;
+  questions: Array<Record<string, unknown>>;
+  test_attempts: Array<Record<string, unknown>>;
+  test_sessions: Array<Record<string, unknown>>;
+  material_progress: Array<Record<string, unknown>>;
+  certificates: Array<Record<string, unknown>>;
+  record_counts: Record<string, number>;
 }
