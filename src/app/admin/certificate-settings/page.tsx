@@ -39,13 +39,17 @@ export default function CertificateSettingsAdminPage() {
     setNumberDigits(st.number_digits);
     setCurrentNumber(st.current_number || st.start_number);
     setShowPosttestScore(st.show_posttest_score);
-    setSignatoryName(st.signatory_name);
-    setSignatoryTitle(st.signatory_title);
-    setSignatoryImageUrl(st.signatory_image_url || '');
-    setSignaturePreview(st.signatory_image_url || '');
+  };
+
+  const applyGlobalSettings = async () => {
+    const global = await StorageAPI.loadGlobalCertificateSettings();
+    setSignatoryName(global.signatory_name);
+    setSignatoryTitle(global.signatory_title);
+    setSignatoryImageUrl(global.signatory_image_url || '');
+    setSignaturePreview(global.signatory_image_url || '');
     setSignatureFile(null);
-    setStampImageUrl(st.stamp_image_url || '');
-    setStampPreview(st.stamp_image_url || '');
+    setStampImageUrl(global.stamp_image_url || '');
+    setStampPreview(global.stamp_image_url || '');
     setStampFile(null);
   };
 
@@ -56,6 +60,7 @@ export default function CertificateSettingsAdminPage() {
         const trainingList = StorageAPI.getTrainings();
         const currentTraining = StorageAPI.getTraining() || trainingList[0];
         setTrainings(trainingList);
+        await applyGlobalSettings();
         if (currentTraining) {
           StorageAPI.setSelectTraining(currentTraining.id);
           setSelectedTrainingId(currentTraining.id);
@@ -126,18 +131,20 @@ export default function CertificateSettingsAdminPage() {
         start_number: Number(startNumber),
         number_digits: Number(numberDigits),
         current_number: Number(currentNumber),
-        show_posttest_score: showPosttestScore,
+        show_posttest_score: showPosttestScore
+      });
+      const savedGlobalSettings = await StorageAPI.updateGlobalCertificateSettings({
         signatory_name: signatoryName.trim(),
         signatory_title: signatoryTitle.trim(),
         signatory_image_url: uploadedImageUrl || null,
         stamp_image_url: uploadedStampUrl || null
       });
       setCurrentNumber(savedSettings.current_number);
-      setSignatoryImageUrl(uploadedImageUrl);
-      setSignaturePreview(uploadedImageUrl);
+      setSignatoryImageUrl(savedGlobalSettings.signatory_image_url || '');
+      setSignaturePreview(savedGlobalSettings.signatory_image_url || '');
       setSignatureFile(null);
-      setStampImageUrl(uploadedStampUrl);
-      setStampPreview(uploadedStampUrl);
+      setStampImageUrl(savedGlobalSettings.stamp_image_url || '');
+      setStampPreview(savedGlobalSettings.stamp_image_url || '');
       setStampFile(null);
       setSavedMsg(true);
       setTimeout(() => setSavedMsg(false), 3000);
@@ -191,7 +198,7 @@ export default function CertificateSettingsAdminPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Pengaturan Sertifikat & Penomoran</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Konfigurasi toggle sertifikat, format penomoran otomatis, dan penandatangan.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Nomor diatur per pelatihan; Direktur, tanda tangan, dan cap berlaku untuk seluruh pelatihan.</p>
         </div>
         <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-bold shrink-0">
           <Settings className="w-5 h-5" />
@@ -205,7 +212,7 @@ export default function CertificateSettingsAdminPage() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan yang Akan Diatur</h3>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Setiap pelatihan memiliki nomor, direktur, dan tanda tangan sertifikat masing-masing.</p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Pilihan pelatihan hanya memengaruhi status sertifikat, tampilan nilai, dan penomoran.</p>
           </div>
         </div>
 
@@ -232,7 +239,7 @@ export default function CertificateSettingsAdminPage() {
             }`}>
               {selectedTraining.active ? 'AKTIF • Tampil di Peserta' : 'NONAKTIF • Disembunyikan'}
             </span>
-            <span className="text-blue-700 dark:text-blue-300">Pengaturan di bawah berlaku untuk: <strong>{selectedTraining.title}</strong></span>
+            <span className="text-blue-700 dark:text-blue-300">Pengaturan status dan nomor berlaku untuk: <strong>{selectedTraining.title}</strong></span>
           </div>
         )}
       </div>
@@ -416,8 +423,12 @@ export default function CertificateSettingsAdminPage() {
         {/* Signatory Settings */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
-            3. Direktur Rumah Sakit
+            3. Direktur Rumah Sakit — Berlaku untuk Semua Pelatihan
           </h3>
+
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-relaxed text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+            Perubahan di bagian ini hanya digunakan oleh sertifikat yang diterbitkan setelah disimpan. Sertifikat yang sudah terbit tetap memakai nama, tanda tangan, dan cap versi sebelumnya.
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

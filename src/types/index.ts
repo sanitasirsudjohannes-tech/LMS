@@ -119,6 +119,17 @@ export interface CertificateSettings {
   updated_at: string;
 }
 
+export interface CertificateGlobalSettings {
+  singleton: true;
+  signatory_name: string;
+  signatory_title: string;
+  signatory_image_url?: string | null;
+  stamp_image_url?: string | null;
+  version: number;
+  updated_at: string;
+  updated_by?: string | null;
+}
+
 export interface Certificate {
   id: string;
   user_id: string | null;

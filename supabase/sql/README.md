@@ -26,6 +26,7 @@ Jalankan berkas di Supabase **SQL Editor** satu per satu dan tunggu status berha
 10. `migrations/010_certificate_stamp_storage.sql`
 11. `migrations/011_long_term_archive_and_certificate_snapshot.sql`
 12. `migrations/012_training_retention_backup_and_monitoring.sql`
+13. `migrations/013_global_certificate_signatory.sql`
 
 Setelah itu:
 
@@ -44,6 +45,7 @@ Untuk aplikasi yang sebelumnya sudah terpasang, jalankan ulang secara berurutan:
 5. `migrations/010_certificate_stamp_storage.sql`
 6. `migrations/011_long_term_archive_and_certificate_snapshot.sql`
 7. `migrations/012_training_retention_backup_and_monitoring.sql`
+8. `migrations/013_global_certificate_signatory.sql`
 
 Migrasi 011 wajib dijalankan sebelum memakai status **Arsip**. Migrasi ini
 menyalin data penting ke setiap sertifikat dan mengubah foreign key agar
@@ -53,6 +55,10 @@ Migrasi 012 menambahkan backup per pelatihan, statistik permanen, perlindungan
 hapus, pembersihan data operasional setelah backup, dan indikator ukuran
 database. Pelatihan produksi disimpan sebagai log; hanya Draf tanpa aktivitas
 peserta yang dapat dihapus permanen.
+
+Migrasi 013 menjadikan identitas Direktur, tanda tangan, dan cap sebagai
+pengaturan global. Sertifikat baru mengambil pengaturan global saat diterbitkan,
+sedangkan sertifikat lama tetap memakai snapshot dan tidak ikut berubah.
 
 Keempat berkas tersebut menggunakan transaksi dan dirancang aman dijalankan ulang. Jika migrasi berhenti karena nomor sertifikat atau urutan materi duplikat, rapikan data duplikat yang disebutkan dalam pesan kesalahan sebelum mencoba lagi. Jangan menghapus data secara massal hanya untuk melewati validasi.
 

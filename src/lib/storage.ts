@@ -14,7 +14,8 @@ import {
   TestSession,
   TrainingMaintenance,
   DatabaseUsage,
-  TrainingBackup
+  TrainingBackup,
+  CertificateGlobalSettings
 } from '@/types';
 import { supabase } from './supabase';
 
@@ -35,6 +36,17 @@ const DEFAULT_CERT_SETTINGS: CertificateSettings = {
   updated_at: new Date().toISOString()
 };
 
+const DEFAULT_GLOBAL_CERT_SETTINGS: CertificateGlobalSettings = {
+  singleton: true,
+  signatory_name: 'Nama Direktur',
+  signatory_title: 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang',
+  signatory_image_url: null,
+  stamp_image_url: null,
+  version: 1,
+  updated_at: new Date().toISOString(),
+  updated_by: null
+};
+
 const cacheState = {
   training: null as Training | null,
   trainings: [] as Training[],
@@ -42,6 +54,7 @@ const cacheState = {
   questions: [] as Question[],
   certSettings: DEFAULT_CERT_SETTINGS,
   certSettingsList: [] as CertificateSettings[],
+  globalCertSettings: DEFAULT_GLOBAL_CERT_SETTINGS,
   profiles: [] as UserProfile[],
   testAttempts: [] as TestAttempt[],
   materialProgress: [] as MaterialProgress[],
@@ -844,9 +857,32 @@ export const StorageAPI = {
     return updated;
   },
 
+  loadGlobalCertificateSettings: async (): Promise<CertificateGlobalSettings> => {
+    const { data, error } = await supabase
+      .from('certificate_global_settings')
+      .select('*')
+      .eq('singleton', true)
+      .single();
+    if (error) throw new Error(`Pengaturan Direktur global gagal dimuat: ${error.message}`);
+    cacheState.globalCertSettings = data as CertificateGlobalSettings;
+    return cacheState.globalCertSettings;
+  },
+
+  updateGlobalCertificateSettings: async (
+    updates: Pick<CertificateGlobalSettings, 'signatory_name' | 'signatory_title' | 'signatory_image_url' | 'stamp_image_url'>
+  ): Promise<CertificateGlobalSettings> => {
+    const { data, error } = await supabase
+      .from('certificate_global_settings')
+      .update(updates)
+      .eq('singleton', true)
+      .select('*')
+      .single();
+    if (error) throw new Error(`Pengaturan Direktur global gagal disimpan: ${error.message}`);
+    cacheState.globalCertSettings = data as CertificateGlobalSettings;
+    return cacheState.globalCertSettings;
+  },
+
   uploadDirectorSignature: async (file: File): Promise<string> => {
-    const trainingId = cacheState.training?.id;
-    if (!trainingId) throw new Error('Pilih pelatihan terlebih dahulu.');
     if (file.type !== 'image/png') throw new Error('Tanda tangan harus menggunakan format PNG.');
     if (file.size > 2 * 1024 * 1024) throw new Error('Ukuran PNG maksimal 2 MB.');
 
@@ -856,7 +892,8 @@ export const StorageAPI = {
       throw new Error('Isi file bukan gambar PNG yang valid.');
     }
 
-    const path = `${trainingId}/director-signature.png`;
+    // Nama unik wajib: sertifikat lama menyimpan URL versi lama sebagai snapshot.
+    const path = `global/director-signature-${crypto.randomUUID()}.png`;
     const { error } = await supabase.storage
       .from('certificate-assets')
       .upload(path, file, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
@@ -867,8 +904,6 @@ export const StorageAPI = {
   },
 
   uploadDirectorStamp: async (file: File): Promise<string> => {
-    const trainingId = cacheState.training?.id;
-    if (!trainingId) throw new Error('Pilih pelatihan terlebih dahulu.');
     if (file.type !== 'image/png') throw new Error('Cap harus menggunakan format PNG.');
     if (file.size > 2 * 1024 * 1024) throw new Error('Ukuran PNG maksimal 2 MB.');
 
@@ -878,7 +913,7 @@ export const StorageAPI = {
       throw new Error('Isi file cap bukan gambar PNG yang valid.');
     }
 
-    const path = `${trainingId}/director-stamp.png`;
+    const path = `global/director-stamp-${crypto.randomUUID()}.png`;
     const { error } = await supabase.storage
       .from('certificate-assets')
       .upload(path, file, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
