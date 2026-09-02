@@ -17,55 +17,53 @@ function ResponsiveCertificatePreview({
   certificate: Certificate;
   settings: CertificateSettings;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [previewScale, setPreviewScale] = useState(1);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const preview = previewRef.current;
+    if (!preview) return;
 
     const updateScale = () => {
-      const availableWidth = container.clientWidth;
-      if (!availableWidth) return;
-      setScale(Math.min(1, availableWidth / CERTIFICATE_WIDTH));
+      const availableWidth = Math.max(0, preview.getBoundingClientRect().width);
+      const nextScale = Math.min(1, availableWidth / CERTIFICATE_WIDTH);
+      setPreviewScale(Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1);
     };
 
     updateScale();
     const observer = new ResizeObserver(updateScale);
-    observer.observe(container);
+    observer.observe(preview);
     window.addEventListener('orientationchange', updateScale);
 
     return () => {
       observer.disconnect();
       window.removeEventListener('orientationchange', updateScale);
     };
-  }, []);
-
-  const scaledWidth = CERTIFICATE_WIDTH * scale;
-  const scaledHeight = CERTIFICATE_HEIGHT * scale;
+  }, [certificate]);
 
   return (
-    <div ref={containerRef} className="w-full min-w-0">
-      {scale > 0 ? (
+    <div className="certificate-print-area w-full p-1 sm:p-2 bg-slate-200/50 dark:bg-slate-950 rounded-lg sm:rounded-2xl border border-slate-300 dark:border-slate-800 overflow-hidden">
+      <div ref={previewRef} className="certificate-preview-viewport w-full max-w-[1000px] mx-auto overflow-hidden">
         <div
-          className="relative mx-auto overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-slate-200"
-          style={{ width: scaledWidth, height: scaledHeight, maxWidth: '100%' }}
+          className="certificate-preview-stage relative mx-auto overflow-hidden"
+          style={{
+            width: `${CERTIFICATE_WIDTH * previewScale}px`,
+            height: `${CERTIFICATE_HEIGHT * previewScale}px`
+          }}
         >
           <div
-            className="absolute left-0 top-0"
+            className="certificate-preview-scale absolute left-0 top-0"
             style={{
-              width: CERTIFICATE_WIDTH,
-              height: CERTIFICATE_HEIGHT,
-              transform: `scale(${scale})`,
+              width: `${CERTIFICATE_WIDTH}px`,
+              height: `${CERTIFICATE_HEIGHT}px`,
+              transform: `scale(${previewScale})`,
               transformOrigin: 'top left'
             }}
           >
-            <CertificateTemplate certificate={certificate} settings={settings} previewMode />
+            <CertificateTemplate certificate={certificate} settings={settings} />
           </div>
         </div>
-      ) : (
-        <div className="aspect-[1000/707] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
-      )}
+      </div>
     </div>
   );
 }
@@ -421,13 +419,13 @@ export default function CertificateSettingsAdminPage() {
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Live</span>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">A4 Landscape</span>
               </div>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Seluruh lembar otomatis menyesuaikan lebar layar. Perubahan form langsung terlihat tanpa perlu menyimpan terlebih dahulu.</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Preview sekarang memakai mekanisme tampilan yang sama dengan halaman sertifikat peserta.</p>
             </div>
           </div>
 
           {!certificateEnabled && <div className="mx-3 mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 sm:mx-5">Sertifikat sedang dinonaktifkan untuk pelatihan ini. Preview tetap tersedia untuk pemeriksaan desain.</div>}
 
-          <div className="bg-slate-100 p-2.5 dark:bg-slate-950 sm:p-5">
+          <div className="p-2 sm:p-4">
             <ResponsiveCertificatePreview certificate={previewCertificate} settings={previewSettings} />
           </div>
 
