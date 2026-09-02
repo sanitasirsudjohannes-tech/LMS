@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { Training } from '@/types';
-import { Plus, Edit2, Trash2, X, Award, Calendar } from 'lucide-react';
+import { Training, TrainingStatus } from '@/types';
+import { Plus, Edit2, Trash2, X, Award, Calendar, Archive } from 'lucide-react';
 import { formatDateInputWita, toWitaDateBoundary } from '@/lib/utils';
 
 export default function TrainingSettingsAdminPage() {
@@ -21,7 +21,7 @@ export default function TrainingSettingsAdminPage() {
   const [endDate, setEndDate] = useState('');
   const [passingScore, setPassingScore] = useState(80);
   const [jpl, setJpl] = useState(1);
-  const [active, setActive] = useState(true);
+  const [status, setStatus] = useState<TrainingStatus>('active');
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function TrainingSettingsAdminPage() {
     setEndDate(nextMonth);
     setPassingScore(80);
     setJpl(1);
-    setActive(true);
+    setStatus('draft');
     setIsModalOpen(true);
   };
 
@@ -72,7 +72,7 @@ export default function TrainingSettingsAdminPage() {
     setEndDate(formatDateForInput(t.end_date));
     setPassingScore(t.passing_score);
     setJpl(t.jpl || 1);
-    setActive(t.active);
+    setStatus(t.status || (t.active ? 'active' : 'archived'));
     setIsModalOpen(true);
   };
 
@@ -99,16 +99,19 @@ export default function TrainingSettingsAdminPage() {
         passing_score: Number(passingScore),
         max_posttest_attempts: 5,
         jpl: Number(jpl),
-        active
+        active: status === 'active',
+        status
       });
 
       setIsModalOpen(false);
       await Swal.fire({
         icon: 'success',
         title: 'Tersimpan!',
-        text: active
+        text: status === 'active'
           ? 'Pelatihan aktif dan sekarang terlihat oleh peserta.'
-          : 'Pelatihan disimpan sebagai nonaktif dan tidak terlihat oleh peserta.',
+          : status === 'archived'
+            ? 'Pelatihan diarsipkan. Sertifikat peserta tetap tersimpan.'
+            : 'Pelatihan disimpan sebagai draf dan belum terlihat oleh peserta.',
         timer: 2200,
         showConfirmButton: false
       });
@@ -122,7 +125,7 @@ export default function TrainingSettingsAdminPage() {
     const { default: Swal } = await import('sweetalert2');
     Swal.fire({
       title: 'Hapus Pelatihan?',
-      text: `Apakah Anda yakin ingin menghapus "${t.title}" beserta seluruh materi dan soal di dalamnya?`,
+      text: `Materi, soal, hasil tes, dan progres "${t.title}" akan dihapus. Sertifikat yang sudah terbit tetap dipertahankan sebagai dokumen permanen.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#dc2626',
@@ -223,9 +226,9 @@ export default function TrainingSettingsAdminPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[220px] sm:max-w-xs">{t.title}</h3>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        t.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300' : 'bg-slate-100 text-slate-500'
+                        t.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300' : t.status === 'archived' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300' : 'bg-slate-100 text-slate-500'
                       }`}>
-                        {t.active ? 'AKTIF • Tampil di Peserta' : 'NONAKTIF • Disembunyikan'}
+                        {t.status === 'active' ? 'AKTIF • Tampil di Peserta' : t.status === 'archived' ? 'ARSIP • Sertifikat Dipertahankan' : 'DRAF • Belum Dipublikasikan'}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2 break-words">{t.description || 'Tidak ada deskripsi'}</p>
@@ -378,18 +381,21 @@ export default function TrainingSettingsAdminPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="activeCheck"
-                  checked={active}
-                  onChange={(e) => setActive(e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
-                />
-                <label htmlFor="activeCheck" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Aktifkan dan tampilkan pelatihan kepada peserta
+              <div className="space-y-1.5 pt-2">
+                <label htmlFor="trainingStatus" className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Archive className="w-3.5 h-3.5" /> Status Pelatihan
                 </label>
-                <p className="text-[10px] text-slate-400 ml-7">Jika dimatikan, pelatihan tidak muncul di dashboard peserta. Sertifikat yang sudah terbit tetap tersedia di Arsip Sertifikat.</p>
+                <select
+                  id="trainingStatus"
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as TrainingStatus)}
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                >
+                  <option value="draft">Draf — belum ditampilkan</option>
+                  <option value="active">Aktif — tampil kepada peserta</option>
+                  <option value="archived">Arsip — kegiatan selesai, sertifikat tetap ada</option>
+                </select>
+                <p className="text-[10px] text-slate-400">Gunakan Arsip setelah kegiatan selesai. Data lama tidak dimuat ke dashboard peserta, sedangkan sertifikat tetap tersedia dan dapat diverifikasi.</p>
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-2">

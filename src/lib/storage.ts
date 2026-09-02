@@ -126,13 +126,20 @@ async function fetchLmsData(): Promise<void> {
     const isAdmin = cacheState.currentUser?.role === 'admin';
     const userFilter = currentUserId && !isAdmin ? currentUserId : null;
 
-    // Setelah pelatihan terpilih diketahui, seluruh data independen dimuat paralel.
+    const selectedTrainingId = cacheState.training?.id;
+
+    // Data besar hanya dimuat untuk pelatihan yang sedang dibuka. Arsip sertifikat
+    // tetap dimuat seluruhnya karena jumlahnya kecil dan dibutuhkan peserta.
     const [materialsResult, questionsResult, settingsResult, profilesResult, attemptsResult, progressResult, certificatesResult] = await Promise.all([
-      supabase.from('materials').select('*').order('order_number', { ascending: true }).order('id', { ascending: true }),
+      selectedTrainingId
+        ? supabase.from('materials').select('*').eq('training_id', selectedTrainingId).order('order_number', { ascending: true }).order('id', { ascending: true })
+        : Promise.resolve({ data: [] as Material[], error: null }),
       isAdmin && cacheState.training
         ? supabase.from('questions').select('*').eq('training_id', cacheState.training.id)
         : Promise.resolve({ data: [] as Question[], error: null }),
-      supabase.from('certificate_settings').select('*'),
+      selectedTrainingId
+        ? supabase.from('certificate_settings').select('*').eq('training_id', selectedTrainingId)
+        : Promise.resolve({ data: [] as CertificateSettings[], error: null }),
       Promise.resolve({ data: cacheState.currentUser ? [cacheState.currentUser] : [], error: null }),
       userFilter
         ? supabase.from('test_attempts').select('*').eq('user_id', userFilter)
@@ -268,6 +275,28 @@ export const StorageAPI = {
     }
   },
 
+  loadTrainingResources: async (id: string): Promise<void> => {
+    StorageAPI.setSelectTraining(id);
+    const [materialsResult, settingsResult] = await Promise.all([
+      supabase.from('materials').select('*').eq('training_id', id).order('order_number').order('id'),
+      supabase.from('certificate_settings').select('*').eq('training_id', id).maybeSingle()
+    ]);
+    if (materialsResult.error) throw new Error(`Gagal memuat materi: ${materialsResult.error.message}`);
+    if (settingsResult.error) throw new Error(`Gagal memuat pengaturan sertifikat: ${settingsResult.error.message}`);
+    cacheState.materials = [
+      ...cacheState.materials.filter(material => material.training_id !== id),
+      ...((materialsResult.data || []) as Material[])
+    ];
+    if (settingsResult.data) {
+      const setting = settingsResult.data as CertificateSettings;
+      cacheState.certSettingsList = [
+        ...cacheState.certSettingsList.filter(item => item.training_id !== id),
+        setting
+      ];
+      cacheState.certSettings = setting;
+    }
+  },
+
   saveTraining: async (trData: Partial<Training>): Promise<Training> => {
     const isNew = !trData.id;
     const targetId = isNew ? crypto.randomUUID() : trData.id!;
@@ -282,6 +311,7 @@ export const StorageAPI = {
       max_posttest_attempts: 5,
       jpl: trData.jpl !== undefined ? Number(trData.jpl) : 1,
       active: trData.active !== undefined ? trData.active : true,
+      status: trData.status || (trData.active === false ? 'archived' : 'active'),
       created_at: trData.created_at || new Date().toISOString()
     };
 
@@ -305,8 +335,7 @@ export const StorageAPI = {
   },
 
   deleteTraining: async (id: string) => {
-    // Relasi di schema memakai ON DELETE CASCADE. Hapus induk secara atomik dan
-    // baru ubah cache setelah database mengonfirmasi keberhasilan.
+    // Migrasi 011 mempertahankan sertifikat sebagai snapshot saat pelatihan dihapus.
     const { data: deleted, error } = await supabase.from('trainings').delete().eq('id', id).select('id').maybeSingle();
     if (error) throw new Error(`Gagal menghapus pelatihan: ${error.message}`);
     if (!deleted) throw new Error('Pelatihan tidak ditemukan atau Anda tidak memiliki izin untuk menghapusnya.');
@@ -823,6 +852,29 @@ export const StorageAPI = {
       };
     });
   },
+
+  selectCertificate: (certificateId: string) => {
+    if (typeof window !== 'undefined') sessionStorage.setItem('lms_selected_certificate_id', certificateId);
+  },
+
+  getSelectedCertificate: (): Certificate | null => {
+    if (typeof window === 'undefined') return null;
+    const certificateId = sessionStorage.getItem('lms_selected_certificate_id');
+    if (!certificateId) return null;
+    return StorageAPI.getCertificates().find(item => item.id === certificateId) || null;
+  },
+
+  getCertificateSnapshotSettings: (certificate: Certificate): CertificateSettings => ({
+    ...DEFAULT_CERT_SETTINGS,
+    id: `snapshot-${certificate.id}`,
+    training_id: certificate.training_id || DEFAULT_CERT_SETTINGS.training_id,
+    show_posttest_score: certificate.show_posttest_score ?? true,
+    signatory_name: certificate.signatory_name || DEFAULT_CERT_SETTINGS.signatory_name,
+    signatory_title: certificate.signatory_title || DEFAULT_CERT_SETTINGS.signatory_title,
+    signatory_image_url: certificate.signatory_image_url || null,
+    stamp_image_url: certificate.stamp_image_url || null,
+    updated_at: certificate.issued_at
+  }),
 
   getCertificateForUser: (userId: string, trainingId?: string): Certificate | null => {
     const targetTrainingId = trainingId || cacheState.training?.id || '';

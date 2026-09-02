@@ -24,6 +24,7 @@ Jalankan berkas di Supabase **SQL Editor** satu per satu dan tunggu status berha
 8. `migrations/008_bugfix_stability_2026_09.sql`
 9. `migrations/009_test_sessions_autosave_shuffle.sql`
 10. `migrations/010_certificate_stamp_storage.sql`
+11. `migrations/011_long_term_archive_and_certificate_snapshot.sql`
 
 Setelah itu:
 
@@ -39,6 +40,12 @@ Untuk aplikasi yang sebelumnya sudah terpasang, jalankan ulang secara berurutan:
 2. `migrations/007_admin_pagination_and_bandwidth.sql`
 3. `migrations/008_bugfix_stability_2026_09.sql`
 4. `migrations/009_test_sessions_autosave_shuffle.sql`
+5. `migrations/010_certificate_stamp_storage.sql`
+6. `migrations/011_long_term_archive_and_certificate_snapshot.sql`
+
+Migrasi 011 wajib dijalankan sebelum memakai status **Arsip**. Migrasi ini
+menyalin data penting ke setiap sertifikat dan mengubah foreign key agar
+sertifikat tidak terhapus ketika akun atau pelatihan induknya dihapus.
 
 Keempat berkas tersebut menggunakan transaksi dan dirancang aman dijalankan ulang. Jika migrasi berhenti karena nomor sertifikat atau urutan materi duplikat, rapikan data duplikat yang disebutkan dalam pesan kesalahan sebelum mencoba lagi. Jangan menghapus data secara massal hanya untuk melewati validasi.
 

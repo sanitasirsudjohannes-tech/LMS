@@ -1,4 +1,5 @@
 export type UserRole = 'peserta' | 'admin';
+export type TrainingStatus = 'draft' | 'active' | 'archived';
 
 export interface UserProfile {
   id: string;
@@ -21,6 +22,7 @@ export interface Training {
   max_posttest_attempts: number;
   jpl: number;
   active: boolean;
+  status: TrainingStatus;
   created_at: string;
 }
 
@@ -117,8 +119,8 @@ export interface CertificateSettings {
 
 export interface Certificate {
   id: string;
-  user_id: string;
-  training_id: string;
+  user_id: string | null;
+  training_id: string | null;
   certificate_number: string | null;
   verification_code: string;
   issued_at: string;
@@ -129,6 +131,11 @@ export interface Certificate {
   training_jpl?: number;
   training_start_date?: string;
   training_end_date?: string;
+  show_posttest_score?: boolean;
+  signatory_name?: string;
+  signatory_title?: string;
+  signatory_image_url?: string | null;
+  stamp_image_url?: string | null;
 }
 
 export interface AdminStats {

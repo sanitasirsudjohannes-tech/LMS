@@ -43,7 +43,7 @@ export default function CertificatePage() {
         setCurrentUser(user);
 
         const training = StorageAPI.getTraining();
-        let cert = StorageAPI.getCertificateForUser(user.id);
+        let cert = StorageAPI.getSelectedCertificate() || StorageAPI.getCertificateForUser(user.id);
         const passed = training && StorageAPI.getTestAttempts(user.id, 'posttest', training.id)
           .some(attempt => attempt.score >= training.passing_score);
         if (!cert && training && passed) {
@@ -55,7 +55,9 @@ export default function CertificatePage() {
         }
         setCertificate(cert);
 
-        const st = StorageAPI.getCertificateSettings();
+        const st = cert
+          ? StorageAPI.getCertificateSnapshotSettings(cert)
+          : StorageAPI.getCertificateSettings();
         setSettings(st);
 
         if (cert) {

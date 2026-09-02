@@ -254,6 +254,11 @@ export default function PosttestPage() {
             {isPassed && certificateIssued ? (
               <Link
                 href="/certificate"
+                onClick={() => {
+                  if (!currentUser || !training) return;
+                  const certificate = StorageAPI.getCertificateForUser(currentUser.id, training.id);
+                  if (certificate) StorageAPI.selectCertificate(certificate.id);
+                }}
                 className="w-full sm:w-auto px-8 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-sm transition-all shadow-md inline-flex items-center justify-center gap-2"
               >
                 <Award className="w-5 h-5" />

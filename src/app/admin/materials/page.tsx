@@ -50,10 +50,16 @@ export default function MaterialsAdminPage() {
     }
   };
 
-  const handleTrainingChange = (trId: string) => {
+  const handleTrainingChange = async (trId: string) => {
     setSelectedTrainingId(trId);
-    StorageAPI.setSelectTraining(trId);
-    reloadMaterials(trId);
+    setOperationError('');
+    try {
+      await StorageAPI.loadTrainingResources(trId);
+      reloadMaterials(trId);
+    } catch (error) {
+      setMaterials([]);
+      setOperationError(error instanceof Error ? error.message : 'Materi gagal dimuat.');
+    }
   };
 
   const handleOpenCreate = () => {

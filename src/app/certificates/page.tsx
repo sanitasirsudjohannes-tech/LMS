@@ -58,7 +58,8 @@ export default function CertificateArchivePage() {
   }, [router]);
 
   const openCertificate = (certificate: Certificate) => {
-    StorageAPI.setSelectTraining(certificate.training_id);
+    StorageAPI.selectCertificate(certificate.id);
+    if (certificate.training_id) StorageAPI.setSelectTraining(certificate.training_id);
     router.push('/certificate');
   };
 

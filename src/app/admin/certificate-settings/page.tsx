@@ -75,12 +75,16 @@ export default function CertificateSettingsAdminPage() {
     };
   }, [signaturePreview, stampPreview]);
 
-  const handleTrainingChange = (trainingId: string) => {
-    StorageAPI.setSelectTraining(trainingId);
+  const handleTrainingChange = async (trainingId: string) => {
     setSelectedTrainingId(trainingId);
     setSavedMsg(false);
     setSaveError('');
-    applySettings(trainingId);
+    try {
+      await StorageAPI.loadTrainingResources(trainingId);
+      applySettings(trainingId);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Pengaturan sertifikat gagal dimuat.');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {

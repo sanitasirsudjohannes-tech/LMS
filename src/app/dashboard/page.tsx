@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const [certificateNotice, setCertificateNotice] = useState('');
 
   const loadTrainingDetails = async (userId: string, tr: Training) => {
-    StorageAPI.setSelectTraining(tr.id);
+    await StorageAPI.loadTrainingResources(tr.id);
     setCertificateNotice('');
 
     const mats = StorageAPI.getMaterials(tr.id).filter(m => m.active);
@@ -498,6 +498,7 @@ export default function DashboardPage() {
               {hasCertificate ? (
                 <Link
                   href="/certificate"
+                  onClick={() => certificate && StorageAPI.selectCertificate(certificate.id)}
                   className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
                 >
                   Unduh PDF

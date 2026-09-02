@@ -77,7 +77,7 @@ export default function CertificatesAdminPage() {
       if (cancelled) return;
       if (error) { console.error(error); setCertificates([]); setTotalCount(0); setLoadError(error.message); setLoading(false); return; }
       const certRows = (data || []) as Certificate[];
-      const ids = [...new Set(certRows.map(cert => cert.user_id))];
+      const ids = [...new Set(certRows.map(cert => cert.user_id).filter((id): id is string => Boolean(id)))];
       const { data: profileRows, error: profileError } = ids.length ? await supabase.from('profiles').select('*').in('id', ids) : { data: [], error: null };
       if (profileError) {
         setCertificates([]);
@@ -87,7 +87,11 @@ export default function CertificatesAdminPage() {
         return;
       }
       const profileMap = new Map(((profileRows || []) as UserProfile[]).map(profile => [profile.id, profile]));
-      setCertificates(certRows.map(cert => ({ ...cert, user_name: profileMap.get(cert.user_id)?.full_name || 'Peserta', user_institution: profileMap.get(cert.user_id)?.institution || '' })));
+      setCertificates(certRows.map(cert => ({
+        ...cert,
+        user_name: cert.user_name || (cert.user_id ? profileMap.get(cert.user_id)?.full_name : undefined) || 'Peserta',
+        user_institution: cert.user_institution || (cert.user_id ? profileMap.get(cert.user_id)?.institution : undefined) || ''
+      })));
       setTotalCount(count || 0); setLoading(false);
     };
     loadPage();
