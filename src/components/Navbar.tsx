@@ -13,6 +13,9 @@ export default function Navbar() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const brandHref = currentUser
+    ? currentUser.role === 'admin' ? '/admin' : '/dashboard'
+    : 'https://lmsrsudjohannes.vercel.app';
 
   useEffect(() => {
     const load = async () => {
@@ -38,7 +41,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           
           {/* Logo & Brand */}
-          <Link href={currentUser?.role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center gap-2.5 group">
+          <Link href={brandHref} className="flex items-center gap-2.5 group">
             <LontarLogo priority className="shadow-sm ring-1 ring-slate-200 transition-transform group-hover:scale-105 dark:ring-slate-700" />
             <div>
               <span className="font-bold text-[#07375c] dark:text-sky-300 tracking-[0.12em] text-base block">LONTAR</span>
