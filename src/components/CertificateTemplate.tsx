@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Certificate, CertificateSettings } from '@/types';
 import { formatDateIndonesian, formatDateInputWita } from '@/lib/utils';
@@ -16,6 +16,39 @@ export default function CertificateTemplate({ certificate, settings, previewMode
   const showScore = settings ? settings.show_posttest_score : true;
   const signatoryName = settings?.signatory_name || 'Nama Direktur';
   const signatoryTitle = settings?.signatory_title || 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang';
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
+
+  useEffect(() => {
+    if (!previewMode || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const host = canvas.parentElement;
+    if (!host) return;
+
+    // Preview admin dibungkus elemen lama yang sebelumnya mencoba menghitung
+    // scale lewat CSS calc(). Matikan transform tersebut dan hitung skala dari
+    // lebar container sebenarnya agar lembar 1000x707 selalu terlihat utuh.
+    const previousHostTransform = host.style.transform;
+    host.style.transform = 'none';
+
+    const updateScale = () => {
+      const availableWidth = host.clientWidth || host.parentElement?.clientWidth || 1000;
+      setPreviewScale(Math.min(1, Math.max(0.1, availableWidth / 1000)));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(host);
+    if (host.parentElement) observer.observe(host.parentElement);
+    window.addEventListener('resize', updateScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateScale);
+      host.style.transform = previousHostTransform;
+    };
+  }, [previewMode]);
 
   const trainingStartDateKey = formatDateInputWita(certificate.training_start_date);
   const trainingEndDateKey = formatDateInputWita(certificate.training_end_date);
@@ -34,8 +67,10 @@ export default function CertificateTemplate({ certificate, settings, previewMode
 
   return (
     <div
+      ref={canvasRef}
       id="certificate-render-target"
       className={`certificate-canvas h-[707px] w-[1000px] max-w-none shrink-0 bg-white text-slate-900 relative overflow-hidden font-serif ${previewMode ? 'shadow-sm' : 'shadow-2xl'}`}
+      style={previewMode ? { transform: `scale(${previewScale})`, transformOrigin: 'top left' } : undefined}
     >
       {/* Panel biru bernuansa rumah sakit, hanya pada sisi kiri. */}
       <div
