@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import CertificateTemplate from '@/components/CertificateTemplate';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { formatCertificateNumber } from '@/lib/utils';
-import { Training } from '@/types';
-import { Settings, Eye, Check, Save, Upload, GraduationCap } from 'lucide-react';
+import { Certificate, CertificateSettings, Training } from '@/types';
+import { Check, Eye, GraduationCap, Save, Settings, Upload } from 'lucide-react';
 
 export default function CertificateSettingsAdminPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [selectedTrainingId, setSelectedTrainingId] = useState('');
-  // Form controls
   const [certificateEnabled, setCertificateEnabled] = useState(true);
   const [numberingEnabled, setNumberingEnabled] = useState(true);
   const [numberFormat, setNumberFormat] = useState('{NO}/SERT/MFK/{BULAN_ROMAWI}/{TAHUN}');
@@ -25,7 +25,6 @@ export default function CertificateSettingsAdminPage() {
   const [stampImageUrl, setStampImageUrl] = useState('');
   const [stampFile, setStampFile] = useState<File | null>(null);
   const [stampPreview, setStampPreview] = useState('');
-
   const [savedMsg, setSavedMsg] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -80,6 +79,57 @@ export default function CertificateSettingsAdminPage() {
     };
   }, [signaturePreview, stampPreview]);
 
+  const selectedTraining = trainings.find((training) => training.id === selectedTrainingId);
+  const previewNumberSample1 = formatCertificateNumber(numberFormat, currentNumber, numberDigits);
+  const previewNumberSample2 = formatCertificateNumber(numberFormat, currentNumber + 1, numberDigits);
+  const previewNumberSample3 = formatCertificateNumber(numberFormat, currentNumber + 2, numberDigits);
+
+  const previewSettings = useMemo<CertificateSettings>(() => ({
+    id: 'preview-settings',
+    training_id: selectedTrainingId || 'preview-training',
+    certificate_enabled: certificateEnabled,
+    numbering_enabled: numberingEnabled,
+    number_format: numberFormat,
+    start_number: startNumber,
+    number_digits: numberDigits,
+    current_number: currentNumber,
+    show_posttest_score: showPosttestScore,
+    signatory_name: signatoryName.trim() || 'Nama Direktur',
+    signatory_title: signatoryTitle.trim() || 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang',
+    signatory_image_url: signaturePreview || null,
+    stamp_image_url: stampPreview || null,
+    updated_at: new Date().toISOString()
+  }), [
+    selectedTrainingId,
+    certificateEnabled,
+    numberingEnabled,
+    numberFormat,
+    startNumber,
+    numberDigits,
+    currentNumber,
+    showPosttestScore,
+    signatoryName,
+    signatoryTitle,
+    signaturePreview,
+    stampPreview
+  ]);
+
+  const previewCertificate = useMemo<Certificate>(() => ({
+    id: 'certificate-preview',
+    user_id: null,
+    training_id: selectedTraining?.id || null,
+    certificate_number: numberingEnabled ? previewNumberSample1 : null,
+    verification_code: 'PREVIEW-LONTAR',
+    issued_at: new Date().toISOString(),
+    posttest_score: 88,
+    user_name: 'Nama Peserta Contoh',
+    user_institution: 'RSUD Prof. Dr. W.Z. Johannes Kupang',
+    training_title: selectedTraining?.title || 'Judul Pelatihan Contoh',
+    training_jpl: selectedTraining?.jpl || 1,
+    training_start_date: selectedTraining?.start_date,
+    training_end_date: selectedTraining?.end_date
+  }), [selectedTraining, numberingEnabled, previewNumberSample1]);
+
   const handleTrainingChange = async (trainingId: string) => {
     setSelectedTrainingId(trainingId);
     setSavedMsg(false);
@@ -92,8 +142,40 @@ export default function CertificateSettingsAdminPage() {
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignatureFile = (file?: File) => {
+    setSaveError('');
+    if (!file) return;
+    if (file.type !== 'image/png') {
+      setSaveError('Tanda tangan harus berupa file PNG.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setSaveError('Ukuran tanda tangan maksimal 2 MB.');
+      return;
+    }
+    if (signaturePreview.startsWith('blob:')) URL.revokeObjectURL(signaturePreview);
+    setSignatureFile(file);
+    setSignaturePreview(URL.createObjectURL(file));
+  };
+
+  const handleStampFile = (file?: File) => {
+    setSaveError('');
+    if (!file) return;
+    if (file.type !== 'image/png') {
+      setSaveError('Cap harus berupa file PNG.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setSaveError('Ukuran cap maksimal 2 MB.');
+      return;
+    }
+    if (stampPreview.startsWith('blob:')) URL.revokeObjectURL(stampPreview);
+    setStampFile(file);
+    setStampPreview(URL.createObjectURL(file));
+  };
+
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSaveError('');
     if (!selectedTrainingId) {
       setSaveError('Pilih pelatihan terlebih dahulu.');
@@ -124,6 +206,7 @@ export default function CertificateSettingsAdminPage() {
       const uploadedStampUrl = stampFile
         ? await StorageAPI.uploadDirectorStamp(stampFile)
         : stampImageUrl;
+
       const savedSettings = await StorageAPI.updateCertificateSettings({
         certificate_enabled: certificateEnabled,
         numbering_enabled: numberingEnabled,
@@ -139,6 +222,7 @@ export default function CertificateSettingsAdminPage() {
         signatory_image_url: uploadedImageUrl || null,
         stamp_image_url: uploadedStampUrl || null
       });
+
       setCurrentNumber(savedSettings.current_number);
       setSignatoryImageUrl(savedGlobalSettings.signatory_image_url || '');
       setSignaturePreview(savedGlobalSettings.signatory_image_url || '');
@@ -155,377 +239,134 @@ export default function CertificateSettingsAdminPage() {
     }
   };
 
-  const handleSignatureFile = (file?: File) => {
-    setSaveError('');
-    if (!file) return;
-    if (file.type !== 'image/png') {
-      setSaveError('Tanda tangan harus berupa file PNG.');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveError('Ukuran tanda tangan maksimal 2 MB.');
-      return;
-    }
-    setSignatureFile(file);
-    setSignaturePreview(URL.createObjectURL(file));
-  };
-
-  const handleStampFile = (file?: File) => {
-    setSaveError('');
-    if (!file) return;
-    if (file.type !== 'image/png') {
-      setSaveError('Cap harus berupa file PNG.');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveError('Ukuran cap maksimal 2 MB.');
-      return;
-    }
-    setStampFile(file);
-    setStampPreview(URL.createObjectURL(file));
-  };
-
-  // Live Preview Calculation (PRD Section 14.3 requirement)
-  const previewNumberSample1 = formatCertificateNumber(numberFormat, currentNumber, numberDigits);
-  const previewNumberSample2 = formatCertificateNumber(numberFormat, currentNumber + 1, numberDigits);
-  const previewNumberSample3 = formatCertificateNumber(numberFormat, currentNumber + 2, numberDigits);
-  const selectedTraining = trainings.find(training => training.id === selectedTrainingId);
-
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Pengaturan Sertifikat & Penomoran</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Nomor diatur per pelatihan; Direktur, tanda tangan, dan cap berlaku untuk seluruh pelatihan.</p>
+          <p className="mt-0.5 text-xs text-slate-500">Nomor diatur per pelatihan; Direktur, tanda tangan, dan cap berlaku untuk seluruh pelatihan.</p>
         </div>
-        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-bold shrink-0">
-          <Settings className="w-5 h-5" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white">
+          <Settings className="h-5 w-5" />
         </div>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-800 rounded-2xl p-5 shadow-sm space-y-3">
+      <div className="space-y-3 rounded-2xl border-2 border-blue-300 bg-blue-50 p-5 shadow-sm dark:border-blue-800 dark:bg-blue-950/30">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-            <GraduationCap className="w-5 h-5" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+            <GraduationCap className="h-5 w-5" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan yang Akan Diatur</h3>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">Pilihan pelatihan hanya memengaruhi status sertifikat, tampilan nilai, dan penomoran.</p>
+            <p className="mt-0.5 text-xs text-blue-700 dark:text-blue-300">Pilihan pelatihan memengaruhi status sertifikat, nilai, penomoran, dan data pelatihan pada preview.</p>
           </div>
         </div>
-
         <select
           value={selectedTrainingId}
-          onChange={(event) => handleTrainingChange(event.target.value)}
+          onChange={(event) => void handleTrainingChange(event.target.value)}
           disabled={trainings.length === 0}
-          className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-xl border border-blue-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-blue-700 dark:bg-slate-900 dark:text-white"
         >
           {trainings.length === 0 && <option value="">Belum ada pelatihan</option>}
-          {trainings.map(training => (
-            <option key={training.id} value={training.id}>
-              {training.active ? 'AKTIF' : 'NONAKTIF'} — {training.title}
-            </option>
+          {trainings.map((training) => (
+            <option key={training.id} value={training.id}>{training.active ? 'AKTIF' : 'NONAKTIF'} — {training.title}</option>
           ))}
         </select>
-
-        {selectedTraining && (
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className={`px-2.5 py-1 rounded-full font-bold ${
-              selectedTraining.active
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-            }`}>
-              {selectedTraining.active ? 'AKTIF • Tampil di Peserta' : 'NONAKTIF • Disembunyikan'}
-            </span>
-            <span className="text-blue-700 dark:text-blue-300">Pengaturan status dan nomor berlaku untuk: <strong>{selectedTraining.title}</strong></span>
-          </div>
-        )}
       </div>
 
       {savedMsg && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-          <Check className="w-4 h-4 text-emerald-600" />
-          <span>Pengaturan sertifikat berhasil diperbarui!</span>
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40">
+          <Check className="h-4 w-4 text-emerald-600" />
+          <span>Pengaturan sertifikat berhasil diperbarui.</span>
         </div>
       )}
-
-      {saveError && (
-        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 text-red-800 text-xs font-semibold">
-          {saveError}
-        </div>
-      )}
+      {saveError && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800 dark:bg-red-950/40">{saveError}</div>}
 
       <form onSubmit={handleSave} className="space-y-6">
-        <div className="px-4 py-3 rounded-xl bg-slate-900 text-white text-xs">
-          Sedang mengatur sertifikat: <strong>{selectedTraining?.title || 'Belum ada pelatihan dipilih'}</strong>
-        </div>
-        
-        {/* Toggle General Certificate */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
-            1. Status Sertifikat Digital
-          </h3>
+        <div className="rounded-xl bg-slate-900 px-4 py-3 text-xs text-white">Sedang mengatur sertifikat: <strong>{selectedTraining?.title || 'Belum ada pelatihan dipilih'}</strong></div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold text-slate-900 dark:text-white block">Aktifkan Sertifikat Kelulusan?</span>
-              <span className="text-xs text-slate-500">Jika diaktifkan, peserta yang lulus Post-Test berhak mengunduh sertifikat.</span>
-            </div>
-            <input
-              type="checkbox"
-              checked={certificateEnabled}
-              onChange={(e) => setCertificateEnabled(e.target.checked)}
-              className="w-5 h-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
-            />
-          </div>
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h3 className="border-b border-slate-100 pb-2 text-sm font-bold text-slate-900 dark:border-slate-800 dark:text-white">1. Status Sertifikat Digital</h3>
+          <label className="flex items-center justify-between gap-4">
+            <span><strong className="block text-xs text-slate-900 dark:text-white">Aktifkan Sertifikat Kelulusan?</strong><span className="text-xs text-slate-500">Peserta yang lulus Post-Test berhak memperoleh sertifikat.</span></span>
+            <input type="checkbox" checked={certificateEnabled} onChange={(event) => setCertificateEnabled(event.target.checked)} className="h-5 w-5" />
+          </label>
+          <label className="flex items-center justify-between gap-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+            <span><strong className="block text-xs text-slate-900 dark:text-white">Tampilkan Nilai Post-Test?</strong><span className="text-xs text-slate-500">Perubahan langsung terlihat pada preview.</span></span>
+            <input type="checkbox" checked={showPosttestScore} onChange={(event) => setShowPosttestScore(event.target.checked)} className="h-5 w-5" />
+          </label>
+        </section>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div>
-              <span className="text-xs font-semibold text-slate-900 dark:text-white block">Tampilkan Nilai Post-Test di Sertifikat?</span>
-              <span className="text-xs text-slate-500">Menampilkan nilai kelulusan pada dokumen sertifikat.</span>
-            </div>
-            <input
-              type="checkbox"
-              checked={showPosttestScore}
-              onChange={(e) => setShowPosttestScore(e.target.checked)}
-              className="w-5 h-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
-            />
-          </div>
-        </div>
-
-        {/* Toggle & Format Builder Penomoran (PRD Section 14) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
-            2. Toggle & Format Penomoran Sertifikat
-          </h3>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold text-slate-900 dark:text-white block">Gunakan Nomor Sertifikat?</span>
-              <span className="text-xs text-slate-500">Jika Tidak, sertifikat dibuat tanpa nomor urut.</span>
-            </div>
-
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setNumberingEnabled(true)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  numberingEnabled ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'
-                }`}
-              >
-                Ya
-              </button>
-              <button
-                type="button"
-                onClick={() => setNumberingEnabled(false)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  !numberingEnabled ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'
-                }`}
-              >
-                Tidak
-              </button>
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h3 className="border-b border-slate-100 pb-2 text-sm font-bold text-slate-900 dark:border-slate-800 dark:text-white">2. Penomoran Sertifikat</h3>
+          <div className="flex items-center justify-between gap-4">
+            <div><strong className="block text-xs text-slate-900 dark:text-white">Gunakan Nomor Sertifikat?</strong><span className="text-xs text-slate-500">Jika tidak, preview menampilkan sertifikat tanpa nomor.</span></div>
+            <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+              <button type="button" onClick={() => setNumberingEnabled(true)} className={`rounded-lg px-3 py-1 text-xs font-bold ${numberingEnabled ? 'bg-white shadow-sm dark:bg-slate-900' : 'text-slate-500'}`}>Ya</button>
+              <button type="button" onClick={() => setNumberingEnabled(false)} className={`rounded-lg px-3 py-1 text-xs font-bold ${!numberingEnabled ? 'bg-white shadow-sm dark:bg-slate-900' : 'text-slate-500'}`}>Tidak</button>
             </div>
           </div>
 
           {numberingEnabled && (
-            <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-              
-              {/* Format input with placeholders guide */}
+            <div className="space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Format Nomor Sertifikat
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={numberFormat}
-                  onChange={(e) => setNumberFormat(e.target.value)}
-                  placeholder="Contoh: {NO}/SERT/MFK/{BULAN_ROMAWI}/{TAHUN}"
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900"
-                />
-                
-                <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
-                  <span className="font-bold text-slate-900 dark:text-white block">Placeholder yang didukung:</span>
-                  <div className="grid grid-cols-2 gap-1 font-mono">
-                    <span>• <strong>{'{NO}'}</strong> : Nomor urut</span>
-                    <span>• <strong>{'{TAHUN}'}</strong> : Tahun (2026)</span>
-                    <span>• <strong>{'{TAHUN2}'}</strong> : Tahun 2 digit (26)</span>
-                    <span>• <strong>{'{BULAN}'}</strong> : Bulan (08)</span>
-                    <span>• <strong>{'{BULAN_ROMAWI}'}</strong> : Bulan Romawi (VIII)</span>
-                  </div>
-                </div>
+                <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Format Nomor Sertifikat</label>
+                <input type="text" required value={numberFormat} onChange={(event) => setNumberFormat(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 font-mono text-xs font-bold dark:border-slate-700 dark:bg-slate-800" />
+                <p className="mt-2 text-[10px] text-slate-500">Placeholder: {'{NO}'}, {'{TAHUN}'}, {'{TAHUN2}'}, {'{BULAN}'}, {'{BULAN_ROMAWI}'}</p>
               </div>
-
-              {/* Number settings grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Nomor Awal (Start)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={startNumber}
-                    onChange={(e) => setStartNumber(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Jumlah Digit Nomor
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={8}
-                    value={numberDigits}
-                    onChange={(e) => setNumberDigits(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Nomor Urut Saat Ini
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={currentNumber}
-                    readOnly
-                    aria-describedby="current-number-help"
-                    className="w-full px-3.5 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-amber-600 cursor-not-allowed"
-                  />
-                  <p id="current-number-help" className="mt-1 text-[10px] text-slate-500">Dikelola otomatis dan tidak dapat diturunkan.</p>
-                </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nomor Awal<input type="number" min={1} value={startNumber} onChange={(event) => setStartNumber(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-800" /></label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Jumlah Digit<input type="number" min={1} max={8} value={numberDigits} onChange={(event) => setNumberDigits(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-800" /></label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nomor Urut Saat Ini<input type="number" value={currentNumber} readOnly className="mt-1 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2 font-mono text-xs font-bold text-amber-600 dark:border-slate-700 dark:bg-slate-800" /></label>
               </div>
-
-              {/* Live Preview Box (PRD Requirement 14.3) */}
-              <div className="p-4 bg-slate-900 text-white rounded-xl space-y-2 border border-slate-800 shadow-sm">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
-                  <Eye className="w-4 h-4" />
-                  <span>Live Preview Hasil Penomoran</span>
-                </div>
-                <div className="font-mono text-sm font-bold tracking-wider space-y-1 pt-1 text-slate-100">
-                  <p className="text-emerald-400">1. {previewNumberSample1}</p>
-                  <p className="opacity-80">2. {previewNumberSample2}</p>
-                  <p className="opacity-60">3. {previewNumberSample3}</p>
-                </div>
+              <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-900 p-4 text-white shadow-sm">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400"><Eye className="h-4 w-4" /><span>Contoh Penomoran</span></div>
+                <div className="pt-1 font-mono text-sm font-bold tracking-wider"><p className="text-emerald-400">1. {previewNumberSample1}</p><p className="opacity-80">2. {previewNumberSample2}</p><p className="opacity-60">3. {previewNumberSample3}</p></div>
               </div>
-
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Signatory Settings */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
-            3. Direktur Rumah Sakit — Berlaku untuk Semua Pelatihan
-          </h3>
-
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-relaxed text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
-            Perubahan di bagian ini hanya digunakan oleh sertifikat yang diterbitkan setelah disimpan. Sertifikat yang sudah terbit tetap memakai nama, tanda tangan, dan cap versi sebelumnya.
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h3 className="border-b border-slate-100 pb-2 text-sm font-bold text-slate-900 dark:border-slate-800 dark:text-white">3. Direktur Rumah Sakit — Berlaku untuk Semua Pelatihan</h3>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-relaxed text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">Perubahan hanya digunakan oleh sertifikat yang diterbitkan setelah disimpan. Sertifikat lama tetap memakai snapshot sebelumnya.</div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Direktur<input type="text" required value={signatoryName} onChange={(event) => setSignatoryName(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" /></label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Jabatan Direktur<input type="text" required value={signatoryTitle} onChange={(event) => setSignatoryTitle(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" /></label>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Nama Direktur Rumah Sakit
-              </label>
-              <input
-                type="text"
-                required
-                value={signatoryName}
-                onChange={(e) => setSignatoryName(e.target.value)}
-                placeholder="Masukkan nama lengkap beserta gelar"
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium"
-              />
+          <div className="grid grid-cols-1 gap-5 border-t border-slate-100 pt-4 dark:border-slate-800 sm:grid-cols-2">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tanda Tangan Direktur (PNG)</p>
+              <div className="flex h-24 w-48 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">{signaturePreview ? <img src={signaturePreview} alt="Pratinjau tanda tangan direktur" className="max-h-full max-w-full object-contain p-2" /> : <span className="px-3 text-center text-[11px] text-slate-400">Belum ada tanda tangan</span>}</div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold dark:bg-slate-800"><Upload className="h-4 w-4" /><span>Pilih File PNG</span><input type="file" accept="image/png,.png" className="hidden" onChange={(event) => handleSignatureFile(event.target.files?.[0])} /></label>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Jabatan Direktur
-              </label>
-              <input
-                type="text"
-                required
-                value={signatoryTitle}
-                onChange={(e) => setSignatoryTitle(e.target.value)}
-                placeholder="Direktur RSUD Prof. Dr. W.Z. Johannes Kupang"
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium"
-              />
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Cap Direktur / Rumah Sakit (PNG)</p>
+              <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">{stampPreview ? <img src={stampPreview} alt="Pratinjau cap direktur" className="max-h-full max-w-full object-contain p-2" /> : <span className="px-3 text-center text-[11px] text-slate-400">Belum ada cap</span>}</div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold dark:bg-slate-800"><Upload className="h-4 w-4" /><span>Pilih File Cap PNG</span><input type="file" accept="image/png,.png" className="hidden" onChange={(event) => handleStampFile(event.target.files?.[0])} /></label>
             </div>
           </div>
+        </section>
 
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Tanda Tangan Direktur (PNG)
-            </label>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="w-48 h-24 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-                {signaturePreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={signaturePreview} alt="Pratinjau tanda tangan direktur" className="max-w-full max-h-full object-contain p-2" />
-                ) : (
-                  <span className="text-[11px] text-slate-400 text-center px-3">Belum ada tanda tangan</span>
-                )}
+        <section className="space-y-4 rounded-2xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900 dark:bg-slate-900 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white"><Eye className="h-4 w-4" /></div>
+            <div><h3 className="text-sm font-bold text-slate-900 dark:text-white">4. Preview Sertifikat</h3><p className="mt-0.5 text-[11px] text-slate-500">Preview memakai layout sertifikat peserta yang sebenarnya dan mengikuti perubahan form secara langsung. Data peserta di bawah hanya contoh dan tidak disimpan.</p></div>
+          </div>
+          {!certificateEnabled && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-semibold text-amber-800">Sertifikat sedang dinonaktifkan untuk pelatihan ini. Preview tetap ditampilkan agar desain dapat diperiksa.</div>}
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-2 dark:border-slate-800 dark:bg-slate-950 sm:p-3">
+            <div className="relative mx-auto aspect-[1000/707] w-full max-w-[1000px] overflow-hidden bg-white">
+              <div className="absolute left-0 top-0 origin-top-left" style={{ transform: 'scale(min(1, calc((100vw - 96px) / 1000)))' }}>
+                <CertificateTemplate certificate={previewCertificate} settings={previewSettings} previewMode />
               </div>
-              <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold cursor-pointer">
-                <Upload className="w-4 h-4" />
-                <span>Pilih File PNG</span>
-                <input
-                  type="file"
-                  accept="image/png,.png"
-                  className="hidden"
-                  onChange={(event) => handleSignatureFile(event.target.files?.[0])}
-                />
-              </label>
             </div>
-            <p className="text-[10px] text-slate-400">Gunakan PNG transparan, maksimal 2 MB. Klik Simpan untuk mengunggah dan menerapkannya.</p>
           </div>
-
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Cap Direktur / Rumah Sakit (PNG)
-            </label>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="w-32 h-32 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-                {stampPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={stampPreview} alt="Pratinjau cap direktur" className="max-w-full max-h-full object-contain p-2" />
-                ) : (
-                  <span className="text-[11px] text-slate-400 text-center px-3">Belum ada cap</span>
-                )}
-              </div>
-              <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold cursor-pointer">
-                <Upload className="w-4 h-4" />
-                <span>Pilih File Cap PNG</span>
-                <input
-                  type="file"
-                  accept="image/png,.png"
-                  className="hidden"
-                  onChange={(event) => handleStampFile(event.target.files?.[0])}
-                />
-              </label>
-            </div>
-            <p className="text-[10px] text-slate-400">Gunakan PNG transparan berbentuk cap, maksimal 2 MB. Cap akan ditempatkan proporsional di belakang tanda tangan Direktur.</p>
-          </div>
-        </div>
+          <p className="text-center text-[10px] text-slate-400">Nama peserta, institusi, nilai, dan kode verifikasi pada preview adalah data contoh.</p>
+        </section>
 
         <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-8 py-3.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-bold rounded-xl text-sm transition-all shadow-md inline-flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Sertifikat'}</span>
-          </button>
+          <button type="submit" disabled={saving || !selectedTrainingId} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-8 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"><Save className="h-4 w-4" /><span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Sertifikat'}</span></button>
         </div>
-
       </form>
     </div>
   );
