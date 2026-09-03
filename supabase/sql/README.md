@@ -1,75 +1,11 @@
-# Panduan SQL LMS
+# SQL LONTAR
 
-Semua berkas database disusun berdasarkan tujuan agar urutan instalasi tidak tertukar.
+Struktur SQL setelah perapihan baseline 2026-09-03.
 
-## Struktur folder
+- `migrations/` hanya untuk perubahan baru setelah baseline. Nomor berikutnya: **018**.
+- `archive/pre_baseline_017/` menyimpan riwayat migrasi 001-017 yang sudah diterapkan pada database produksi.
+- Database produksi **tidak perlu menjalankan ulang** migrasi 001-017.
 
-| Folder | Kegunaan | Kapan dijalankan |
-| --- | --- | --- |
-| `migrations/` | Struktur tabel, keamanan, RPC, indeks, dan perbaikan skema | Wajib, sesuai nomor urut |
-| `setup/` | Membuat admin dan data contoh | Setelah seluruh migrasi |
-| `maintenance/` | Perbaikan khusus untuk instalasi lama | Hanya jika mengalami masalah terkait |
+Catatan penting: produksi sempat menjalankan dua file dengan nomor 016. File pengamanan urutan materi tetap dicatat sebagai 016, sedangkan migrasi integritas sertifikat dinomori ulang menjadi 017 di repository. Isi perbaikan sertifikat sudah diterapkan pada database produksi, sehingga 017 tidak perlu dijalankan ulang di produksi.
 
-## Instalasi database baru
-
-Jalankan berkas di Supabase **SQL Editor** satu per satu dan tunggu status berhasil sebelum melanjutkan:
-
-1. `migrations/001_schema.sql`
-2. `migrations/002_security_hardening.sql`
-3. `migrations/003_training_jpl_and_attempt_limit.sql`
-4. `migrations/004_certificate_training_dates.sql`
-5. `migrations/005_certificate_signature_storage.sql`
-6. `migrations/006_training_visibility_and_certificate_archive.sql`
-7. `migrations/007_admin_pagination_and_bandwidth.sql`
-8. `migrations/008_bugfix_stability_2026_09.sql`
-9. `migrations/009_test_sessions_autosave_shuffle.sql`
-10. `migrations/010_certificate_stamp_storage.sql`
-11. `migrations/011_long_term_archive_and_certificate_snapshot.sql`
-12. `migrations/012_training_retention_backup_and_monitoring.sql`
-13. `migrations/013_global_certificate_signatory.sql`
-
-Setelah itu:
-
-1. Buat user admin melalui **Authentication → Users → Add user** dan aktifkan **Auto confirm user**.
-2. Buka `setup/create_admin.sql`, ganti `GANTI_DENGAN_EMAIL_ADMIN`, kemudian jalankan bagian `INSERT` dan verifikasinya.
-3. `setup/seed_data.sql` bersifat opsional. Jangan jalankan pada database produksi yang sudah berisi pelatihan nyata kecuali memang ingin memasukkan data contoh.
-
-## Memperbarui instalasi lama
-
-Untuk aplikasi yang sebelumnya sudah terpasang, jalankan ulang secara berurutan:
-
-1. `migrations/002_security_hardening.sql`
-2. `migrations/007_admin_pagination_and_bandwidth.sql`
-3. `migrations/008_bugfix_stability_2026_09.sql`
-4. `migrations/009_test_sessions_autosave_shuffle.sql`
-5. `migrations/010_certificate_stamp_storage.sql`
-6. `migrations/011_long_term_archive_and_certificate_snapshot.sql`
-7. `migrations/012_training_retention_backup_and_monitoring.sql`
-8. `migrations/013_global_certificate_signatory.sql`
-
-Migrasi 011 wajib dijalankan sebelum memakai status **Arsip**. Migrasi ini
-menyalin data penting ke setiap sertifikat dan mengubah foreign key agar
-sertifikat tidak terhapus ketika akun atau pelatihan induknya dihapus.
-
-Migrasi 012 menambahkan backup per pelatihan, statistik permanen, perlindungan
-hapus, pembersihan data operasional setelah backup, dan indikator ukuran
-database. Pelatihan produksi disimpan sebagai log; hanya Draf tanpa aktivitas
-peserta yang dapat dihapus permanen.
-
-Migrasi 013 menjadikan identitas Direktur, tanda tangan, dan cap sebagai
-pengaturan global. Sertifikat baru mengambil pengaturan global saat diterbitkan,
-sedangkan sertifikat lama tetap memakai snapshot dan tidak ikut berubah.
-
-Keempat berkas tersebut menggunakan transaksi dan dirancang aman dijalankan ulang. Jika migrasi berhenti karena nomor sertifikat atau urutan materi duplikat, rapikan data duplikat yang disebutkan dalam pesan kesalahan sebelum mencoba lagi. Jangan menghapus data secara massal hanya untuk melewati validasi.
-
-## Pemeliharaan
-
-`maintenance/fix_profile_access.sql` hanya diperlukan bila user dapat masuk melalui Supabase Auth tetapi aplikasi menampilkan pesan bahwa profil tidak ditemukan. Migrasi keamanan terbaru sudah memuat konfigurasi normal yang dibutuhkan, sehingga berkas ini bukan bagian instalasi rutin.
-
-## Catatan keamanan
-
-- Jangan menyimpan password, service role key, atau token Supabase dalam repository.
-- Frontend hanya menggunakan anon key melalui `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- Jangan melewati `002_security_hardening.sql`; berkas ini memasang RLS, kontrol role, penilaian tes di server, timer materi, dan penerbitan sertifikat atomik.
-- Jangan mengubah nomor urut sertifikat ke angka yang lebih rendah setelah sertifikat diterbitkan.
-- Setelah perubahan RPC, bila Supabase masih menyatakan fungsi tidak ditemukan, buka **Settings → API** lalu reload schema cache, atau jalankan `NOTIFY pgrst, 'reload schema';`.
+Untuk instalasi Supabase baru, gunakan bundle arsip 001-017 secara berurutan sampai tersedia schema dump/squash terverifikasi dari database. Jangan membuat baseline tunggal dengan sekadar copy-paste karena beberapa fungsi, trigger, policy, dan grant ditimpa oleh migrasi berikutnya.
