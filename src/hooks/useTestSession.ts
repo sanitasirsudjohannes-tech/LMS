@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StorageAPI } from '@/lib/storage';
+import { initLocalStorage, StorageAPI } from '@/lib/storage';
 import { SubmittedTestResult, TestOption, TestSession } from '@/types';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'local';
@@ -63,6 +63,12 @@ export function useTestSession() {
     if (!session) throw new Error('Sesi tes belum tersedia. Muat ulang halaman lalu coba kembali.');
     if (saveTimer.current) clearTimeout(saveTimer.current);
     const result = await StorageAPI.submitTestSession(session, answers);
+
+    // Setelah RPC submit berhasil, muat ulang data peserta dari Supabase agar cache
+    // memakai row test_attempts asli (ID dan timestamp database), bukan data sintetis
+    // sementara yang dibuat client di StorageAPI.submitTestSession.
+    await initLocalStorage(true);
+
     setSaveStatus('saved');
     return result;
   }, [answers, session]);
