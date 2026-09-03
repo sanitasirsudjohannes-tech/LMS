@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Clock, CheckCircle2, Lock } from 'lucide-react';
 import { formatDuration } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 interface TimerWidgetProps {
   minimumDurationSeconds: number;
@@ -17,35 +18,85 @@ export default function TimerWidget({
   onComplete,
   isAlreadyCompleted = false
 }: TimerWidgetProps) {
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(Math.max(0, minimumDurationSeconds));
   const [isCompleted, setIsCompleted] = useState<boolean>(isAlreadyCompleted);
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
+  const [clockReady, setClockReady] = useState(isAlreadyCompleted || minimumDurationSeconds <= 0);
+  const completionNotifiedRef = useRef(isAlreadyCompleted);
+
+  useEffect(() => {
+    setIsCompleted(isAlreadyCompleted);
+    completionNotifiedRef.current = isAlreadyCompleted;
+  }, [isAlreadyCompleted, startedAtIso]);
 
   useEffect(() => {
     if (isAlreadyCompleted || minimumDurationSeconds <= 0) {
+      setClockReady(true);
       return;
     }
 
+    let cancelled = false;
+
+    const syncServerClock = async () => {
+      const requestStartedAt = Date.now();
+      try {
+        const { data, error } = await supabase.rpc('lms_server_now');
+        if (error) throw error;
+
+        const responseReceivedAt = Date.now();
+        const serverNowMs = new Date(String(data)).getTime();
+        if (!Number.isFinite(serverNowMs)) throw new Error('Waktu server tidak valid');
+
+        // Gunakan titik tengah request untuk mengurangi pengaruh latensi jaringan.
+        const localMidpointMs = requestStartedAt + (responseReceivedAt - requestStartedAt) / 2;
+        if (!cancelled) setServerOffsetMs(serverNowMs - localMidpointMs);
+      } catch {
+        // Fallback kompatibel sebelum migrasi SQL timer dijalankan. Backend tetap
+        // memvalidasi durasi memakai waktu server saat materi diselesaikan.
+        if (!cancelled) setServerOffsetMs(0);
+      } finally {
+        if (!cancelled) setClockReady(true);
+      }
+    };
+
+    void syncServerClock();
+    return () => { cancelled = true; };
+  }, [isAlreadyCompleted, minimumDurationSeconds, startedAtIso]);
+
+  useEffect(() => {
+    if (isAlreadyCompleted || minimumDurationSeconds <= 0 || !clockReady) return;
+
     const startTime = new Date(startedAtIso).getTime();
+    if (!Number.isFinite(startTime)) return;
+
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     const checkTime = () => {
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      const serverNowEstimate = Date.now() + serverOffsetMs;
+      const elapsedSeconds = Math.max(0, Math.floor((serverNowEstimate - startTime) / 1000));
       const remaining = Math.max(0, minimumDurationSeconds - elapsedSeconds);
       setRemainingSeconds(remaining);
 
       if (remaining === 0) {
         setIsCompleted(true);
-        onComplete();
+        if (!completionNotifiedRef.current) {
+          completionNotifiedRef.current = true;
+          onComplete();
+        }
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
       }
     };
 
-    const initialCheck = window.setTimeout(checkTime, 0);
-    const interval = setInterval(checkTime, 1000);
+    checkTime();
+    if (!completionNotifiedRef.current) interval = setInterval(checkTime, 1000);
 
     return () => {
-      window.clearTimeout(initialCheck);
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [minimumDurationSeconds, startedAtIso, isAlreadyCompleted, onComplete]);
+  }, [minimumDurationSeconds, startedAtIso, isAlreadyCompleted, onComplete, clockReady, serverOffsetMs]);
 
   if (minimumDurationSeconds <= 0) return null;
 
@@ -69,7 +120,9 @@ export default function TimerWidget({
             <p className="text-sm font-bold">
               {isCompleted
                 ? 'Waktu membaca minimum terpenuhi ✓'
-                : `Sisa waktu: ${formatDuration(remainingSeconds)}`}
+                : clockReady
+                  ? `Sisa waktu: ${formatDuration(remainingSeconds)}`
+                  : 'Menyinkronkan waktu...'}
             </p>
           </div>
         </div>
