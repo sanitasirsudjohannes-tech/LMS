@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { UserProfile } from '@/types';
-import { LayoutDashboard, Users, BookOpen, HelpCircle, Award, Settings, FileCheck2, Sliders } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, HelpCircle, Award, Settings, FileCheck2, Sliders, Clock3 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -58,6 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/results', label: 'Hasil Tes', icon: FileCheck2 },
     { href: '/admin/certificates', label: 'Daftar Sertifikat', icon: Award },
     { href: '/admin/certificate-settings', label: 'Pengaturan Sertifikat', icon: Settings },
+    { href: '/admin/posttest-settings', label: 'Jadwal Post-Test', icon: Clock3 },
     { href: '/admin/training-settings', label: 'Kelola Pelatihan', icon: Sliders }
   ];
 
