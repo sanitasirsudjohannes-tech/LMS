@@ -3,6 +3,19 @@ export function toRomanMonth(monthIndex: number): string {
   return romanMonths[monthIndex] || 'I';
 }
 
+function getWitaDateParts(date: Date): { year: string; month: string } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    timeZone: 'Asia/Makassar'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return {
+    year: values.year,
+    month: values.month
+  };
+}
+
 export function formatCertificateNumber(
   format: string,
   num: number,
@@ -10,10 +23,9 @@ export function formatCertificateNumber(
   date: Date = new Date()
 ): string {
   const paddedNum = String(num).padStart(digits, '0');
-  const yearFull = date.getFullYear().toString();
-  const yearTwo = date.getFullYear().toString().slice(-2);
-  const monthNum = String(date.getMonth() + 1).padStart(2, '0');
-  const monthRoman = toRomanMonth(date.getMonth());
+  const { year: yearFull, month: monthNum } = getWitaDateParts(date);
+  const yearTwo = yearFull.slice(-2);
+  const monthRoman = toRomanMonth(Math.max(0, Number(monthNum) - 1));
 
   let result = format || '{NO}/SERT/MFK/{BULAN_ROMAWI}/{TAHUN}';
   result = result.replace(/{NO}/g, paddedNum);
