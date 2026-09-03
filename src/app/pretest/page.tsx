@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { ParticipantQuestion, UserProfile, Training } from '@/types';
 import { FileCheck2, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
@@ -39,7 +40,6 @@ export default function PretestPage() {
         const tr = StorageAPI.getTraining();
         setTraining(tr);
 
-        // Check if already completed
         const existing = StorageAPI.getTestAttempts(user.id, 'pretest');
         if (existing.length > 0) {
           const qList = tr ? await StorageAPI.loadQuestionsForTest(tr.id, 'pretest') : [];
@@ -73,7 +73,12 @@ export default function PretestPage() {
     if (!currentUser || !training) return;
 
     if (Object.keys(answers).length < questions.length) {
-      alert('Mohon jawab seluruh pertanyaan sebelum mengirimkan Pre-Test.');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Jawaban Belum Lengkap',
+        text: 'Mohon jawab seluruh pertanyaan sebelum mengirimkan Pre-Test.',
+        confirmButtonText: 'Mengerti'
+      });
       return;
     }
 
@@ -83,8 +88,17 @@ export default function PretestPage() {
       const result = await submit();
       setScore(result.score);
       setSubmitted(true);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Pre-Test Berhasil Dikirim',
+        text: `Nilai Pre-Test Anda: ${result.score}/100.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Pre-Test gagal dikirim.');
+      const message = error instanceof Error ? error.message : 'Pre-Test gagal dikirim.';
+      setSubmitError(message);
+      await Swal.fire('Pre-Test Gagal Dikirim', message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -120,8 +134,6 @@ export default function PretestPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 py-2">
-      
-      {/* Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Tahap 1</span>
@@ -133,7 +145,6 @@ export default function PretestPage() {
         </div>
       </div>
 
-      {/* Result Display if Submitted */}
       {submitted && score !== null ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm text-center space-y-6">
           <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
@@ -164,7 +175,6 @@ export default function PretestPage() {
           </div>
         </div>
       ) : (
-        /* Questions Form */
         <form onSubmit={handleSubmit} className="space-y-6">
           {submitError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">{submitError}</div>}
           {questions.map((q, qIdx) => (
