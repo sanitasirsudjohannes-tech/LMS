@@ -18,6 +18,7 @@ export interface Training {
   description: string;
   start_date: string;
   end_date: string;
+  posttest_start_at?: string | null;
   passing_score: number;
   max_posttest_attempts: number;
   jpl: number;
