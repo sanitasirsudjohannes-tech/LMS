@@ -1,7 +1,12 @@
--- Lindungi hak sertifikat sebelum data operasional pelatihan arsip dibersihkan.
--- Peserta yang belum menyelesaikan materi, belum Post-Test, atau belum lulus
--- TIDAK menghalangi purge. Purge hanya ditolak bila ada peserta yang sudah
--- mencapai passing score pada Post-Test tetapi belum memiliki sertifikat.
+-- Pengamanan final sebelum data operasional pelatihan arsip dibersihkan.
+-- Migrasi ini BELUM pernah diterapkan ke produksi saat disusun.
+--
+-- Aturan:
+-- 1. Pelatihan harus berstatus archived dan sudah memiliki backup valid.
+-- 2. Peserta belum selesai materi, belum Post-Test, atau belum lulus tidak menghalangi purge.
+-- 3. Bila sertifikat untuk pelatihan dinonaktifkan, peserta lulus tanpa sertifikat tidak menghalangi purge.
+-- 4. Bila sertifikat aktif, sistem mencoba memulihkan sertifikat peserta yang sudah lulus terlebih dahulu.
+-- 5. Purge ditolak hanya jika setelah pemulihan masih ada peserta lulus tanpa sertifikat.
 
 BEGIN;
 
@@ -16,12 +21,14 @@ SET search_path = ''
 AS $$
 DECLARE
   v_training public.trainings%ROWTYPE;
+  v_certificate_enabled BOOLEAN := FALSE;
   v_sessions BIGINT;
   v_attempts BIGINT;
   v_progress BIGINT;
   v_questions BIGINT;
   v_materials BIGINT;
-  v_missing_certificates BIGINT;
+  v_missing_certificates BIGINT := 0;
+  v_passed RECORD;
 BEGIN
   IF NOT private.is_lms_admin(auth.uid()) THEN
     RAISE EXCEPTION 'Akses admin diperlukan';
@@ -49,29 +56,59 @@ BEGIN
     RAISE EXCEPTION 'Backup pelatihan yang valid diperlukan sebelum pembersihan';
   END IF;
 
-  -- Hanya peserta yang SUDAH LULUS yang wajib mempunyai sertifikat sebelum
-  -- test_attempts dihapus. Peserta belum selesai / belum Post-Test / belum lulus
-  -- tetap boleh ikut dibersihkan setelah pelatihan diarsipkan dan dibackup.
-  SELECT count(*) INTO v_missing_certificates
-  FROM (
-    SELECT a.user_id
-    FROM public.test_attempts a
-    WHERE a.training_id = p_training_id
-      AND a.test_type = 'posttest'
-    GROUP BY a.user_id
-    HAVING MAX(a.score) >= v_training.passing_score
-  ) passed
-  WHERE NOT EXISTS (
-    SELECT 1
-    FROM public.certificates c
-    WHERE c.training_id = p_training_id
-      AND c.user_id = passed.user_id
-  );
+  SELECT COALESCE(cs.certificate_enabled, FALSE)
+  INTO v_certificate_enabled
+  FROM public.certificate_settings cs
+  WHERE cs.training_id = p_training_id;
 
-  IF v_missing_certificates > 0 THEN
-    RAISE EXCEPTION 'Pembersihan ditolak: % peserta sudah lulus tetapi sertifikat belum terbit. Pulihkan sertifikat terlebih dahulu.', v_missing_certificates;
+  v_certificate_enabled := COALESCE(v_certificate_enabled, FALSE);
+
+  IF v_certificate_enabled THEN
+    -- Pulihkan terlebih dahulu sertifikat peserta yang sudah mencapai passing score.
+    -- Fungsi issuer bersifat idempotent sehingga aman bila sertifikat sudah ada.
+    FOR v_passed IN
+      SELECT a.user_id, MAX(a.score)::NUMERIC AS best_score
+      FROM public.test_attempts a
+      WHERE a.training_id = p_training_id
+        AND a.test_type = 'posttest'
+      GROUP BY a.user_id
+      HAVING MAX(a.score) >= v_training.passing_score
+    LOOP
+      IF NOT EXISTS (
+        SELECT 1 FROM public.certificates c
+        WHERE c.training_id = p_training_id
+          AND c.user_id = v_passed.user_id
+      ) THEN
+        PERFORM private.issue_lms_certificate(
+          v_passed.user_id,
+          p_training_id,
+          v_passed.best_score
+        );
+      END IF;
+    END LOOP;
+
+    SELECT count(*) INTO v_missing_certificates
+    FROM (
+      SELECT a.user_id
+      FROM public.test_attempts a
+      WHERE a.training_id = p_training_id
+        AND a.test_type = 'posttest'
+      GROUP BY a.user_id
+      HAVING MAX(a.score) >= v_training.passing_score
+    ) passed
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.certificates c
+      WHERE c.training_id = p_training_id
+        AND c.user_id = passed.user_id
+    );
+
+    IF v_missing_certificates > 0 THEN
+      RAISE EXCEPTION 'Pembersihan ditolak: % peserta sudah lulus tetapi sertifikat belum berhasil diterbitkan. Periksa kegagalan penerbitan sertifikat terlebih dahulu.', v_missing_certificates;
+    END IF;
   END IF;
 
+  -- Simpan statistik final sebelum data operasional dihapus.
   PERFORM private.capture_training_summary(p_training_id);
 
   WITH deleted AS (
@@ -103,6 +140,7 @@ BEGIN
 
   RETURN jsonb_build_object(
     'status', 'purged',
+    'certificate_guard_enabled', v_certificate_enabled,
     'sessions', v_sessions,
     'attempts', v_attempts,
     'progress', v_progress,
