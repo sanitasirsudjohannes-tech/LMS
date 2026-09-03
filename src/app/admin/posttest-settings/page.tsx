@@ -48,7 +48,6 @@ export default function PosttestSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const selectedTraining = useMemo(
     () => trainings.find(training => training.id === trainingId) || null,
@@ -91,16 +90,15 @@ export default function PosttestSettingsPage() {
     setTrainingId(id);
     applyTraining(trainings.find(training => training.id === id) || null);
     setError('');
-    setSuccess('');
   };
 
   const handleSave = async () => {
     if (!selectedTraining) return;
     setError('');
-    setSuccess('');
+    const { default: Swal } = await import('sweetalert2');
 
     if (scheduled && !startAt) {
-      setError('Pilih tanggal dan jam mulai Post-Test terlebih dahulu.');
+      await Swal.fire('Jadwal Belum Lengkap', 'Pilih tanggal dan jam mulai Post-Test terlebih dahulu.', 'warning');
       return;
     }
 
@@ -111,7 +109,7 @@ export default function PosttestSettingsPage() {
       const trainingStartMs = selectedTraining.start_date ? new Date(selectedTraining.start_date).getTime() : Number.NEGATIVE_INFINITY;
       const trainingEndMs = selectedTraining.end_date ? new Date(selectedTraining.end_date).getTime() : Number.POSITIVE_INFINITY;
       if (scheduleMs < trainingStartMs || scheduleMs > trainingEndMs) {
-        setError('Waktu mulai Post-Test harus berada di dalam periode pelatihan.');
+        await Swal.fire('Jadwal Tidak Valid', 'Waktu mulai Post-Test harus berada di dalam periode pelatihan.', 'warning');
         return;
       }
     }
@@ -134,16 +132,21 @@ export default function PosttestSettingsPage() {
 
       const updated = data as Training;
       setTrainings(previous => previous.map(item => item.id === updated.id ? updated : item));
-      // Segarkan cache global dari server agar dashboard/Post-Test tidak membaca jadwal lama.
       await initLocalStorage(true);
       StorageAPI.setSelectTraining(updated.id);
       setScheduled(Boolean(updated.posttest_start_at));
       setStartAt(formatWitaDateTimeInput(updated.posttest_start_at));
-      setSuccess(updated.posttest_start_at
-        ? `Post-Test ditahan sampai ${formatWitaDisplay(updated.posttest_start_at)}.`
-        : 'Post-Test akan terbuka segera setelah peserta menyelesaikan seluruh materi.');
+      await Swal.fire({
+        icon: 'success',
+        title: 'Jadwal Tersimpan',
+        text: updated.posttest_start_at
+          ? `Post-Test ditahan sampai ${formatWitaDisplay(updated.posttest_start_at)}.`
+          : 'Post-Test akan terbuka segera setelah peserta menyelesaikan seluruh materi.',
+        timer: 2200,
+        showConfirmButton: false
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Jadwal Post-Test gagal disimpan.');
+      await Swal.fire('Gagal Menyimpan', err instanceof Error ? err.message : 'Jadwal Post-Test gagal disimpan.', 'error');
     } finally {
       setSaving(false);
     }
@@ -170,11 +173,7 @@ export default function PosttestSettingsPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
         <div>
           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Pelatihan</label>
-          <select
-            value={trainingId}
-            onChange={event => handleTrainingChange(event.target.value)}
-            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
-          >
+          <select value={trainingId} onChange={event => handleTrainingChange(event.target.value)} className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white">
             {trainings.map(training => <option key={training.id} value={training.id}>{training.title}</option>)}
           </select>
         </div>
@@ -182,69 +181,22 @@ export default function PosttestSettingsPage() {
         {selectedTraining ? (
           <>
             <div className="grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={() => setScheduled(false)}
-                className={`p-4 rounded-xl border text-left transition-all ${!scheduled ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-slate-200 dark:border-slate-700'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Unlock className="w-5 h-5 text-emerald-600" />
-                  <div>
-                    <div className="text-sm font-bold text-slate-900 dark:text-white">Buka otomatis setelah materi selesai</div>
-                    <div className="text-xs text-slate-500 mt-0.5">Tidak ada penahanan waktu tambahan.</div>
-                  </div>
-                </div>
+              <button type="button" onClick={() => setScheduled(false)} className={`p-4 rounded-xl border text-left transition-all ${!scheduled ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' : 'border-slate-200 dark:border-slate-700'}`}>
+                <div className="flex items-center gap-3"><Unlock className="w-5 h-5 text-emerald-600" /><div><div className="text-sm font-bold text-slate-900 dark:text-white">Buka otomatis setelah materi selesai</div><div className="text-xs text-slate-500 mt-0.5">Tidak ada penahanan waktu tambahan.</div></div></div>
               </button>
-
-              <button
-                type="button"
-                onClick={() => setScheduled(true)}
-                className={`p-4 rounded-xl border text-left transition-all ${scheduled ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'border-slate-200 dark:border-slate-700'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <LockKeyhole className="w-5 h-5 text-amber-600" />
-                  <div>
-                    <div className="text-sm font-bold text-slate-900 dark:text-white">Tahan sampai waktu tertentu</div>
-                    <div className="text-xs text-slate-500 mt-0.5">Post-Test baru muncul dan dapat dibuka setelah jadwal tercapai.</div>
-                  </div>
-                </div>
+              <button type="button" onClick={() => setScheduled(true)} className={`p-4 rounded-xl border text-left transition-all ${scheduled ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'border-slate-200 dark:border-slate-700'}`}>
+                <div className="flex items-center gap-3"><LockKeyhole className="w-5 h-5 text-amber-600" /><div><div className="text-sm font-bold text-slate-900 dark:text-white">Tahan sampai waktu tertentu</div><div className="text-xs text-slate-500 mt-0.5">Post-Test baru muncul dan dapat dibuka setelah jadwal tercapai.</div></div></div>
               </button>
             </div>
 
-            {scheduled && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal & Jam Mulai (WITA)</label>
-                <input
-                  type="datetime-local"
-                  value={startAt}
-                  onChange={event => setStartAt(event.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white font-mono"
-                />
-                <p className="text-[11px] text-slate-500 mt-1.5">Periode pelatihan: {new Date(selectedTraining.start_date).toLocaleDateString('id-ID', { timeZone: 'Asia/Makassar' })} s.d. {new Date(selectedTraining.end_date).toLocaleDateString('id-ID', { timeZone: 'Asia/Makassar' })}.</p>
-              </div>
-            )}
+            {scheduled && <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tanggal & Jam Mulai (WITA)</label><input type="datetime-local" value={startAt} onChange={event => setStartAt(event.target.value)} className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white font-mono" /><p className="text-[11px] text-slate-500 mt-1.5">Periode pelatihan: {new Date(selectedTraining.start_date).toLocaleDateString('id-ID', { timeZone: 'Asia/Makassar' })} s.d. {new Date(selectedTraining.end_date).toLocaleDateString('id-ID', { timeZone: 'Asia/Makassar' })}.</p></div>}
 
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 p-4 text-xs text-slate-600 dark:text-slate-300">
-              <strong>Status saat ini:</strong> {scheduled && startAt ? `Ditahan sampai ${formatWitaDisplay(witaInputToIso(startAt))}` : 'Terbuka setelah seluruh materi selesai'}.
-            </div>
-
+            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 p-4 text-xs text-slate-600 dark:text-slate-300"><strong>Status saat ini:</strong> {scheduled && startAt ? `Ditahan sampai ${formatWitaDisplay(witaInputToIso(startAt))}` : 'Terbuka setelah seluruh materi selesai'}.</div>
             {error && <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 p-3 text-xs text-red-700 dark:text-red-300">{error}</div>}
-            {success && <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40 p-3 text-xs text-emerald-700 dark:text-emerald-300">{success}</div>}
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-bold disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" /> {saving ? 'Menyimpan...' : 'Simpan Jadwal'}
-              </button>
-            </div>
+            <div className="flex justify-end"><button type="button" onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-bold disabled:opacity-50"><Save className="w-4 h-4" /> {saving ? 'Menyimpan...' : 'Simpan Jadwal'}</button></div>
           </>
-        ) : (
-          <div className="text-sm text-slate-500">Belum ada pelatihan yang dapat diatur.</div>
-        )}
+        ) : <div className="text-sm text-slate-500">Belum ada pelatihan yang dapat diatur.</div>}
       </div>
     </div>
   );
