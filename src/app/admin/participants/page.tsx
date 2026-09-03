@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Training } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -86,20 +87,34 @@ export default function ParticipantsAdminPage() {
   const handleExportCSV = async () => {
     if (!selectedTrainingId) return;
     setExporting(true);
-    const { data, error } = await supabase.rpc('admin_training_participants', {
-      p_training_id: selectedTrainingId, p_search: debouncedSearch, p_status: filterStatus,
-      p_limit: 10000, p_offset: 0
-    });
-    setExporting(false);
-    if (error) return alert(`Gagal mengekspor peserta: ${error.message}`);
-    const cell = (value: string | number | null | undefined) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-    const headers = ['Pelatihan', 'Nama Peserta', 'Email', 'Instansi', 'NIP/NIK', 'Nilai Pre-Test', 'Nilai Post-Test', 'Status Kelulusan', 'Nomor Sertifikat', 'Tanggal Registrasi'];
-    const exportRows = ((data || []) as ParticipantRow[]).map(row => [selectedTraining?.title, row.full_name, row.email, row.institution, row.nip_nik, row.pre_score, row.post_score, row.status, row.certificate_number, formatDateIndonesian(row.created_at)].map(cell).join(','));
-    const blob = new Blob(['\uFEFF' + [headers.map(cell).join(','), ...exportRows].join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const safeName = (selectedTraining?.title || 'Pelatihan').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
-    link.href = url; link.download = `Daftar_Peserta_${safeName}.csv`; link.click(); URL.revokeObjectURL(url);
+    try {
+      const { data, error } = await supabase.rpc('admin_training_participants', {
+        p_training_id: selectedTrainingId, p_search: debouncedSearch, p_status: filterStatus,
+        p_limit: 10000, p_offset: 0
+      });
+      if (error) throw new Error(error.message);
+
+      const cell = (value: string | number | null | undefined) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const headers = ['Pelatihan', 'Nama Peserta', 'Email', 'Instansi', 'NIP/NIK', 'Nilai Pre-Test', 'Nilai Post-Test', 'Status Kelulusan', 'Nomor Sertifikat', 'Tanggal Registrasi'];
+      const exportRows = ((data || []) as ParticipantRow[]).map(row => [selectedTraining?.title, row.full_name, row.email, row.institution, row.nip_nik, row.pre_score, row.post_score, row.status, row.certificate_number, formatDateIndonesian(row.created_at)].map(cell).join(','));
+      const blob = new Blob(['\uFEFF' + [headers.map(cell).join(','), ...exportRows].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = (selectedTraining?.title || 'Pelatihan').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+      link.href = url; link.download = `Daftar_Peserta_${safeName}.csv`; link.click(); URL.revokeObjectURL(url);
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Ekspor Berhasil',
+        text: `${(data || []).length} data peserta berhasil diekspor.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      await Swal.fire('Gagal Mengekspor Peserta', error instanceof Error ? error.message : 'Data peserta gagal diekspor.', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return <div className="space-y-6">
