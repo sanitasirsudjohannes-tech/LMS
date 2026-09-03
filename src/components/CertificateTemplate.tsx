@@ -1,212 +1,39 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Certificate, CertificateSettings } from '@/types';
 import { formatDateIndonesian, formatDateInputWita } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 
-interface CertificateTemplateProps {
-  certificate: Certificate;
-  settings?: CertificateSettings;
-  previewMode?: boolean;
-}
+const NTT_LOGO = 'data:image/jpeg;base64,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';
 
-export default function CertificateTemplate({ certificate, settings, previewMode = false }: CertificateTemplateProps) {
+interface CertificateTemplateProps { certificate: Certificate; settings?: CertificateSettings; previewMode?: boolean; }
+
+export default function CertificateTemplate({ certificate, settings }: CertificateTemplateProps) {
   const showScore = settings ? settings.show_posttest_score : true;
   const signatoryName = settings?.signatory_name || 'Nama Direktur';
   const signatoryTitle = settings?.signatory_title || 'Direktur RSUD Prof. Dr. W.Z. Johannes Kupang';
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [previewScale, setPreviewScale] = useState(1);
-
-  useEffect(() => {
-    if (!previewMode || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const host = canvas.parentElement;
-    if (!host) return;
-
-    // Preview admin dibungkus elemen lama yang sebelumnya mencoba menghitung
-    // scale lewat CSS calc(). Matikan transform tersebut dan hitung skala dari
-    // lebar container sebenarnya agar lembar 1000x707 selalu terlihat utuh.
-    const previousHostTransform = host.style.transform;
-    host.style.transform = 'none';
-
-    const updateScale = () => {
-      const availableWidth = host.clientWidth || host.parentElement?.clientWidth || 1000;
-      setPreviewScale(Math.min(1, Math.max(0.1, availableWidth / 1000)));
-    };
-
-    updateScale();
-    const observer = new ResizeObserver(updateScale);
-    observer.observe(host);
-    if (host.parentElement) observer.observe(host.parentElement);
-    window.addEventListener('resize', updateScale);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', updateScale);
-      host.style.transform = previousHostTransform;
-    };
-  }, [previewMode]);
-
-  const trainingStartDateKey = formatDateInputWita(certificate.training_start_date);
-  const trainingEndDateKey = formatDateInputWita(certificate.training_end_date);
-  const isSingleDayTraining = Boolean(
-    trainingStartDateKey && trainingEndDateKey && trainingStartDateKey === trainingEndDateKey
-  );
-
-  const trainingPeriod = certificate.training_start_date
-    ? certificate.training_end_date && !isSingleDayTraining
-      ? `${formatDateIndonesian(certificate.training_start_date)} sampai ${formatDateIndonesian(certificate.training_end_date)}`
-      : formatDateIndonesian(certificate.training_start_date)
-    : null;
-
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://lms.pelatihan.id';
+  const start = formatDateInputWita(certificate.training_start_date);
+  const end = formatDateInputWita(certificate.training_end_date);
+  const single = Boolean(start && end && start === end);
+  const period = certificate.training_start_date ? (certificate.training_end_date && !single ? `${formatDateIndonesian(certificate.training_start_date)} sampai ${formatDateIndonesian(certificate.training_end_date)}` : formatDateIndonesian(certificate.training_start_date)) : null;
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://lmsrsudjohannes.vercel.app';
   const verifyUrl = `${origin}/verify/${certificate.verification_code}`;
 
-  return (
-    <div
-      ref={canvasRef}
-      id="certificate-render-target"
-      className={`certificate-canvas h-[707px] w-[1000px] max-w-none shrink-0 bg-white text-slate-900 relative overflow-hidden font-serif ${previewMode ? 'shadow-sm' : 'shadow-2xl'}`}
-      style={previewMode ? { transform: `scale(${previewScale})`, transformOrigin: 'top left' } : undefined}
-    >
-      {/* Panel biru bernuansa rumah sakit, hanya pada sisi kiri. */}
-      <div
-        className="absolute inset-y-0 left-0 w-[185px] overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #0b3b75 0%, #1261a8 48%, #2f8fd1 100%)' }}
-      >
-        <div className="absolute -right-[78px] top-[-45px] h-[320px] w-[160px] rounded-[50%] border-[18px] border-white/15" />
-        <div className="absolute -right-[98px] bottom-[-55px] h-[340px] w-[185px] rounded-[50%] border-[22px] border-white/10" />
-        <div className="absolute inset-y-0 right-0 w-[5px] bg-white/30" />
-
-        {/* Motif medis abstrak tanpa logo/gambar. */}
-        <div className="absolute left-10 top-20 h-12 w-12 opacity-20">
-          <div className="absolute left-[17px] top-0 h-12 w-[14px] rounded-sm bg-white" />
-          <div className="absolute left-0 top-[17px] h-[14px] w-12 rounded-sm bg-white" />
+  return <div id="certificate-render-target" className="certificate-canvas h-[707px] w-[1000px] max-w-none shrink-0 bg-white text-slate-900 relative overflow-hidden font-serif shadow-2xl">
+    <div className="absolute inset-y-0 left-0 w-[185px] overflow-hidden" style={{background:'linear-gradient(160deg,#0b3b75 0%,#1261a8 48%,#2f8fd1 100%)'}}><div className="absolute inset-y-0 right-0 w-[5px] bg-white/30"/><div className="absolute left-8 bottom-[86px] right-8 text-white font-sans"><p className="text-[10px] uppercase tracking-[0.32em] opacity-70">LMS Online</p><p className="mt-1 text-lg font-bold tracking-[0.16em]">LONTAR</p><div className="mt-3 h-px w-14 bg-white/60"/><p className="mt-3 text-[9px] leading-relaxed opacity-75">Pelatihan Terpadu<br/>RSUD Johannes</p></div></div>
+    <div className="absolute inset-7 border-[5px] border-[#123d6a] pointer-events-none"/><div className="absolute inset-[34px] border border-[#8fb9db] pointer-events-none"/>
+    <div className="absolute left-[208px] right-[54px] top-[38px] bottom-[68px] flex flex-col">
+      <div className="relative z-10 shrink-0 font-sans">
+        <div className="relative flex min-h-[76px] items-center justify-center border-b-2 border-[#315f8c] pb-2 text-center">
+          <img src={NTT_LOGO} alt="Logo Pemerintah Provinsi Nusa Tenggara Timur" className="absolute left-1 top-0 h-[70px] w-[70px] object-contain"/>
+          <div className="px-[82px]"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#315f8c]">PEMERINTAH PROVINSI NUSA TENGGARA TIMUR</p><p className="mt-1 text-[14px] font-bold uppercase tracking-[0.08em] text-[#123d6a]">RSUD Prof. Dr. W.Z. Johannes Kupang</p></div>
         </div>
-        <div className="absolute left-[92px] top-[162px] h-8 w-8 opacity-15">
-          <div className="absolute left-[11px] top-0 h-8 w-[10px] rounded-sm bg-white" />
-          <div className="absolute left-0 top-[11px] h-[10px] w-8 rounded-sm bg-white" />
-        </div>
-        <div className="absolute left-8 bottom-[185px] h-9 w-9 opacity-15">
-          <div className="absolute left-[12px] top-0 h-9 w-[11px] rounded-sm bg-white" />
-          <div className="absolute left-0 top-[12px] h-[11px] w-9 rounded-sm bg-white" />
-        </div>
-
-        <div className="absolute left-7 top-[265px] flex items-center gap-1 opacity-30">
-          <span className="block h-px w-7 bg-white" />
-          <span className="block h-3 w-px rotate-[35deg] bg-white" />
-          <span className="block h-6 w-px -rotate-[25deg] bg-white" />
-          <span className="block h-3 w-px rotate-[30deg] bg-white" />
-          <span className="block h-px w-7 bg-white" />
-        </div>
-
-        <div className="absolute left-8 bottom-[86px] right-8 text-white font-sans">
-          <p className="text-[10px] uppercase tracking-[0.32em] opacity-70">LMS Online</p>
-          <p className="mt-1 text-lg font-bold tracking-[0.16em]">LONTAR</p>
-          <div className="mt-3 h-px w-14 bg-white/60" />
-          <p className="mt-3 text-[9px] leading-relaxed opacity-75">Pelatihan Terpadu<br />RSUD Johannes</p>
-        </div>
+        <div className="text-center"><h1 className="mt-2 text-[34px] font-bold tracking-[0.16em] text-[#123d6a] uppercase">Sertifikat</h1><p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Certificate of Completion</p>{certificate.certificate_number?<div className="mt-1 font-mono text-[10px] font-semibold text-slate-600">No: {certificate.certificate_number}</div>:<div className="mt-1 text-[9px] font-mono text-slate-400 italic">[Tanpa Penomoran Sertifikat]</div>}</div>
       </div>
-
-      {/* Bingkai formal mengikuti area kertas, dengan aksen biru. */}
-      <div className="absolute inset-7 border-[5px] border-[#123d6a] pointer-events-none" />
-      <div className="absolute inset-[34px] border border-[#8fb9db] pointer-events-none" />
-
-      {/* Konten utama digeser ke kanan agar tidak bertabrakan dengan panel biru. */}
-      <div className="absolute left-[208px] right-[54px] top-[46px] bottom-[68px] flex flex-col">
-        <div className="text-center relative z-10 shrink-0 font-sans">
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#315f8c]">
-            RSUD Prof Dr. W.Z. Johannes Kupang
-          </p>
-          <div className="mx-auto mt-2 h-[3px] w-16 rounded-full bg-[#2f8fd1]" />
-          <h1 className="mt-3 text-[36px] font-bold tracking-[0.16em] text-[#123d6a] uppercase">
-            Sertifikat
-          </h1>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.24em] text-slate-500">Certificate of Completion</p>
-
-          {certificate.certificate_number ? (
-            <div className="mt-2 font-mono text-[11px] font-semibold tracking-wide text-slate-600">No: {certificate.certificate_number}</div>
-          ) : (
-            <div className="mt-2 text-[10px] font-mono text-slate-400 italic">[Tanpa Penomoran Sertifikat]</div>
-          )}
-        </div>
-
-        <div className="my-3 text-center space-y-1.5 relative z-10 shrink-0">
-          <p className="text-[12px] text-slate-500 font-sans">Diberikan secara sah kepada:</p>
-
-          <div className="py-1.5 border-b-2 border-[#2f8fd1] max-w-[560px] mx-auto">
-            <h2 className="text-[30px] font-bold text-[#123d6a] tracking-wide font-sans">{certificate.user_name || 'Nama Peserta'}</h2>
-            {certificate.user_institution && (
-              <p className="text-[12px] text-slate-600 font-sans mt-1 italic">{certificate.user_institution}</p>
-            )}
-          </div>
-
-          <p className="text-[12px] text-slate-700 leading-relaxed font-sans max-w-[620px] mx-auto pt-1">
-            Telah berhasil menyelesaikan seluruh rangkaian program dan dinyatakan <strong className="text-[#123d6a] font-bold uppercase">LULUS</strong> pada:
-          </p>
-
-          <h3 className="text-[18px] font-bold text-slate-900 font-sans tracking-tight max-w-[650px] mx-auto">
-            {certificate.training_title || 'Pelatihan Standar Pelayanan & Keselamatan Kerja'}
-          </h3>
-
-          <p className="text-[12px] font-semibold text-slate-700 font-sans">Dengan beban pembelajaran {certificate.training_jpl || 1} Jam Pelajaran (JPL)</p>
-
-          {trainingPeriod && <p className="text-[11px] text-slate-600 font-sans">Dilaksanakan pada {trainingPeriod}</p>}
-
-          {showScore && certificate.posttest_score !== undefined && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eef6fc] rounded-full font-sans text-[11px] font-semibold text-[#123d6a] border border-[#b9d8ed]">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#2479b8]" />
-              <span>Nilai Post-Test: {certificate.posttest_score} / 100</span>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-auto pt-2.5 border-t border-[#d3e4f1] grid grid-cols-[0.8fr_1.2fr] items-end gap-6 relative z-10 font-sans shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-1 bg-white border border-[#9fc5df] rounded shrink-0">
-              <QRCodeSVG value={verifyUrl} size={54} level="M" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[8px] text-[#47789e] block uppercase font-semibold tracking-wide">Kode Verifikasi</span>
-              <span className="font-mono text-[10px] font-bold text-[#123d6a] tracking-wide block break-all leading-tight">{certificate.verification_code}</span>
-              <span className="text-[8px] text-slate-500 block mt-0.5 leading-tight">Pindai QR untuk verifikasi keaslian</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center text-center min-w-0 px-2">
-            <p className="text-[12px] font-semibold text-[#315f8c] leading-tight mb-1">
-              Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}
-            </p>
-            <div className="h-[66px] w-full flex items-end justify-center -mb-2 relative">
-              {settings?.stamp_image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={settings.stamp_image_url}
-                  alt="Cap Direktur"
-                  className="absolute z-0 left-1/2 bottom-[-22px] h-[106px] w-[106px] -translate-x-[72%] object-contain opacity-90"
-                />
-              )}
-              {settings?.signatory_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={settings.signatory_image_url}
-                  alt={`Tanda tangan ${signatoryName}`}
-                  className="relative z-10 max-w-[220px] max-h-[66px] object-contain object-center"
-                />
-              ) : (
-                <span className="relative z-10 font-serif italic text-lg font-bold text-[#123d6a] tracking-wide px-3">{signatoryName}</span>
-              )}
-            </div>
-            <div className="relative z-0 min-w-[240px] max-w-full">
-              <p className="text-[12px] font-bold text-[#123d6a] leading-tight border-b border-[#739fc0] pb-0.5 break-words">{signatoryName}</p>
-              <p className="text-[10px] leading-tight text-slate-600 mt-1 break-words">{signatoryTitle}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div className="my-2 text-center space-y-1 relative z-10 shrink-0"><p className="text-[11px] text-slate-500 font-sans">Diberikan secara sah kepada:</p><div className="py-1 border-b-2 border-[#2f8fd1] max-w-[560px] mx-auto"><h2 className="text-[29px] font-bold text-[#123d6a] tracking-wide font-sans">{certificate.user_name||'Nama Peserta'}</h2></div><p className="text-[11px] text-slate-700 font-sans max-w-[620px] mx-auto pt-1">Telah berhasil menyelesaikan seluruh rangkaian program dan dinyatakan <strong className="text-[#123d6a] uppercase">LULUS</strong> pada:</p><h3 className="text-[17px] font-bold text-slate-900 font-sans max-w-[650px] mx-auto">{certificate.training_title||'Judul Pelatihan'}</h3><p className="text-[11px] font-semibold text-slate-700 font-sans">Dengan beban pembelajaran {certificate.training_jpl||1} Jam Pelajaran (JPL)</p>{period&&<p className="text-[10px] text-slate-600 font-sans">Dilaksanakan pada {period}</p>}{showScore&&certificate.posttest_score!==undefined&&<div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eef6fc] rounded-full font-sans text-[10px] font-semibold text-[#123d6a] border border-[#b9d8ed]"><CheckCircle2 className="w-3 h-3"/>Nilai Post-Test: {certificate.posttest_score} / 100</div>}</div>
+      <div className="mt-auto pt-2 border-t border-[#d3e4f1] grid grid-cols-[0.8fr_1.2fr] items-end gap-6 relative z-10 font-sans shrink-0"><div className="flex items-center gap-2.5"><div className="p-1 bg-white border border-[#9fc5df] rounded"><QRCodeSVG value={verifyUrl} size={54} level="M"/></div><div><span className="text-[8px] text-[#47789e] block uppercase font-semibold">Kode Verifikasi</span><span className="font-mono text-[10px] font-bold text-[#123d6a] block break-all">{certificate.verification_code}</span><span className="text-[8px] text-slate-500 block">Pindai QR untuk verifikasi keaslian</span></div></div><div className="flex flex-col items-center text-center px-2"><p className="text-[11px] font-semibold text-[#315f8c] mb-1">Diterbitkan pada {formatDateIndonesian(certificate.issued_at)}</p><div className="h-[66px] w-full flex items-end justify-center -mb-2 relative">{settings?.stamp_image_url&&<img src={settings.stamp_image_url} alt="Cap Direktur" className="absolute z-0 left-1/2 bottom-[-22px] h-[106px] w-[106px] -translate-x-[72%] object-contain opacity-90"/>}{settings?.signatory_image_url?<img src={settings.signatory_image_url} alt={`Tanda tangan ${signatoryName}`} className="relative z-10 max-w-[220px] max-h-[66px] object-contain"/>:<span className="relative z-10 font-serif italic text-lg font-bold text-[#123d6a]">{signatoryName}</span>}</div><div className="min-w-[240px]"><p className="text-[12px] font-bold text-[#123d6a] border-b border-[#739fc0] pb-0.5">{signatoryName}</p><p className="text-[10px] text-slate-600 mt-1">{signatoryTitle}</p></div></div></div>
     </div>
-  );
+  </div>;
 }
