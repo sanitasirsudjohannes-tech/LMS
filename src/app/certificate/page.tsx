@@ -43,7 +43,24 @@ export default function CertificatePage() {
         setCurrentUser(user);
 
         const training = StorageAPI.getTraining();
-        let cert = StorageAPI.getSelectedCertificate() || StorageAPI.getCertificateForUser(user.id);
+        const selectedCertificate = StorageAPI.getSelectedCertificate();
+        const selectedBelongsToUser = !!selectedCertificate && selectedCertificate.user_id === user.id;
+        const selectedMatchesTraining = selectedBelongsToUser && (
+          !training ||
+          !selectedCertificate?.training_id ||
+          selectedCertificate.training_id === training.id
+        );
+
+        // Prioritaskan sertifikat pelatihan yang sedang dibuka. Sertifikat arsip
+        // hanya dipakai bila memang milik peserta dan cocok dengan konteksnya.
+        let cert = selectedMatchesTraining
+          ? selectedCertificate
+          : training
+            ? StorageAPI.getCertificateForUser(user.id, training.id)
+            : selectedBelongsToUser
+              ? selectedCertificate
+              : null;
+
         const passed = training && StorageAPI.getTestAttempts(user.id, 'posttest', training.id)
           .some(attempt => attempt.score >= training.passing_score);
         if (!cert && training && passed) {
