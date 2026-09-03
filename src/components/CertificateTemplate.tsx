@@ -27,10 +27,9 @@ export default function CertificateTemplate({ certificate, settings }: Certifica
       <Cross className="absolute left-[48px] top-[70px] h-20 w-20 text-white/10" strokeWidth={1.5}/>
       <HeartPulse className="absolute left-[35px] top-[210px] h-28 w-28 text-white/10" strokeWidth={1.25}/>
       <div className="absolute left-7 right-7 top-[365px] flex items-center gap-2 text-white/70"><div className="h-px flex-1 bg-white/25"/><HeartPulse className="h-4 w-4"/><div className="h-px flex-1 bg-white/25"/></div>
-      <div className="absolute left-8 bottom-[86px] right-8 text-white font-sans"><p className="text-[10px] uppercase tracking-[0.32em] opacity-70">LMS Online</p><p className="mt-1 text-lg font-bold tracking-[0.16em]">LONTAR</p><div className="mt-3 h-px w-14 bg-white/60"/><p className="mt-3 text-[9px] leading-relaxed opacity-80">Pelatihan Terpadu<br/>RSUD Johannes</p><p className="mt-2 text-[8px] uppercase tracking-[0.16em] text-white/60">Learning • Care • Service</p></div>
+      <div className="absolute left-11 bottom-[100px] right-6 text-white font-sans"><p className="text-[10px] uppercase tracking-[0.32em] opacity-70">LMS Online</p><p className="mt-1 text-lg font-bold tracking-[0.16em]">LONTAR</p><div className="mt-3 h-px w-14 bg-white/60"/><p className="mt-3 text-[9px] leading-relaxed opacity-80">Pelatihan Terpadu<br/>RSUD Johannes</p><p className="mt-2 text-[8px] uppercase tracking-[0.16em] text-white/60">Learning • Care • Service</p></div>
     </div>
     <div className="absolute inset-7 border-[5px] border-[#0f5268] pointer-events-none"/><div className="absolute inset-[34px] border border-[#8ccac5] pointer-events-none"/>
-    <div className="absolute right-[54px] top-[40px] flex items-center gap-1.5 font-sans text-[8px] font-semibold uppercase tracking-[0.16em] text-[#2b8a81]"><HeartPulse className="h-3.5 w-3.5"/> Pendidikan & Pelayanan Kesehatan</div>
     <div className="absolute left-[208px] right-[54px] top-[38px] bottom-[68px] flex flex-col">
       <div className="relative z-10 shrink-0 font-sans">
         <div className="relative flex min-h-[76px] items-center justify-center border-b-2 border-[#2b8a81] pb-2 text-center">
