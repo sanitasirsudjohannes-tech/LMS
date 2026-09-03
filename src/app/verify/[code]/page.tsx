@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { StorageAPI } from '@/lib/storage';
 import { Certificate } from '@/types';
-import { formatDateIndonesian } from '@/lib/utils';
-import { ShieldCheck, ShieldAlert, Award, Calendar, Building, User, ArrowLeft } from 'lucide-react';
+import { formatDateIndonesian, formatDateInputWita } from '@/lib/utils';
+import { ShieldCheck, ShieldAlert, Award, Calendar, Building, User, ArrowLeft, Clock3, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 
 export default function VerifyCertificatePage() {
@@ -53,10 +53,17 @@ export default function VerifyCertificatePage() {
     );
   }
 
+  const start = certificate ? formatDateInputWita(certificate.training_start_date) : '';
+  const end = certificate ? formatDateInputWita(certificate.training_end_date) : '';
+  const period = certificate?.training_start_date
+    ? certificate.training_end_date && start && end && start !== end
+      ? `${formatDateIndonesian(certificate.training_start_date)} sampai ${formatDateIndonesian(certificate.training_end_date)}`
+      : formatDateIndonesian(certificate.training_start_date)
+    : null;
+
   return (
     <div className="max-w-xl mx-auto py-6 sm:py-10">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-        
         <div className="text-center space-y-2">
           <Link href="/" className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white mb-2">
             <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Utama
@@ -118,6 +125,34 @@ export default function VerifyCertificatePage() {
                 </div>
               </div>
 
+              <div className="flex items-start gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                <Clock3 className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block">Beban Pembelajaran</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{certificate.training_jpl || 1} Jam Pelajaran (JPL)</span>
+                </div>
+              </div>
+
+              {period && (
+                <div className="flex items-start gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <Calendar className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase font-semibold block">Periode Pelatihan</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{period}</span>
+                  </div>
+                </div>
+              )}
+
+              {certificate.show_posttest_score !== false && certificate.posttest_score !== undefined && certificate.posttest_score !== null && (
+                <div className="flex items-start gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <GraduationCap className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase font-semibold block">Nilai Post-Test</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{certificate.posttest_score} / 100</span>
+                  </div>
+                </div>
+              )}
+
               {certificate.certificate_number && (
                 <div className="flex items-start gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                   <span className="w-4 font-mono text-xs font-bold text-slate-400 mt-1 text-center shrink-0">#</span>
@@ -138,7 +173,7 @@ export default function VerifyCertificatePage() {
             </div>
 
             <div className="p-3 rounded-xl bg-slate-900 text-white text-center">
-              <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-medium">Kode Verifikasi System</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-medium">Kode Verifikasi Sistem</span>
               <span className="font-mono text-base font-bold tracking-widest text-emerald-400">{certificate.verification_code}</span>
             </div>
           </div>
