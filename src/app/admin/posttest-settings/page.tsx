@@ -127,13 +127,15 @@ export default function PosttestSettingsPage() {
 
       if (updateError) {
         if (updateError.message.toLowerCase().includes('posttest_start_at')) {
-          throw new Error('Kolom jadwal Post-Test belum tersedia. Jalankan SQL migrasi 015 terlebih dahulu.');
+          throw new Error('Fitur jadwal Post-Test belum tersedia pada database. Pastikan seluruh pembaruan SQL LONTAR yang diwajibkan sudah diterapkan.');
         }
         throw new Error(updateError.message);
       }
 
       const updated = data as Training;
       setTrainings(previous => previous.map(item => item.id === updated.id ? updated : item));
+      // Segarkan cache global dari server agar dashboard/Post-Test tidak membaca jadwal lama.
+      await initLocalStorage(true);
       StorageAPI.setSelectTraining(updated.id);
       setScheduled(Boolean(updated.posttest_start_at));
       setStartAt(formatWitaDateTimeInput(updated.posttest_start_at));
