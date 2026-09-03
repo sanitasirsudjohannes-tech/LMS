@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ResponsiveCertificatePreview from '@/components/ResponsiveCertificatePreview';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { Training, Certificate, CertificateSettings } from '@/types';
+import { Training, Certificate, CertificateSettings, CertificateGlobalSettings } from '@/types';
 import { formatCertificateNumber } from '@/lib/utils';
 import { Check, Eye, Save, SlidersHorizontal } from 'lucide-react';
 
@@ -17,7 +17,7 @@ export default function CertificateTrainingPage() {
   const [start, setStart] = useState(1);
   const [digits, setDigits] = useState(4);
   const [current, setCurrent] = useState(1);
-  const [globalSettings, setGlobalSettings] = useState<CertificateSettings | null>(null);
+  const [globalSettings, setGlobalSettings] = useState<CertificateGlobalSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [message, setMessage] = useState('');
@@ -84,7 +84,6 @@ export default function CertificateTrainingPage() {
 
     setSaving(true);
     try {
-      // Pastikan cache aktif selalu sesuai pelatihan yang terlihat sebelum menyimpan.
       await StorageAPI.loadTrainingResources(trainingId);
       const s = await StorageAPI.updateCertificateSettings({
         certificate_enabled: enabled,
@@ -106,6 +105,7 @@ export default function CertificateTrainingPage() {
 
   const selected = trainings.find(t => t.id === trainingId);
   const samples = [0, 1, 2].map(n => formatCertificateNumber(format, current + n, digits));
+  const previewNumber = samples[0];
 
   const previewSettings = useMemo<CertificateSettings>(() => ({
     id: 'preview-settings',
@@ -128,7 +128,7 @@ export default function CertificateTrainingPage() {
     id: 'certificate-preview',
     user_id: null,
     training_id: selected?.id || null,
-    certificate_number: numbering ? samples[0] : null,
+    certificate_number: numbering ? previewNumber : null,
     verification_code: 'PREVIEW-LONTAR',
     issued_at: new Date().toISOString(),
     posttest_score: 88,
@@ -138,7 +138,7 @@ export default function CertificateTrainingPage() {
     training_jpl: selected?.jpl || 1,
     training_start_date: selected?.start_date,
     training_end_date: selected?.end_date
-  }), [selected, numbering, samples]);
+  }), [selected, numbering, previewNumber]);
 
   return <div className="mx-auto max-w-5xl space-y-5">
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6"><div className="flex items-center gap-3"><div className="rounded-xl bg-slate-100 p-2.5 dark:bg-slate-800"><SlidersHorizontal className="h-5 w-5" /></div><div><h2 className="text-lg font-bold">Pengaturan Sertifikat per Pelatihan</h2><p className="text-xs text-slate-500">Atur status sertifikat, nilai Post-Test, dan penomoran khusus pelatihan.</p></div></div></div>
