@@ -26,8 +26,6 @@ USING (private.is_lms_admin());
 REVOKE ALL ON TABLE public.certificate_issuance_failures FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON TABLE public.certificate_issuance_failures TO authenticated;
 
--- Penerbitan idempoten. Nomor berjalan hanya maju bila INSERT sertifikat benar-benar berhasil.
--- Semua placeholder tanggal memakai WITA (Asia/Makassar), sama dengan tampilan aplikasi.
 CREATE OR REPLACE FUNCTION private.issue_lms_certificate(
   p_user_id UUID,
   p_training_id UUID,
@@ -126,7 +124,6 @@ $$;
 
 REVOKE ALL ON FUNCTION private.issue_lms_certificate(UUID, UUID, NUMERIC) FROM PUBLIC, anon, authenticated;
 
--- Recovery satu pelatihan tetap berlaku walaupun pelatihan sudah diarsipkan.
 CREATE OR REPLACE FUNCTION public.ensure_my_certificate(p_training_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
@@ -164,7 +161,6 @@ $$;
 REVOKE ALL ON FUNCTION public.ensure_my_certificate(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.ensure_my_certificate(UUID) TO authenticated;
 
--- Recovery massal tidak bergantung pada daftar pelatihan aktif di browser.
 CREATE OR REPLACE FUNCTION public.ensure_my_missing_certificates()
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -205,7 +201,8 @@ $$;
 REVOKE ALL ON FUNCTION public.ensure_my_missing_certificates() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.ensure_my_missing_certificates() TO authenticated;
 
--- Snapshot dokumen sertifikat tidak boleh berubah setelah penerbitan.
+-- Snapshot isi dokumen tidak berubah, tetapi FK user_id/training_id tetap boleh
+-- menjadi NULL melalui ON DELETE SET NULL agar penghapusan induk tidak merusak arsip.
 CREATE OR REPLACE FUNCTION private.snapshot_lms_certificate()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -220,8 +217,6 @@ DECLARE
   v_global public.certificate_global_settings%ROWTYPE;
 BEGIN
   IF TG_OP = 'UPDATE' THEN
-    NEW.user_id := OLD.user_id;
-    NEW.training_id := OLD.training_id;
     NEW.certificate_number := OLD.certificate_number;
     NEW.verification_code := OLD.verification_code;
     NEW.issued_at := OLD.issued_at;
@@ -267,7 +262,6 @@ $$;
 
 REVOKE ALL ON FUNCTION private.snapshot_lms_certificate() FROM PUBLIC, anon, authenticated;
 
--- Verifikasi publik memakai snapshot permanen dan menghormati pengaturan tampil nilai.
 DROP FUNCTION IF EXISTS public.verify_certificate(TEXT);
 CREATE FUNCTION public.verify_certificate(p_code TEXT)
 RETURNS TABLE (
