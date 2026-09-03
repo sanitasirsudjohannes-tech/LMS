@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Certificate, CertificateSettings, UserProfile } from '@/types';
 import CertificateTemplate from '@/components/CertificateTemplate';
@@ -46,8 +47,6 @@ export default function CertificatePage() {
         const selectedCertificate = StorageAPI.getSelectedCertificate();
         const selectedBelongsToUser = !!selectedCertificate && selectedCertificate.user_id === user.id;
 
-        // Sertifikat yang dipilih dari arsip selalu menjadi sumber utama,
-        // meskipun pelatihan asalnya sudah archived dan tidak ada di cache aktif.
         let cert = selectedBelongsToUser
           ? selectedCertificate
           : training
@@ -73,11 +72,7 @@ export default function CertificatePage() {
         if (cert) {
           try {
             const { default: confetti } = await import('canvas-confetti');
-            confetti({
-              particleCount: 80,
-              spread: 70,
-              origin: { y: 0.6 }
-            });
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
           } catch {
             // Efek dekoratif tidak boleh menggagalkan tampilan sertifikat.
           }
@@ -118,8 +113,19 @@ export default function CertificatePage() {
     try {
       const filename = `Sertifikat_${(certificate.user_name || 'Peserta').replace(/\s+/g, '_')}.pdf`;
       await generateCertificatePDF('certificate-render-target', filename);
+      await Swal.fire({
+        icon: 'success',
+        title: 'PDF Berhasil Diunduh',
+        text: 'Sertifikat telah berhasil dibuat dalam format PDF.',
+        timer: 1700,
+        showConfirmButton: false
+      });
     } catch (err: unknown) {
-      alert('Gagal mengunduh PDF: ' + (err instanceof Error ? err.message : 'Tidak diketahui'));
+      await Swal.fire(
+        'Gagal Mengunduh PDF',
+        err instanceof Error ? err.message : 'Terjadi kesalahan yang tidak diketahui.',
+        'error'
+      );
     } finally {
       setDownloading(false);
     }
@@ -136,10 +142,19 @@ export default function CertificatePage() {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Tautan Disalin',
+        text: 'Tautan verifikasi sertifikat telah disalin ke clipboard.',
+        timer: 1500,
+        showConfirmButton: false
+      });
       setTimeout(() => setCopied(false), 2000);
     } catch {
+      const message = 'Tautan tidak dapat disalin otomatis. Pastikan izin clipboard browser diaktifkan.';
       setCopied(false);
-      setShareError('Tautan tidak dapat disalin otomatis. Pastikan izin clipboard browser diaktifkan.');
+      setShareError(message);
+      await Swal.fire('Gagal Menyalin Tautan', message, 'error');
     }
   };
 
@@ -155,21 +170,10 @@ export default function CertificatePage() {
     return (
       <div className="max-w-md mx-auto py-12">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm text-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
-            <Lock className="w-7 h-7" />
-          </div>
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto"><Lock className="w-7 h-7" /></div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Sertifikat Belum Tersedia 🔒</h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            {certificateRecoveryError || 'Sertifikat digital hanya tersedia setelah Anda menyelesaikan Pre-Test, seluruh materi, dan lulus Post-Test.'}
-          </p>
-          <div className="pt-2">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold"
-            >
-              <ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard
-            </Link>
-          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{certificateRecoveryError || 'Sertifikat digital hanya tersedia setelah Anda menyelesaikan Pre-Test, seluruh materi, dan lulus Post-Test.'}</p>
+          <div className="pt-2"><Link href="/dashboard" className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold"><ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard</Link></div>
         </div>
       </div>
     );
@@ -181,59 +185,22 @@ export default function CertificatePage() {
 
       <div className="certificate-screen-actions bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="min-w-0 w-full md:w-auto">
-          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Sertifikat Resmi Pelatihan
-          </span>
+          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Sertifikat Resmi Pelatihan</span>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Sertifikat Kelulusan</h1>
           <p className="text-xs text-slate-500 mt-0.5 break-all">Kode Verifikasi: <strong className="font-mono">{certificate.verification_code}</strong></p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:min-w-[330px]">
-          <button
-            onClick={handleDownloadPDF}
-            disabled={downloading}
-            className="min-w-0 px-2 sm:px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-[11px] sm:text-xs transition-colors shadow-sm inline-flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-4 h-4 shrink-0" />
-            <span className="truncate">{downloading ? 'Mengunduh...' : 'Unduh PDF'}</span>
-          </button>
-
-          <button
-            onClick={handlePrint}
-            className="min-w-0 px-2 sm:px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-[11px] sm:text-xs transition-colors inline-flex items-center justify-center gap-1.5"
-          >
-            <Printer className="w-4 h-4 shrink-0" />
-            <span>Cetak</span>
-          </button>
-
-          <button
-            onClick={handleShare}
-            className="min-w-0 px-2 sm:px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-[11px] sm:text-xs transition-colors inline-flex items-center justify-center gap-1.5"
-          >
-            <Share2 className="w-4 h-4 shrink-0" />
-            <span className="truncate">{copied ? 'Disalin ✓' : 'Bagikan'}</span>
-          </button>
+          <button onClick={handleDownloadPDF} disabled={downloading} className="min-w-0 px-2 sm:px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-[11px] sm:text-xs transition-colors shadow-sm inline-flex items-center justify-center gap-1.5"><Download className="w-4 h-4 shrink-0" /><span className="truncate">{downloading ? 'Mengunduh...' : 'Unduh PDF'}</span></button>
+          <button onClick={handlePrint} className="min-w-0 px-2 sm:px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-[11px] sm:text-xs transition-colors inline-flex items-center justify-center gap-1.5"><Printer className="w-4 h-4 shrink-0" /><span>Cetak</span></button>
+          <button onClick={handleShare} className="min-w-0 px-2 sm:px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-semibold rounded-xl text-[11px] sm:text-xs transition-colors inline-flex items-center justify-center gap-1.5"><Share2 className="w-4 h-4 shrink-0" /><span className="truncate">{copied ? 'Disalin ✓' : 'Bagikan'}</span></button>
         </div>
       </div>
 
       <div className="certificate-print-area w-full p-1 sm:p-2 bg-slate-200/50 dark:bg-slate-950 rounded-lg sm:rounded-2xl border border-slate-300 dark:border-slate-800 overflow-hidden">
         <div ref={previewRef} className="certificate-preview-viewport w-full max-w-[1000px] mx-auto overflow-hidden">
-          <div
-            className="certificate-preview-stage relative mx-auto overflow-hidden"
-            style={{
-              width: `${CERTIFICATE_WIDTH * previewScale}px`,
-              height: `${CERTIFICATE_HEIGHT * previewScale}px`
-            }}
-          >
-            <div
-              className="certificate-preview-scale absolute left-0 top-0"
-              style={{
-                width: `${CERTIFICATE_WIDTH}px`,
-                height: `${CERTIFICATE_HEIGHT}px`,
-                transform: `scale(${previewScale})`,
-                transformOrigin: 'top left'
-              }}
-            >
+          <div className="certificate-preview-stage relative mx-auto overflow-hidden" style={{ width: `${CERTIFICATE_WIDTH * previewScale}px`, height: `${CERTIFICATE_HEIGHT * previewScale}px` }}>
+            <div className="certificate-preview-scale absolute left-0 top-0" style={{ width: `${CERTIFICATE_WIDTH}px`, height: `${CERTIFICATE_HEIGHT}px`, transform: `scale(${previewScale})`, transformOrigin: 'top left' }}>
               <CertificateTemplate certificate={certificate} settings={settings || undefined} />
             </div>
           </div>
