@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { ParticipantQuestion, UserProfile, Training, TestAttempt } from '@/types';
@@ -161,7 +162,12 @@ export default function PosttestPage() {
     if (!currentUser || !training) return;
 
     if (Object.keys(answers).length < questions.length) {
-      alert('Mohon jawab seluruh pertanyaan Post-Test.');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Jawaban Belum Lengkap',
+        text: 'Mohon jawab seluruh pertanyaan Post-Test sebelum mengirim jawaban.',
+        confirmButtonText: 'Mengerti'
+      });
       return;
     }
 
@@ -175,8 +181,19 @@ export default function PosttestPage() {
       setIsPassed(result.passed);
       setCertificateIssued(result.certificate_issued);
       setIsSubmitted(true);
+      await Swal.fire({
+        icon: result.passed ? 'success' : 'info',
+        title: result.passed ? 'Selamat, Anda Lulus!' : 'Post-Test Berhasil Dikirim',
+        text: result.passed
+          ? `Nilai Anda ${result.score}/100 dan telah memenuhi passing grade.`
+          : `Nilai Anda ${result.score}/100. Anda masih dapat mencoba kembali jika kesempatan tersedia.`,
+        timer: 2200,
+        showConfirmButton: false
+      });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Post-Test gagal dikirim.');
+      const message = error instanceof Error ? error.message : 'Post-Test gagal dikirim.';
+      setSubmitError(message);
+      await Swal.fire('Post-Test Gagal Dikirim', message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -190,7 +207,9 @@ export default function PosttestPage() {
       setQuestions(orderTestQuestions(qList, activeSession.id));
       setIsSubmitted(false);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Percobaan baru belum dapat dimulai.');
+      const message = error instanceof Error ? error.message : 'Percobaan baru belum dapat dimulai.';
+      setSubmitError(message);
+      await Swal.fire('Percobaan Baru Gagal Dimulai', message, 'error');
     }
   };
 
