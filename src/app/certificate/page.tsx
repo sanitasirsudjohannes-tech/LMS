@@ -45,21 +45,14 @@ export default function CertificatePage() {
         const training = StorageAPI.getTraining();
         const selectedCertificate = StorageAPI.getSelectedCertificate();
         const selectedBelongsToUser = !!selectedCertificate && selectedCertificate.user_id === user.id;
-        const selectedMatchesTraining = selectedBelongsToUser && (
-          !training ||
-          !selectedCertificate?.training_id ||
-          selectedCertificate.training_id === training.id
-        );
 
-        // Prioritaskan sertifikat pelatihan yang sedang dibuka. Sertifikat arsip
-        // hanya dipakai bila memang milik peserta dan cocok dengan konteksnya.
-        let cert = selectedMatchesTraining
+        // Sertifikat yang dipilih dari arsip selalu menjadi sumber utama,
+        // meskipun pelatihan asalnya sudah archived dan tidak ada di cache aktif.
+        let cert = selectedBelongsToUser
           ? selectedCertificate
           : training
             ? StorageAPI.getCertificateForUser(user.id, training.id)
-            : selectedBelongsToUser
-              ? selectedCertificate
-              : null;
+            : null;
 
         const passed = training && StorageAPI.getTestAttempts(user.id, 'posttest', training.id)
           .some(attempt => attempt.score >= training.passing_score);
