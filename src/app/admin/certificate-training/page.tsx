@@ -5,7 +5,7 @@ import ResponsiveCertificatePreview from '@/components/ResponsiveCertificatePrev
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Training, Certificate, CertificateSettings, CertificateGlobalSettings } from '@/types';
 import { formatCertificateNumber } from '@/lib/utils';
-import { Check, Eye, Save, SlidersHorizontal } from 'lucide-react';
+import { Eye, Save, SlidersHorizontal } from 'lucide-react';
 
 export default function CertificateTrainingPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
@@ -20,7 +20,6 @@ export default function CertificateTrainingPage() {
   const [globalSettings, setGlobalSettings] = useState<CertificateGlobalSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [switching, setSwitching] = useState(false);
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   const apply = (id: string) => {
@@ -59,7 +58,6 @@ export default function CertificateTrainingPage() {
   const change = async (id: string) => {
     if (!id || switching) return;
     setTrainingId(id);
-    setMessage('');
     setError('');
     setSwitching(true);
     try {
@@ -75,12 +73,13 @@ export default function CertificateTrainingPage() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setMessage('');
-    if (!trainingId) { setError('Pilih pelatihan terlebih dahulu.'); return; }
-    if (numbering && !format.includes('{NO}')) { setError('Format nomor wajib memuat {NO}.'); return; }
-    if (!Number.isInteger(start) || start < 1) { setError('Nomor awal harus berupa bilangan bulat minimal 1.'); return; }
-    if (!Number.isInteger(digits) || digits < 1 || digits > 8) { setError('Jumlah digit harus berupa bilangan bulat antara 1 dan 8.'); return; }
-    if (!Number.isInteger(current) || current < start) { setError('Nomor urut saat ini tidak boleh lebih kecil dari nomor awal.'); return; }
+    const { default: Swal } = await import('sweetalert2');
+
+    if (!trainingId) { await Swal.fire('Pilih Pelatihan', 'Pilih pelatihan terlebih dahulu.', 'warning'); return; }
+    if (numbering && !format.includes('{NO}')) { await Swal.fire('Format Tidak Valid', 'Format nomor wajib memuat {NO}.', 'warning'); return; }
+    if (!Number.isInteger(start) || start < 1) { await Swal.fire('Nomor Awal Tidak Valid', 'Nomor awal harus berupa bilangan bulat minimal 1.', 'warning'); return; }
+    if (!Number.isInteger(digits) || digits < 1 || digits > 8) { await Swal.fire('Jumlah Digit Tidak Valid', 'Jumlah digit harus berupa bilangan bulat antara 1 dan 8.', 'warning'); return; }
+    if (!Number.isInteger(current) || current < start) { await Swal.fire('Nomor Urut Tidak Valid', 'Nomor urut saat ini tidak boleh lebih kecil dari nomor awal.', 'warning'); return; }
 
     setSaving(true);
     try {
@@ -95,9 +94,15 @@ export default function CertificateTrainingPage() {
         current_number: Number(current)
       });
       setCurrent(s.current_number);
-      setMessage('Pengaturan sertifikat untuk pelatihan ini berhasil disimpan.');
+      await Swal.fire({
+        icon: 'success',
+        title: 'Pengaturan Tersimpan',
+        text: 'Pengaturan sertifikat untuk pelatihan ini berhasil disimpan.',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Pengaturan gagal disimpan.');
+      await Swal.fire('Gagal Menyimpan', e instanceof Error ? e.message : 'Pengaturan gagal disimpan.', 'error');
     } finally {
       setSaving(false);
     }
@@ -145,7 +150,6 @@ export default function CertificateTrainingPage() {
 
     <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-800 dark:bg-blue-950/30"><label className="text-xs font-bold text-blue-950 dark:text-blue-100">Pilih Pelatihan<select value={trainingId} disabled={switching || trainings.length === 0} onChange={e => void change(e.target.value)} className="mt-2 w-full rounded-xl border border-blue-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 disabled:opacity-60 dark:border-blue-700 dark:bg-slate-900 dark:text-white">{trainings.length === 0 && <option value="">Belum ada pelatihan</option>}{trainings.map(t => <option key={t.id} value={t.id}>{t.active ? 'AKTIF' : 'NONAKTIF'} — {t.title}</option>)}</select></label>{switching && <p className="mt-2 text-[11px] font-semibold text-blue-700 dark:text-blue-300">Memuat pengaturan pelatihan...</p>}</div>
 
-    {message && <div className="flex gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800"><Check className="h-4 w-4" />{message}</div>}
     {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800">{error}</div>}
 
     <form onSubmit={save} className="space-y-5">
