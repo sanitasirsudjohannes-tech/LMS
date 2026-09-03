@@ -68,8 +68,7 @@ body {
   .certificate-page,
   .certificate-print-area,
   .certificate-preview-viewport,
-  .certificate-preview-stage,
-  .certificate-preview-scale {
+  .certificate-preview-stage {
     position: absolute !important;
     inset: 0 !important;
     display: block !important;
@@ -86,17 +85,29 @@ body {
     background: #fff !important;
     box-shadow: none !important;
     transform: none !important;
+  }
+
+  .certificate-preview-scale {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 1000px !important;
+    height: 707px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: scale(1.12252) !important;
     transform-origin: top left !important;
   }
 
   #certificate-render-target {
     position: absolute !important;
-    inset: 0 !important;
-    width: 297mm !important;
-    height: 210mm !important;
+    inset: 0 auto auto 0 !important;
+    width: 1000px !important;
+    height: 707px !important;
     max-width: none !important;
-    min-width: 297mm !important;
-    min-height: 210mm !important;
+    min-width: 1000px !important;
+    min-height: 707px !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
