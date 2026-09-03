@@ -1,11 +1,27 @@
+async function waitForImages(root: HTMLElement): Promise<void> {
+  const images = Array.from(root.querySelectorAll('img'));
+  await Promise.all(images.map(async (image) => {
+    if (image.complete && image.naturalWidth > 0) {
+      try { await image.decode(); } catch { /* browser dapat menolak decode walau gambar sudah termuat */ }
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      image.addEventListener('load', done, { once: true });
+      image.addEventListener('error', done, { once: true });
+    });
+
+    try { await image.decode(); } catch { /* lanjutkan render walau decode eksplisit tidak tersedia */ }
+  }));
+}
+
 export async function generateCertificatePDF(elementId: string, filename: string = 'sertifikat-pelatihan.pdf'): Promise<void> {
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error('Elemen sertifikat tidak ditemukan.');
   }
 
-  // Gunakan html2canvas-pro karena Tailwind CSS v4/browser modern dapat menghasilkan
-  // warna lab()/oklab()/oklch() yang tidak didukung html2canvas 1.4.x.
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
     import('html2canvas-pro'),
     import('jspdf')
@@ -14,8 +30,6 @@ export async function generateCertificatePDF(elementId: string, filename: string
   const certificateWidth = 1000;
   const certificateHeight = 707;
 
-  // Render dari salinan berukuran asli agar hasil PDF tidak terpengaruh oleh
-  // transform/scale preview responsif pada layar mobile maupun desktop.
   const renderHost = document.createElement('div');
   renderHost.style.position = 'fixed';
   renderHost.style.left = '-10000px';
@@ -49,8 +63,9 @@ export async function generateCertificatePDF(elementId: string, filename: string
   document.body.appendChild(renderHost);
 
   try {
-    // Beri satu frame agar gambar/tanda tangan yang ada pada clone sempat dilayout.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await waitForImages(clone);
+    if ('fonts' in document) await document.fonts.ready;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
     const canvas = await html2canvas(clone, {
       scale: 2,
@@ -66,19 +81,9 @@ export async function generateCertificatePDF(elementId: string, filename: string
     });
 
     const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4',
-      compress: true
-    });
-
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-
-    // Rasio desain 1000x707 hampir identik dengan A4 landscape. Hitung ukuran
-    // secara proporsional agar tidak terjadi distorsi, pemotongan, atau ruang kosong berlebihan.
     const imageRatio = certificateWidth / certificateHeight;
     const pageRatio = pdfWidth / pdfHeight;
 
