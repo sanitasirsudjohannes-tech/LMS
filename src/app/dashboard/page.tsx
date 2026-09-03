@@ -19,6 +19,18 @@ import {
 } from 'lucide-react';
 import { isTrainingAvailable } from '@/lib/utils';
 
+function formatPosttestOpening(iso: string): string {
+  return new Date(iso).toLocaleString('id-ID', {
+    timeZone: 'Asia/Makassar',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }) + ' WITA';
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -135,6 +147,16 @@ export default function DashboardPage() {
   const passingScore = selectedTraining?.passing_score || 80;
   const isPassedPosttest = posttestAttempts.some(a => a.score >= passingScore);
   const hasCertificate = !!certificate;
+  const posttestOpeningMs = selectedTraining?.posttest_start_at ? new Date(selectedTraining.posttest_start_at).getTime() : null;
+  const isPosttestTimeLocked = Boolean(
+    selectedTraining?.posttest_start_at &&
+    posttestOpeningMs !== null &&
+    Number.isFinite(posttestOpeningMs) &&
+    Date.now() < posttestOpeningMs
+  );
+  const posttestOpeningLabel = selectedTraining?.posttest_start_at
+    ? formatPosttestOpening(selectedTraining.posttest_start_at)
+    : '';
 
   const totalSteps = 1 + materials.length + 2;
   let currentStepPoints = 0;
@@ -149,6 +171,7 @@ export default function DashboardPage() {
   let ctaLink = '/pretest';
   let ctaText = 'Mulai Pre-Test';
   let ctaSub = 'Wajib diselesaikan sebelum membuka materi';
+  let ctaDisabled = false;
 
   if (!hasCompletedPretest) {
     ctaLink = '/pretest';
@@ -159,6 +182,11 @@ export default function DashboardPage() {
     ctaLink = nextMat ? `/material/${nextMat.id}` : '#';
     ctaText = nextMat ? `Lanjut ${nextMat.title.split(':')[0] || 'Materi'}` : 'Semua Materi Selesai';
     ctaSub = `Materi ${completedMaterialsCount + 1} dari ${materials.length}`;
+  } else if (!isPassedPosttest && isPosttestTimeLocked) {
+    ctaLink = '#';
+    ctaText = 'Post-Test Belum Dibuka';
+    ctaSub = `Dibuka ${posttestOpeningLabel}`;
+    ctaDisabled = true;
   } else if (!isPassedPosttest) {
     ctaLink = '/posttest';
     ctaText = 'Mulai Post-Test';
@@ -281,16 +309,26 @@ export default function DashboardPage() {
 
             {/* Primary CTA Button */}
             <div className="pt-2">
-              <Link
-                href={ctaLink}
-                className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-all shadow-md flex items-center justify-between group"
-              >
-                <div>
-                  <span className="font-bold text-base block group-hover:translate-x-0.5 transition-transform">{ctaText}</span>
-                  <span className="text-xs opacity-80 font-normal">{ctaSub}</span>
+              {ctaDisabled ? (
+                <div className="w-full py-3.5 px-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-sm flex items-center justify-between border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <span className="font-bold text-base block">{ctaText}</span>
+                    <span className="text-xs font-normal">{ctaSub}</span>
+                  </div>
+                  <Lock className="w-5 h-5 shrink-0" />
                 </div>
-                <ArrowRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              ) : (
+                <Link
+                  href={ctaLink}
+                  className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-all shadow-md flex items-center justify-between group"
+                >
+                  <div>
+                    <span className="font-bold text-base block group-hover:translate-x-0.5 transition-transform">{ctaText}</span>
+                    <span className="text-xs opacity-80 font-normal">{ctaSub}</span>
+                  </div>
+                  <ArrowRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -411,7 +449,7 @@ export default function DashboardPage() {
             <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
               isPassedPosttest
                 ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
-                : hasCompletedAllMaterials
+                : hasCompletedAllMaterials && !isPosttestTimeLocked
                 ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                 : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'
             }`}>
@@ -419,13 +457,13 @@ export default function DashboardPage() {
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
                   isPassedPosttest
                     ? 'bg-emerald-600 text-white'
-                    : hasCompletedAllMaterials
+                    : hasCompletedAllMaterials && !isPosttestTimeLocked
                     ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                     : 'bg-slate-200 text-slate-500 dark:bg-slate-700'
                 }`}>
                   {isPassedPosttest ? (
                     <CheckCircle2 className="w-5 h-5" />
-                  ) : hasCompletedAllMaterials ? (
+                  ) : hasCompletedAllMaterials && !isPosttestTimeLocked ? (
                     <GraduationCap className="w-4 h-4" />
                   ) : (
                     <Lock className="w-4 h-4" />
@@ -438,6 +476,8 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-500">
                     {isPassedPosttest
                       ? `LULUS • Nilai Terbaik: ${bestPosttestScore} / 100`
+                      : isPosttestTimeLocked
+                      ? `Belum dibuka • Mulai ${posttestOpeningLabel}`
                       : posttestAttempts.length > 0
                       ? `Percobaan ${posttestAttempts.length}/${selectedTraining.max_posttest_attempts} • Nilai Terakhir: ${posttestAttempts[posttestAttempts.length - 1].score}`
                       : `Passing grade: ${selectedTraining.passing_score}`}
@@ -449,7 +489,7 @@ export default function DashboardPage() {
                 <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-md">
                   Lulus ✓
                 </span>
-              ) : hasCompletedAllMaterials ? (
+              ) : hasCompletedAllMaterials && !isPosttestTimeLocked ? (
                 <Link
                   href="/posttest"
                   className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90"
@@ -458,7 +498,7 @@ export default function DashboardPage() {
                 </Link>
               ) : (
                 <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Lock className="w-3.5 h-3.5" /> Terkunci
+                  <Lock className="w-3.5 h-3.5" /> {isPosttestTimeLocked ? 'Belum Dibuka' : 'Terkunci'}
                 </span>
               )}
             </div>
