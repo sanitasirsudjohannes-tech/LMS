@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import { UserProfile, Training, Material, TestAttempt, MaterialProgress, Certificate } from '@/types';
 import {
   FileCheck2,
@@ -31,18 +32,33 @@ function formatPosttestOpening(iso: string): string {
   }) + ' WITA';
 }
 
+async function getServerOffsetMs(): Promise<number> {
+  const requestStartedAt = Date.now();
+  try {
+    const { data, error } = await supabase.rpc('lms_server_now');
+    if (error) throw error;
+    const responseReceivedAt = Date.now();
+    const serverNowMs = new Date(String(data)).getTime();
+    if (!Number.isFinite(serverNowMs)) return 0;
+    const localMidpointMs = requestStartedAt + (responseReceivedAt - requestStartedAt) / 2;
+    return serverNowMs - localMidpointMs;
+  } catch {
+    return 0;
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
-  
   const [materials, setMaterials] = useState<Material[]>([]);
   const [pretestAttempt, setPretestAttempt] = useState<TestAttempt | null>(null);
   const [posttestAttempts, setPosttestAttempts] = useState<TestAttempt[]>([]);
   const [materialProgress, setMaterialProgress] = useState<MaterialProgress[]>([]);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [certificateNotice, setCertificateNotice] = useState('');
@@ -51,13 +67,23 @@ export default function DashboardPage() {
     await StorageAPI.loadTrainingResources(tr.id);
     setCertificateNotice('');
 
+    if (tr.posttest_start_at) {
+      setServerOffsetMs(await getServerOffsetMs());
+    } else {
+      setServerOffsetMs(0);
+    }
+
     const mats = StorageAPI.getMaterials(tr.id).filter(m => m.active);
     setMaterials(mats);
 
     const pre = StorageAPI.getTestAttempts(userId, 'pretest', tr.id);
     setPretestAttempt(pre.length > 0 ? pre[0] : null);
 
-    const post = StorageAPI.getTestAttempts(userId, 'posttest', tr.id);
+    const post = [...StorageAPI.getTestAttempts(userId, 'posttest', tr.id)].sort((a, b) => {
+      const attemptDiff = (a.attempt_number || 0) - (b.attempt_number || 0);
+      if (attemptDiff !== 0) return attemptDiff;
+      return new Date(a.submitted_at || a.started_at || 0).getTime() - new Date(b.submitted_at || b.started_at || 0).getTime();
+    });
     setPosttestAttempts(post);
 
     const mp = StorageAPI.getMaterialProgress(userId);
@@ -122,27 +148,19 @@ export default function DashboardPage() {
     return (
       <div className="max-w-xl mx-auto py-12 text-center space-y-4">
         <p className="text-sm text-red-700 dark:text-red-300">{loadError}</p>
-        <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold">
-          Coba Lagi
-        </button>
+        <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold">Coba Lagi</button>
       </div>
     );
   }
 
   if (loading || !currentUser) {
-    return (
-      <div className="max-w-xl mx-auto py-12 text-center text-slate-500 text-sm">
-        Memuat dashboard pelatihan...
-      </div>
-    );
+    return <div className="max-w-xl mx-auto py-12 text-center text-slate-500 text-sm">Memuat dashboard pelatihan...</div>;
   }
 
-  // Calculate Progress Logic
   const hasCompletedPretest = !!pretestAttempt;
   const completedMaterialIds = materialProgress.filter(p => p.completed_at).map(p => p.material_id);
   const completedMaterialsCount = materials.filter(m => completedMaterialIds.includes(m.id)).length;
   const hasCompletedAllMaterials = materials.length === 0 || completedMaterialsCount === materials.length;
-  
   const bestPosttestScore = posttestAttempts.reduce((max, a) => Math.max(max, a.score), 0);
   const passingScore = selectedTraining?.passing_score || 80;
   const isPassedPosttest = posttestAttempts.some(a => a.score >= passingScore);
@@ -152,11 +170,9 @@ export default function DashboardPage() {
     selectedTraining?.posttest_start_at &&
     posttestOpeningMs !== null &&
     Number.isFinite(posttestOpeningMs) &&
-    Date.now() < posttestOpeningMs
+    Date.now() + serverOffsetMs < posttestOpeningMs
   );
-  const posttestOpeningLabel = selectedTraining?.posttest_start_at
-    ? formatPosttestOpening(selectedTraining.posttest_start_at)
-    : '';
+  const posttestOpeningLabel = selectedTraining?.posttest_start_at ? formatPosttestOpening(selectedTraining.posttest_start_at) : '';
 
   const totalSteps = 1 + materials.length + 2;
   let currentStepPoints = 0;
@@ -164,10 +180,8 @@ export default function DashboardPage() {
   currentStepPoints += completedMaterialsCount;
   if (isPassedPosttest) currentStepPoints += 1;
   if (hasCertificate) currentStepPoints += 1;
-
   const progressPercentage = Math.min(100, Math.round((currentStepPoints / totalSteps) * 100));
 
-  // Determine Primary CTA Button
   let ctaLink = '/pretest';
   let ctaText = 'Mulai Pre-Test';
   let ctaSub = 'Wajib diselesaikan sebelum membuka materi';
@@ -203,13 +217,9 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-2">
-      
-      {/* Header Info Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
         <div className="flex items-center gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60 p-3.5">
-          <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-            <Building2 className="w-5 h-5" />
-          </div>
+          <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm"><Building2 className="w-5 h-5" /></div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">LONTAR</p>
             <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">RSUD Prof. Dr. W.Z. Johannes Kupang</p>
@@ -222,17 +232,12 @@ export default function DashboardPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{currentUser.full_name}</h1>
             <p className="text-xs text-slate-500 mt-0.5">{currentUser.institution} {currentUser.nip_nik ? `• NIP: ${currentUser.nip_nik}` : ''}</p>
           </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 w-fit">
-            Peserta Pelatihan
-          </span>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 w-fit">Peserta Pelatihan</span>
         </div>
 
-        {/* Catalog of Available Trainings */}
         <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-              Daftar Pelatihan Yang Tersedia ({trainings.length})
-            </span>
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Daftar Pelatihan Yang Tersedia ({trainings.length})</span>
             <span className="text-[11px] text-slate-400">Pilih untuk mengikuti</span>
           </div>
 
@@ -241,40 +246,16 @@ export default function DashboardPage() {
               {trainings.map(t => {
                 const isSelected = selectedTraining?.id === t.id;
                 return (
-                  <div
-                    key={t.id}
-                    onClick={() => handleSelectTraining(t)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                      isSelected
-                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 shadow-sm ring-1 ring-slate-900 dark:ring-slate-100'
-                        : 'bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 hover:border-slate-400'
-                    }`}
-                  >
+                  <div key={t.id} onClick={() => handleSelectTraining(t)} className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${isSelected ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 shadow-sm ring-1 ring-slate-900 dark:ring-slate-100' : 'bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-bold leading-tight">{t.title}</h3>
-                        {isSelected && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-white">
-                            Pelatihan Dipilih
-                          </span>
-                        )}
+                        {isSelected && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-white">Pelatihan Dipilih</span>}
                       </div>
-                      <p className={`text-xs ${isSelected ? 'opacity-80' : 'text-slate-500'} line-clamp-1`}>
-                        {t.description || 'Tidak ada deskripsi singkat.'}
-                      </p>
-                      {(t.start_date || t.end_date) && (
-                        <div className={`text-[11px] font-mono mt-1 ${isSelected ? 'opacity-90' : 'text-blue-600 dark:text-blue-400'}`}>
-                          📅 Periode: {t.start_date ? new Date(t.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Awal'} - {t.end_date ? new Date(t.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Selesai'}
-                        </div>
-                      )}
+                      <p className={`text-xs ${isSelected ? 'opacity-80' : 'text-slate-500'} line-clamp-1`}>{t.description || 'Tidak ada deskripsi singkat.'}</p>
+                      {(t.start_date || t.end_date) && <div className={`text-[11px] font-mono mt-1 ${isSelected ? 'opacity-90' : 'text-blue-600 dark:text-blue-400'}`}>📅 Periode: {t.start_date ? new Date(t.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Awal'} - {t.end_date ? new Date(t.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Selesai'}</div>}
                     </div>
-                    <div className="shrink-0">
-                      {isSelected ? (
-                        <Check className="w-5 h-5 text-emerald-400 dark:text-emerald-600" />
-                      ) : (
-                        <span className="text-xs font-medium text-slate-500 hover:underline">Pilih ➔</span>
-                      )}
-                    </div>
+                    <div className="shrink-0">{isSelected ? <Check className="w-5 h-5 text-emerald-400 dark:text-emerald-600" /> : <span className="text-xs font-medium text-slate-500 hover:underline">Pilih ➔</span>}</div>
                   </div>
                 );
               })}
@@ -283,273 +264,78 @@ export default function DashboardPage() {
             <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl p-6 text-center space-y-2">
               <Sliders className="w-8 h-8 text-amber-500 mx-auto" />
               <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">Belum Ada Pelatihan Aktif</h4>
-              <p className="text-xs text-amber-700 dark:text-amber-300 max-w-md mx-auto">
-                Saat ini belum ada program pelatihan yang dipublikasikan atau diaktifkan oleh Administrator. Silakan hubungi tim diklat atau periksa kembali secara berkala.
-              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 max-w-md mx-auto">Saat ini belum ada program pelatihan yang dipublikasikan atau diaktifkan oleh Administrator. Silakan hubungi tim diklat atau periksa kembali secara berkala.</p>
             </div>
           )}
         </div>
 
-        {/* Selected Training Details & Progress */}
         {selectedTraining && (
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            {/* Progress Bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold">
                 <span className="text-slate-700 dark:text-slate-300">Progres Pelatihan Ini ({selectedTraining.title})</span>
                 <span className="text-slate-900 dark:text-white font-mono text-sm">{progressPercentage}%</span>
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden p-0.5">
-                <div
-                  className="bg-slate-900 dark:bg-slate-100 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden p-0.5"><div className="bg-slate-900 dark:bg-slate-100 h-full rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }} /></div>
             </div>
 
-            {/* Primary CTA Button */}
             <div className="pt-2">
               {ctaDisabled ? (
-                <div className="w-full py-3.5 px-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-sm flex items-center justify-between border border-slate-200 dark:border-slate-700">
-                  <div>
-                    <span className="font-bold text-base block">{ctaText}</span>
-                    <span className="text-xs font-normal">{ctaSub}</span>
-                  </div>
-                  <Lock className="w-5 h-5 shrink-0" />
-                </div>
+                <div className="w-full py-3.5 px-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-sm flex items-center justify-between border border-slate-200 dark:border-slate-700"><div><span className="font-bold text-base block">{ctaText}</span><span className="text-xs font-normal">{ctaSub}</span></div><Lock className="w-5 h-5 shrink-0" /></div>
               ) : (
-                <Link
-                  href={ctaLink}
-                  className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-all shadow-md flex items-center justify-between group"
-                >
-                  <div>
-                    <span className="font-bold text-base block group-hover:translate-x-0.5 transition-transform">{ctaText}</span>
-                    <span className="text-xs opacity-80 font-normal">{ctaSub}</span>
-                  </div>
-                  <ArrowRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                <Link href={ctaLink} className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-all shadow-md flex items-center justify-between group"><div><span className="font-bold text-base block group-hover:translate-x-0.5 transition-transform">{ctaText}</span><span className="text-xs opacity-80 font-normal">{ctaSub}</span></div><ArrowRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" /></Link>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Sequential Stages Steps */}
       {selectedTraining && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Tahapan Pelatihan: {selectedTraining.title}</h3>
-
           <div className="space-y-3">
-            
-            {/* Step 1: Pre-test */}
-            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-              hasCompletedPretest
-                ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-            }`}>
+            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${hasCompletedPretest ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  hasCompletedPretest
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                }`}>
-                  {hasCompletedPretest ? <CheckCircle2 className="w-5 h-5" /> : <FileCheck2 className="w-4 h-4" />}
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">1. Pre-Test</h4>
-                  <p className="text-xs text-slate-500">
-                    {hasCompletedPretest
-                      ? `Selesai • Nilai: ${pretestAttempt?.score} / 100`
-                      : 'Wajib dikerjakan sebelum materi terbuka'}
-                  </p>
-                </div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${hasCompletedPretest ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'}`}>{hasCompletedPretest ? <CheckCircle2 className="w-5 h-5" /> : <FileCheck2 className="w-4 h-4" />}</div>
+                <div><h4 className="text-sm font-bold text-slate-900 dark:text-white">1. Pre-Test</h4><p className="text-xs text-slate-500">{hasCompletedPretest ? `Selesai • Nilai: ${pretestAttempt?.score} / 100` : 'Wajib dikerjakan sebelum materi terbuka'}</p></div>
               </div>
-
-              {hasCompletedPretest ? (
-                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-md">
-                  Selesai ✓
-                </span>
-              ) : (
-                <Link
-                  href="/pretest"
-                  className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90"
-                >
-                  Mulai
-                </Link>
-              )}
+              {hasCompletedPretest ? <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-md">Selesai ✓</span> : <Link href="/pretest" className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90">Mulai</Link>}
             </div>
 
-            {/* Step 2..N: Materials */}
             {materials.map((mat, idx) => {
               const isCompleted = completedMaterialIds.includes(mat.id);
               const isUnlocked = hasCompletedPretest && (idx === 0 || completedMaterialIds.includes(materials[idx - 1].id));
-
               return (
-                <div
-                  key={mat.id}
-                  className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-                    isCompleted
-                      ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
-                      : isUnlocked
-                      ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                      : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'
-                  }`}
-                >
+                <div key={mat.id} className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${isCompleted ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' : isUnlocked ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                      isCompleted
-                        ? 'bg-emerald-600 text-white'
-                        : isUnlocked
-                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                        : 'bg-slate-200 text-slate-500 dark:bg-slate-700'
-                    }`}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5" />
-                      ) : isUnlocked ? (
-                        <BookOpen className="w-4 h-4" />
-                      ) : (
-                        <Lock className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        {idx + 2}. {mat.title}
-                      </h4>
-                      <p className="text-xs text-slate-500 flex items-center gap-2">
-                        <span>Durasi min: {mat.minimum_duration_seconds} detik</span>
-                        {isCompleted && <span className="text-emerald-600 font-semibold">• Telah Dibaca</span>}
-                      </p>
-                    </div>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isCompleted ? 'bg-emerald-600 text-white' : isUnlocked ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}>{isCompleted ? <CheckCircle2 className="w-5 h-5" /> : isUnlocked ? <BookOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}</div>
+                    <div><h4 className="text-sm font-bold text-slate-900 dark:text-white">{idx + 2}. {mat.title}</h4><p className="text-xs text-slate-500 flex items-center gap-2"><span>Durasi min: {mat.minimum_duration_seconds} detik</span>{isCompleted && <span className="text-emerald-600 font-semibold">• Telah Dibaca</span>}</p></div>
                   </div>
-
-                  {isCompleted ? (
-                    <Link
-                      href={`/material/${mat.id}`}
-                      className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline"
-                    >
-                      Baca Lagi
-                    </Link>
-                  ) : isUnlocked ? (
-                    <Link
-                      href={`/material/${mat.id}`}
-                      className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90"
-                    >
-                      Buka
-                    </Link>
-                  ) : (
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Lock className="w-3.5 h-3.5" /> Terkunci
-                    </span>
-                  )}
+                  {isCompleted ? <Link href={`/material/${mat.id}`} className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline">Baca Lagi</Link> : isUnlocked ? <Link href={`/material/${mat.id}`} className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90">Buka</Link> : <span className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> Terkunci</span>}
                 </div>
               );
             })}
 
-            {/* Post-Test */}
-            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-              isPassedPosttest
-                ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
-                : hasCompletedAllMaterials && !isPosttestTimeLocked
-                ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'
-            }`}>
+            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${isPassedPosttest ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' : hasCompletedAllMaterials && !isPosttestTimeLocked ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  isPassedPosttest
-                    ? 'bg-emerald-600 text-white'
-                    : hasCompletedAllMaterials && !isPosttestTimeLocked
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'bg-slate-200 text-slate-500 dark:bg-slate-700'
-                }`}>
-                  {isPassedPosttest ? (
-                    <CheckCircle2 className="w-5 h-5" />
-                  ) : hasCompletedAllMaterials && !isPosttestTimeLocked ? (
-                    <GraduationCap className="w-4 h-4" />
-                  ) : (
-                    <Lock className="w-4 h-4" />
-                  )}
-                </div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isPassedPosttest ? 'bg-emerald-600 text-white' : hasCompletedAllMaterials && !isPosttestTimeLocked ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}>{isPassedPosttest ? <CheckCircle2 className="w-5 h-5" /> : hasCompletedAllMaterials && !isPosttestTimeLocked ? <GraduationCap className="w-4 h-4" /> : <Lock className="w-4 h-4" />}</div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {materials.length + 2}. Post-Test
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    {isPassedPosttest
-                      ? `LULUS • Nilai Terbaik: ${bestPosttestScore} / 100`
-                      : isPosttestTimeLocked
-                      ? `Belum dibuka • Mulai ${posttestOpeningLabel}`
-                      : posttestAttempts.length > 0
-                      ? `Percobaan ${posttestAttempts.length}/${selectedTraining.max_posttest_attempts} • Nilai Terakhir: ${posttestAttempts[posttestAttempts.length - 1].score}`
-                      : `Passing grade: ${selectedTraining.passing_score}`}
-                  </p>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">{materials.length + 2}. Post-Test</h4>
+                  <p className="text-xs text-slate-500">{isPassedPosttest ? `LULUS • Nilai Terbaik: ${bestPosttestScore} / 100` : isPosttestTimeLocked ? `Belum dibuka • Mulai ${posttestOpeningLabel}` : posttestAttempts.length > 0 ? `Percobaan ${posttestAttempts.length}/${selectedTraining.max_posttest_attempts} • Nilai Terakhir: ${posttestAttempts.at(-1)?.score}` : `Passing grade: ${selectedTraining.passing_score}`}</p>
                 </div>
               </div>
-
-              {isPassedPosttest ? (
-                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-md">
-                  Lulus ✓
-                </span>
-              ) : hasCompletedAllMaterials && !isPosttestTimeLocked ? (
-                <Link
-                  href="/posttest"
-                  className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90"
-                >
-                  Mulai Test
-                </Link>
-              ) : (
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Lock className="w-3.5 h-3.5" /> {isPosttestTimeLocked ? 'Belum Dibuka' : 'Terkunci'}
-                </span>
-              )}
+              {isPassedPosttest ? <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-md">Lulus ✓</span> : hasCompletedAllMaterials && !isPosttestTimeLocked ? <Link href="/posttest" className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90">Mulai Test</Link> : <span className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> {isPosttestTimeLocked ? 'Belum Dibuka' : 'Terkunci'}</span>}
             </div>
 
-            {/* Certificate Stage */}
-            {certificateNotice && (
-              <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                {certificateNotice}
-              </div>
-            )}
+            {certificateNotice && <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{certificateNotice}</div>}
 
-            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
-              hasCertificate
-                ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60'
-                : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'
-            }`}>
+            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${hasCertificate ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60' : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  hasCertificate ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'
-                }`}>
-                  <Award className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {materials.length + 3}. Sertifikat Digital
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    {hasCertificate
-                      ? 'Sertifikat telah diterbitkan & dapat diunduh'
-                      : isPassedPosttest
-                        ? 'Anda sudah lulus • sertifikat belum diterbitkan'
-                        : 'Tersedia setelah lulus Post-Test'}
-                  </p>
-                </div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${hasCertificate ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}><Award className="w-4 h-4" /></div>
+                <div><h4 className="text-sm font-bold text-slate-900 dark:text-white">{materials.length + 3}. Sertifikat Digital</h4><p className="text-xs text-slate-500">{hasCertificate ? 'Sertifikat telah diterbitkan & dapat diunduh' : isPassedPosttest ? 'Anda sudah lulus • sertifikat belum diterbitkan' : 'Tersedia setelah lulus Post-Test'}</p></div>
               </div>
-
-              {hasCertificate ? (
-                <Link
-                  href="/certificate"
-                  onClick={() => certificate && StorageAPI.selectCertificate(certificate.id)}
-                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
-                >
-                  Unduh PDF
-                </Link>
-              ) : (
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Lock className="w-3.5 h-3.5" /> Terkunci
-                </span>
-              )}
+              {hasCertificate ? <Link href="/certificate" onClick={() => certificate && StorageAPI.selectCertificate(certificate.id)} className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">Unduh PDF</Link> : <span className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> Terkunci</span>}
             </div>
-
           </div>
         </div>
       )}
