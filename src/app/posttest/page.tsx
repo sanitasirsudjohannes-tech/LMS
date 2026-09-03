@@ -3,11 +3,35 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import { ParticipantQuestion, UserProfile, Training, TestAttempt } from '@/types';
 import { GraduationCap, CheckCircle2, XCircle, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTestSession } from '@/hooks/useTestSession';
 import { getDisplayOptions, orderTestQuestions } from '@/lib/testSession';
+
+function formatPosttestOpening(iso: string): string {
+  return new Date(iso).toLocaleString('id-ID', {
+    timeZone: 'Asia/Makassar',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }) + ' WITA';
+}
+
+async function getServerNowMs(): Promise<number> {
+  try {
+    const { data, error } = await supabase.rpc('lms_server_now');
+    if (error) throw error;
+    const value = new Date(String(data)).getTime();
+    return Number.isFinite(value) ? value : Date.now();
+  } catch {
+    return Date.now();
+  }
+}
 
 export default function PosttestPage() {
   const router = useRouter();
@@ -52,7 +76,18 @@ export default function PosttestPage() {
           return;
         }
 
-      // Validate if all materials are completed (PRD Section 12)
+        if (tr.posttest_start_at) {
+          const serverNowMs = await getServerNowMs();
+          const openingMs = new Date(tr.posttest_start_at).getTime();
+          if (Number.isFinite(openingMs) && serverNowMs < openingMs) {
+            setIsAccessAllowed(false);
+            setAccessErrorMsg(`Post-Test belum dibuka oleh admin. Post-Test dapat dimulai pada ${formatPosttestOpening(tr.posttest_start_at)}.`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Validate if all materials are completed (PRD Section 12)
         const materials = StorageAPI.getMaterials().filter(m => m.active);
         const userProgress = StorageAPI.getMaterialProgress(user.id);
         const materialIds = new Set(materials.map(material => material.id));
@@ -69,7 +104,7 @@ export default function PosttestPage() {
           return;
         }
 
-      // Check existing post-test attempts
+        // Check existing post-test attempts
         const existingAttempts = StorageAPI.getTestAttempts(user.id, 'posttest');
         setAttempts(existingAttempts);
 
