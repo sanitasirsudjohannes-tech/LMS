@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Award, CalendarDays, ExternalLink, FileCheck2 } from 'lucide-react';
 import { Certificate, UserProfile } from '@/types';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import { formatDateIndonesian } from '@/lib/utils';
 
 export default function CertificateArchivePage() {
@@ -30,17 +31,13 @@ export default function CertificateArchivePage() {
         }
         setUser(currentUser);
 
-        for (const training of StorageAPI.getTrainings()) {
-          const passed = StorageAPI.getTestAttempts(currentUser.id, 'posttest', training.id)
-            .some(attempt => attempt.score >= training.passing_score);
-          const hasCertificate = !!StorageAPI.getCertificateForUser(currentUser.id, training.id);
-          if (passed && !hasCertificate) {
-            try {
-              await StorageAPI.ensureMyCertificate(training.id);
-            } catch (error) {
-              setLoadError(error instanceof Error ? error.message : 'Sebagian sertifikat belum dapat diterbitkan.');
-            }
-          }
+        // Recovery seluruh sertifikat yang seharusnya sudah terbit, termasuk
+        // pelatihan yang sudah diarsipkan dan tidak lagi ada di cache peserta.
+        const { error: recoveryError } = await supabase.rpc('ensure_my_missing_certificates');
+        if (recoveryError) {
+          setLoadError(`Sebagian sertifikat belum dapat dipulihkan: ${recoveryError.message}`);
+        } else {
+          await initLocalStorage(true);
         }
 
         setCertificates(
@@ -58,8 +55,9 @@ export default function CertificateArchivePage() {
   }, [router]);
 
   const openCertificate = (certificate: Certificate) => {
+    // Sertifikat dipilih berdasarkan ID dokumen. Jangan mengubah konteks pelatihan
+    // karena pelatihan arsip mungkin memang tidak dapat dibaca lagi oleh peserta.
     StorageAPI.selectCertificate(certificate.id);
-    if (certificate.training_id) StorageAPI.setSelectTraining(certificate.training_id);
     router.push('/certificate');
   };
 
