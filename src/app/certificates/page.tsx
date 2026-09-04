@@ -72,14 +72,14 @@ export default function CertificateArchivePage() {
   return (
     <div className="max-w-3xl mx-auto py-2 space-y-6">
       {loadError && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{loadError}</div>}
-      <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-sm flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
-          <Award className="w-7 h-7" />
+      <div className="bg-gradient-to-r from-teal-800 via-emerald-800 to-slate-900 dark:from-slate-900 dark:to-slate-900 text-white rounded-2xl p-6 shadow-md border border-teal-700/30 dark:border-slate-800 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-teal-500/30 dark:bg-amber-500 flex items-center justify-center shrink-0 border border-teal-400/30">
+          <Award className="w-7 h-7 text-teal-200 dark:text-slate-900" />
         </div>
         <div>
-          <p className="text-[11px] uppercase tracking-wider font-bold text-amber-300">Dokumen Peserta</p>
+          <p className="text-[11px] uppercase tracking-wider font-bold text-teal-300 dark:text-amber-300">Dokumen Peserta</p>
           <h1 className="text-xl sm:text-2xl font-bold">Arsip Sertifikat Saya</h1>
-          <p className="text-xs text-slate-300 mt-1">Sertifikat tetap tersedia meskipun pelatihannya sudah dinonaktifkan admin.</p>
+          <p className="text-xs text-teal-100/80 dark:text-slate-300 mt-1">Sertifikat tetap tersedia meskipun pelatihannya sudah dinonaktifkan admin.</p>
         </div>
       </div>
 

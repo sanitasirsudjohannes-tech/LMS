@@ -121,7 +121,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-md">
+      <section className="bg-gradient-to-r from-teal-800 via-emerald-800 to-slate-900 dark:from-slate-900 dark:to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-md border border-teal-700/30 dark:border-slate-800">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400"><ShieldCheck className="w-4 h-4" /><span>Verifikasi Keaslian Sertifikat</span></div>
