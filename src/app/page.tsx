@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { initCurrentUser } from '@/lib/storage';
+import { getValidatedCurrentUser } from '@/lib/authSession';
 import { UserProfile } from '@/types';
 import {
   BookOpen,
@@ -29,11 +29,11 @@ export default function Home() {
 
     const load = async () => {
       try {
-        const user = await initCurrentUser();
+        const user = await getValidatedCurrentUser();
         if (mounted) setCurrentUser(user);
       } catch (error) {
         console.error('Gagal memulihkan sesi di landing page:', error);
-        if (mounted) setCurrentUser(null);
+        // Jangan menganggap gangguan jaringan sebagai logout.
       } finally {
         if (mounted) setAuthLoading(false);
       }
