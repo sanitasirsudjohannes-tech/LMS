@@ -30,7 +30,7 @@ type NavItem = {
   certificateGroup?: boolean;
 };
 
-export default function Navbar() {
+export default function Navbar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -103,34 +103,40 @@ export default function Navbar() {
     return pathname.startsWith(item.href);
   };
 
-  if (authLoading) return null;
+  if (authLoading) {
+    return <div className="min-h-screen">{children}</div>;
+  }
 
   if (!currentUser) {
     return (
-      <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
-            <LontarLogo priority className="shrink-0 ring-1 ring-slate-200 dark:ring-slate-700" />
-            <div className="min-w-0">
-              <span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span>
-              <span className="hidden truncate text-[10px] font-medium text-slate-500 sm:block">LMS Online & Pelatihan Terpadu RSUD Johannes</span>
-            </div>
-          </Link>
+      <div className="min-h-screen">
+        <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+          <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <Link href="/" className="flex min-w-0 items-center gap-3">
+              <LontarLogo priority className="shrink-0 ring-1 ring-slate-200 dark:ring-slate-700" />
+              <div className="min-w-0">
+                <span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span>
+                <span className="hidden truncate text-[10px] font-medium text-slate-500 sm:block">LMS Online & Pelatihan Terpadu RSUD Johannes</span>
+              </div>
+            </Link>
 
-          <div className="flex items-center gap-2">
-            {pathname !== '/login' && (
-              <Link href="/login" className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900 sm:text-sm">
-                Masuk
-              </Link>
-            )}
-            {pathname !== '/register' && (
-              <Link href="/register" className="rounded-lg bg-[#07375c] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#052c4a] sm:text-sm">
-                Daftar Akun
-              </Link>
-            )}
+            <div className="flex items-center gap-2">
+              {pathname !== '/login' && (
+                <Link href="/login" className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900 sm:text-sm">
+                  Masuk
+                </Link>
+              )}
+              {pathname !== '/register' && (
+                <Link href="/register" className="rounded-lg bg-[#07375c] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#052c4a] sm:text-sm">
+                  Daftar Akun
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+
+        <div className="pt-16">{children}</div>
+      </div>
     );
   }
 
@@ -178,10 +184,10 @@ export default function Navbar() {
   );
 
   return (
-    <>
+    <div className="min-h-screen">
       <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
         <div className="flex h-full items-center">
-          <div className="flex h-full w-64 shrink-0 items-center border-r border-slate-200 px-4 dark:border-slate-800">
+          <div className="flex h-full w-full items-center px-4 lg:w-64 lg:shrink-0 lg:border-r lg:border-slate-200 dark:lg:border-slate-800">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
@@ -198,11 +204,21 @@ export default function Navbar() {
                 <span className="hidden truncate text-[9px] font-medium text-slate-500 xl:block">LMS Online & Pelatihan Terpadu</span>
               </div>
             </Link>
+
+            <div className="ml-auto flex min-w-0 items-center gap-3 lg:hidden">
+              <div className="hidden min-w-0 text-right sm:block">
+                <p className="max-w-[180px] truncate text-xs font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p>
+                <p className="truncate text-[10px] capitalize text-slate-500">{currentUser.role}</p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+                <User className="h-4 w-4" />
+              </div>
+            </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 items-center justify-end px-4 sm:px-6">
+          <div className="hidden min-w-0 flex-1 items-center justify-end px-4 sm:px-6 lg:flex">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="hidden min-w-0 text-right sm:block">
+              <div className="min-w-0 text-right">
                 <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p>
                 <p className="truncate text-[10px] capitalize text-slate-500">{currentUser.role} • {currentUser.institution}</p>
               </div>
@@ -217,6 +233,8 @@ export default function Navbar() {
       <aside className="fixed bottom-0 left-0 top-16 z-30 hidden w-64 border-r border-slate-200 bg-slate-50 lg:block dark:border-slate-800 dark:bg-slate-950">
         <SidebarContent />
       </aside>
+
+      <div className="pt-16 lg:pl-64">{children}</div>
 
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -251,6 +269,6 @@ export default function Navbar() {
           </aside>
         </div>
       )}
-    </>
+    </div>
   );
 }
