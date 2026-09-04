@@ -30,7 +30,7 @@ type NavItem = {
   certificateGroup?: boolean;
 };
 
-export default function Navbar() {
+export default function Navbar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -46,7 +46,7 @@ export default function Navbar() {
         const user = await initCurrentUser();
         if (mounted) setCurrentUser(user);
       } catch (error) {
-        console.error('Gagal memulihkan sesi di sidebar:', error);
+        console.error('Gagal memulihkan sesi di navigasi:', error);
         if (mounted) setCurrentUser(null);
       } finally {
         if (mounted) setAuthLoading(false);
@@ -103,36 +103,31 @@ export default function Navbar() {
     return pathname.startsWith(item.href);
   };
 
-  if (authLoading || !currentUser) return null;
+  if (authLoading || !currentUser) {
+    return <>{children}</>;
+  }
+
+  const homeHref = currentUser.role === 'admin' ? '/admin' : '/dashboard';
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className="flex h-full flex-col bg-white dark:bg-slate-900">
-      <div className="flex h-20 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
-        <Link
-          href={currentUser.role === 'admin' ? '/admin' : '/dashboard'}
-          className="flex min-w-0 items-center gap-3"
-          onClick={() => mobile && setIsMobileMenuOpen(false)}
-        >
-          <LontarLogo priority className="shrink-0 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700" />
-          <div className="min-w-0">
-            <span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span>
-            <span className="block truncate text-[10px] font-medium text-slate-500">LMS Online & Pelatihan Terpadu</span>
-          </div>
-        </Link>
-        {mobile && (
+    <div className="flex h-full flex-col bg-slate-50/95 dark:bg-slate-950">
+      {mobile && (
+        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800">
+          <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Menu Navigasi</span>
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="ml-auto rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded-lg p-2 text-slate-500 hover:bg-slate-200/70 dark:hover:bg-slate-800"
             aria-label="Tutup menu"
           >
             <X className="h-5 w-5" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label="Navigasi utama">
-        <div className="space-y-1.5">
+        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Navigasi</p>
+        <div className="space-y-1">
           {navItems.map((item) => {
             const active = isActive(item);
             return (
@@ -140,13 +135,14 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => mobile && setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
+                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
-                    ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+                    ? 'bg-sky-50 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200'
+                    : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white'
                 }`}
               >
-                <item.icon className="h-4.5 w-4.5 shrink-0" />
+                {active && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-sky-600 dark:bg-sky-400" aria-hidden="true" />}
+                <item.icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
               </Link>
             );
@@ -154,20 +150,11 @@ export default function Navbar() {
         </div>
       </nav>
 
-      <div className="border-t border-slate-200 p-4 dark:border-slate-800">
-        <div className="mb-3 flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-            <User className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{currentUser.full_name}</p>
-            <p className="truncate text-[10px] capitalize text-slate-500">{currentUser.role} • {currentUser.institution}</p>
-          </div>
-        </div>
+      <div className="border-t border-slate-200 p-3 dark:border-slate-800">
         <button
           type="button"
           onClick={() => void handleLogout()}
-          className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
         >
           <LogOut className="h-4 w-4" />
           <span>Keluar</span>
@@ -177,36 +164,64 @@ export default function Navbar() {
   );
 
   return (
-    <>
-      <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-white lg:block dark:border-slate-800 dark:bg-slate-900">
-        <div className="sticky top-0 h-screen">
-          <SidebarContent />
+    <div className="min-h-screen">
+      <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+        <div className="flex h-full items-center">
+          <div className="flex h-full w-full items-center gap-3 px-4 lg:w-64 lg:border-r lg:border-slate-200 lg:px-5 dark:lg:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden dark:text-slate-300 dark:hover:bg-slate-800"
+              aria-label="Buka menu"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
+            <Link href={homeHref} className="flex min-w-0 items-center gap-2.5">
+              <LontarLogo priority className="shrink-0 ring-1 ring-slate-200 dark:ring-slate-700" />
+              <div className="min-w-0">
+                <span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span>
+                <span className="hidden truncate text-[9px] font-medium text-slate-500 sm:block">LMS Online & Pelatihan Terpadu</span>
+              </div>
+            </Link>
+          </div>
+
+          <div className="hidden min-w-0 flex-1 items-center justify-end px-5 sm:flex">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="hidden min-w-0 text-right md:block">
+                <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p>
+                <p className="truncate text-[10px] capitalize text-slate-500">{currentUser.role} • {currentUser.institution}</p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                <User className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
         </div>
+      </header>
+
+      <aside className="fixed bottom-0 left-0 top-16 z-40 hidden w-64 border-r border-slate-200 lg:block dark:border-slate-800">
+        <SidebarContent />
       </aside>
 
-      <button
-        type="button"
-        onClick={() => setIsMobileMenuOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-700 shadow-md backdrop-blur lg:hidden dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200"
-        aria-label="Buka menu"
-        aria-expanded={isMobileMenuOpen}
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      <div className="min-h-screen pt-16 lg:pl-64">
+        {children}
+      </div>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-[60] lg:hidden">
           <button
             type="button"
             aria-label="Tutup menu"
             onClick={() => setIsMobileMenuOpen(false)}
             className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]"
           />
-          <aside className="relative h-full w-[min(86vw,18rem)] border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+          <aside className="relative h-full w-[min(86vw,16rem)] border-r border-slate-200 bg-slate-50 shadow-xl dark:border-slate-800 dark:bg-slate-950">
             <SidebarContent mobile />
           </aside>
         </div>
       )}
-    </>
+    </div>
   );
 }
