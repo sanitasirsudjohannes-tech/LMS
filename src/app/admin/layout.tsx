@@ -6,6 +6,9 @@ import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { UserProfile } from '@/types';
 import CertificateAdminTabs from '@/components/CertificateAdminTabs';
 
+const RECENT_LOGIN_KEY = 'lms_recent_login_at';
+const RECENT_LOGIN_WINDOW_MS = 10_000;
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -16,10 +19,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const load = async () => {
       try {
+        const cachedUser = StorageAPI.getCurrentUser();
+        const recentLoginAt = Number(sessionStorage.getItem(RECENT_LOGIN_KEY) || 0);
+        const isRecentLogin = recentLoginAt > 0 && Date.now() - recentLoginAt < RECENT_LOGIN_WINDOW_MS;
+
+        if (cachedUser && isRecentLogin) {
+          if (cachedUser.role !== 'admin') {
+            router.replace('/dashboard');
+            return;
+          }
+          setCurrentUser(cachedUser);
+          sessionStorage.removeItem(RECENT_LOGIN_KEY);
+          return;
+        }
+
         await initLocalStorage();
         const user = StorageAPI.getCurrentUser();
-        if (!user) { router.push('/login'); return; }
-        if (user.role !== 'admin') { router.push('/dashboard'); return; }
+        if (!user) { router.replace('/login'); return; }
+        if (user.role !== 'admin') { router.replace('/dashboard'); return; }
         setCurrentUser(user);
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : 'Dashboard admin gagal dimuat.');
