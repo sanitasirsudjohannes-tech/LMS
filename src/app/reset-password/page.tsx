@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Eye, EyeOff, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { StorageAPI } from '@/lib/storage';
+import { logoutFromLontar } from '@/lib/logout';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -45,14 +45,21 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    setLoading(false);
     if (updateError) {
+      setLoading(false);
       setError(updateError.message);
       return;
     }
-    await StorageAPI.logout();
-    setSuccess(true);
-    window.setTimeout(() => router.replace('/login'), 1800);
+
+    try {
+      await logoutFromLontar();
+    } catch (logoutError) {
+      console.error('Logout setelah reset password gagal:', logoutError);
+    } finally {
+      setLoading(false);
+      setSuccess(true);
+      window.setTimeout(() => router.replace('/login'), 1800);
+    }
   };
 
   return (
