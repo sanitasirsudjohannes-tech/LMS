@@ -6,6 +6,13 @@ let validationInFlight: Promise<UserProfile | null> | null = null;
 let lastValidatedAt = 0;
 const VALIDATION_TTL_MS = 15_000;
 
+function isMissingSessionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { name?: string; message?: string };
+  return candidate.name === 'AuthSessionMissingError'
+    || /auth session missing/i.test(candidate.message || '');
+}
+
 export function markValidatedUser(user: UserProfile | null) {
   StorageAPI.setCurrentUser(user);
   lastValidatedAt = user ? Date.now() : 0;
@@ -54,6 +61,12 @@ export async function getValidatedCurrentUser(force = false): Promise<UserProfil
       markValidatedUser(validated);
       return validated;
     } catch (error) {
+      // Tidak adanya sesi adalah kondisi logout normal, bukan error UI.
+      if (isMissingSessionError(error)) {
+        clearValidatedUser();
+        return null;
+      }
+
       // Error jaringan/temporer bukan bukti bahwa sesi sudah logout.
       // Pertahankan profil terakhir yang sudah pernah tervalidasi agar UI tidak
       // mendadak berubah menjadi guest. RLS Supabase tetap menjadi otorisasi akhir.
