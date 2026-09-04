@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { StorageAPI } from '@/lib/storage';
+import { isLontarLogoutPending } from '@/lib/logout';
 import { UserProfile } from '@/types';
 
 export function useGuestRouteGuard() {
@@ -14,6 +15,11 @@ export function useGuestRouteGuard() {
     let active = true;
 
     const checkSession = async () => {
+      if (isLontarLogoutPending()) {
+        setCheckingSession(false);
+        return;
+      }
+
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (!active) return;
 
