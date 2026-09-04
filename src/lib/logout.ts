@@ -1,10 +1,11 @@
 import { supabase } from './supabase';
-import { StorageAPI } from './storage';
+import { clearValidatedUser } from './authSession';
 
-const LOGOUT_PENDING_KEY = 'lontar_logout_pending';
+const LOGOUT_PENDING_KEY = 'lontar_logout_pending_at';
+const LOGOUT_PENDING_TTL_MS = 10_000;
 
 function clearLontarBrowserState() {
-  StorageAPI.setCurrentUser(null);
+  clearValidatedUser();
 
   if (typeof window === 'undefined') return;
 
@@ -17,20 +18,35 @@ function clearLontarBrowserState() {
   }
 }
 
+function clearLogoutPending() {
+  if (typeof window !== 'undefined') sessionStorage.removeItem(LOGOUT_PENDING_KEY);
+}
+
 export function isLontarLogoutPending(): boolean {
-  return typeof window !== 'undefined' && sessionStorage.getItem(LOGOUT_PENDING_KEY) === '1';
+  if (typeof window === 'undefined') return false;
+
+  const startedAt = Number(sessionStorage.getItem(LOGOUT_PENDING_KEY) || 0);
+  if (!startedAt) return false;
+
+  if (Date.now() - startedAt > LOGOUT_PENDING_TTL_MS) {
+    clearLogoutPending();
+    return false;
+  }
+
+  return true;
 }
 
 /**
- * Membersihkan state lokal secara sinkron agar UI bisa langsung pindah ke login,
- * sementara sign-out Supabase diselesaikan di belakang layar. Penanda khusus
- * mencegah guest guard membaca sesi lama dan memantulkan pengguna ke dashboard.
+ * UI dibersihkan secara sinkron agar langsung dapat berpindah ke login.
+ * Sign-out Supabase tetap dijalankan, tetapi flag transisinya memiliki expiry
+ * sehingga request jaringan yang macet tidak dapat mengunci guest guard.
  */
 export async function logoutFromLontar(): Promise<void> {
   clearLontarBrowserState();
 
   if (typeof window !== 'undefined') {
-    sessionStorage.setItem(LOGOUT_PENDING_KEY, '1');
+    sessionStorage.setItem(LOGOUT_PENDING_KEY, String(Date.now()));
+    window.setTimeout(clearLogoutPending, LOGOUT_PENDING_TTL_MS);
   }
 
   void supabase.auth.signOut()
@@ -42,8 +58,6 @@ export async function logoutFromLontar(): Promise<void> {
     })
     .finally(() => {
       clearLontarBrowserState();
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem(LOGOUT_PENDING_KEY);
-      }
+      clearLogoutPending();
     });
 }
