@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { StorageAPI } from '@/lib/storage';
+import { getValidatedCurrentUser } from '@/lib/authSession';
 import { isLontarLogoutPending } from '@/lib/logout';
-import { UserProfile } from '@/types';
 
 export function useGuestRouteGuard() {
   const router = useRouter();
@@ -16,36 +14,28 @@ export function useGuestRouteGuard() {
 
     const checkSession = async () => {
       if (isLontarLogoutPending()) {
-        setCheckingSession(false);
+        if (active) setCheckingSession(false);
         return;
       }
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (!active) return;
+      try {
+        const profile = await getValidatedCurrentUser();
+        if (!active) return;
 
-      if (authError || !user) {
-        setCheckingSession(false);
-        return;
+        if (!profile) {
+          setCheckingSession(false);
+          return;
+        }
+
+        router.replace(profile.role === 'admin' ? '/admin' : '/dashboard');
+      } catch (error) {
+        // Gangguan jaringan tidak boleh membuat halaman guest terkunci selamanya.
+        console.error('Pengecekan sesi guest gagal:', error);
+        if (active) setCheckingSession(false);
       }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (!active) return;
-      if (profileError || !profile) {
-        setCheckingSession(false);
-        return;
-      }
-
-      const currentProfile = profile as UserProfile;
-      StorageAPI.setCurrentUser(currentProfile);
-      router.replace(currentProfile.role === 'admin' ? '/admin' : '/dashboard');
     };
 
-    checkSession();
+    void checkSession();
     return () => { active = false; };
   }, [router]);
 
