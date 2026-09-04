@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { ParticipantQuestion, UserProfile, Training, TestAttempt } from '@/types';
-import { GraduationCap, CheckCircle2, XCircle, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
+import { GraduationCap, CheckCircle2, XCircle as XCircle2, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTestSession } from '@/hooks/useTestSession';
 import { getDisplayOptions, orderTestQuestions } from '@/lib/testSession';
