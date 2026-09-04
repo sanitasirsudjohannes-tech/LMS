@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { StorageAPI } from '@/lib/storage';
+import { markValidatedUser } from '@/lib/authSession';
 import { Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
 import LontarLogo from '@/components/LontarLogo';
@@ -78,7 +78,7 @@ export default function LoginPage() {
         }
       }
 
-      StorageAPI.setCurrentUser(profileData);
+      markValidatedUser(profileData);
       sessionStorage.setItem(RECENT_LOGIN_KEY, String(Date.now()));
       router.replace(profileData.role === 'admin' ? '/admin' : '/dashboard');
     } catch (err: unknown) {
