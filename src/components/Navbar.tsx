@@ -19,8 +19,9 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { initCurrentUser } from '@/lib/storage';
 import { logoutFromLontar } from '@/lib/logout';
+import { getValidatedCurrentUser, clearValidatedUser } from '@/lib/authSession';
+import { supabase } from '@/lib/supabase';
 import { UserProfile } from '@/types';
 import LontarLogo from '@/components/LontarLogo';
 
@@ -47,11 +48,12 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
       if (isLoggingOut) return;
       setAuthLoading(true);
       try {
-        const user = await initCurrentUser();
+        const user = await getValidatedCurrentUser();
         if (mounted) setCurrentUser(user);
       } catch (error) {
         console.error('Gagal memulihkan sesi di navigasi:', error);
-        if (mounted) setCurrentUser(null);
+        // Error jaringan bukan bukti logout. Jangan menghapus user yang masih
+        // tampil; otorisasi data tetap dijaga oleh RLS Supabase.
       } finally {
         if (mounted) setAuthLoading(false);
       }
@@ -60,6 +62,33 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     void load();
     return () => { mounted = false; };
   }, [pathname, isLoggingOut]);
+
+  useEffect(() => {
+    let active = true;
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (!active) return;
+
+      if (event === 'SIGNED_OUT') {
+        clearValidatedUser();
+        setCurrentUser(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        window.setTimeout(() => {
+          void getValidatedCurrentUser(true)
+            .then((user) => { if (active) setCurrentUser(user); })
+            .catch((error) => console.error('Sinkronisasi sesi LONTAR gagal:', error));
+        }, 0);
+      }
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
