@@ -40,15 +40,14 @@ export default function RootLayout({
     <html lang="id" className="h-full">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans dark:bg-slate-950 dark:text-slate-100">
         <PwaRegister />
-        <div className="flex min-h-screen w-full">
-          <Navbar />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+        <Navbar>
+          <div className="flex min-h-[calc(100vh-4rem)] min-w-0 flex-col">
+            <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 md:py-8 lg:px-8">
               {children}
             </main>
             <Footer />
           </div>
-        </div>
+        </Navbar>
       </body>
     </html>
   );
