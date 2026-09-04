@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { logoutFromLontar } from '@/lib/logout';
 import { getValidatedCurrentUser, clearValidatedUser } from '@/lib/authSession';
+import { StorageAPI } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { UserProfile } from '@/types';
 import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
@@ -36,8 +37,8 @@ type NavItem = {
 export default function Navbar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageAPI.getCurrentUser());
+  const [authLoading, setAuthLoading] = useState(() => StorageAPI.getCurrentUser() === null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -46,7 +47,15 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
 
     const load = async () => {
       if (isLoggingOut) return;
-      setAuthLoading(true);
+
+      const cachedUser = StorageAPI.getCurrentUser();
+      if (cachedUser && mounted) {
+        setCurrentUser(cachedUser);
+        setAuthLoading(false);
+      } else if (mounted) {
+        setAuthLoading(true);
+      }
+
       try {
         const user = await getValidatedCurrentUser();
         if (mounted) setCurrentUser(user);
@@ -61,7 +70,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
 
     void load();
     return () => { mounted = false; };
-  }, [pathname, isLoggingOut]);
+  }, [isLoggingOut]);
 
   useEffect(() => {
     let active = true;
