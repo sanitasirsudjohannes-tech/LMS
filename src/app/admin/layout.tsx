@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { UserProfile } from '@/types';
-import { LayoutDashboard, Users, BookOpen, HelpCircle, Award, FileCheck2, Sliders, Clock3 } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, HelpCircle, Award, FileCheck2, Sliders, Clock3, MessageSquareText } from 'lucide-react';
 import CertificateAdminTabs from '@/components/CertificateAdminTabs';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -41,6 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/materials', label: 'Materi', icon: BookOpen },
     { href: '/admin/questions', label: 'Soal Tes', icon: HelpCircle },
     { href: '/admin/results', label: 'Hasil Tes', icon: FileCheck2 },
+    { href: '/admin/reviews', label: 'Review', icon: MessageSquareText },
     { href: '/admin/certificates', label: 'Sertifikat', icon: Award, certificateGroup: true },
     { href: '/admin/posttest-settings', label: 'Jadwal Post-Test', icon: Clock3 },
     { href: '/admin/training-settings', label: 'Kelola Pelatihan', icon: Sliders }

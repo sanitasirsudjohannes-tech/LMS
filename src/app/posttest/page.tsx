@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { ParticipantQuestion, UserProfile, Training, TestAttempt } from '@/types';
-import { GraduationCap, CheckCircle2, XCircle, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
+import { GraduationCap, CheckCircle2, XCircle as XCircle2, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTestSession } from '@/hooks/useTestSession';
 import { getDisplayOptions, orderTestQuestions } from '@/lib/testSession';
@@ -116,31 +116,36 @@ export default function PosttestPage() {
 
         const existingAttempts = orderAttempts(StorageAPI.getTestAttempts(user.id, 'posttest', tr.id));
         setAttempts(existingAttempts);
-
         const qList = await StorageAPI.loadQuestionsForTest(tr.id, 'posttest');
 
         if (existingAttempts.length > 0) {
           const passed = existingAttempts.some(a => a.score >= tr.passing_score);
           setIsPassed(passed);
           let certificate = StorageAPI.getCertificateForUser(user.id, tr.id);
-          if (passed && !certificate) {
+          let hasReview = false;
+
+          if (passed) {
+            const { data: existingReview, error: reviewError } = await supabase
+              .from('training_reviews')
+              .select('id')
+              .eq('training_id', tr.id)
+              .eq('user_id', user.id)
+              .maybeSingle();
+            if (reviewError) throw new Error(`Status review pelatihan gagal diperiksa: ${reviewError.message}`);
+            hasReview = !!existingReview;
+            setReviewSubmitted(hasReview);
+          }
+
+          if (passed && hasReview && !certificate) {
             try {
               certificate = await StorageAPI.ensureMyCertificate(tr.id);
             } catch (error) {
               setSubmitError(error instanceof Error ? error.message : 'Sertifikat belum dapat diterbitkan.');
             }
           }
+
           setCertificateIssued(!!certificate);
           setLastAttemptScore(existingAttempts.at(-1)?.score ?? null);
-          if (passed) {
-            const { data: existingReview } = await supabase
-              .from('training_reviews')
-              .select('id')
-              .eq('training_id', tr.id)
-              .eq('user_id', user.id)
-              .maybeSingle();
-            setReviewSubmitted(!!existingReview);
-          }
 
           if (passed || existingAttempts.length >= tr.max_posttest_attempts) {
             setIsSubmitted(true);
@@ -191,15 +196,15 @@ export default function PosttestPage() {
       setAttempts(refreshedAttempts);
       setLastAttemptScore(result.score);
       setIsPassed(result.passed);
-      setCertificateIssued(result.certificate_issued);
+      setCertificateIssued(result.passed ? false : result.certificate_issued);
       setIsSubmitted(true);
       await Swal.fire({
         icon: result.passed ? 'success' : 'info',
         title: result.passed ? 'Selamat, Anda Lulus!' : 'Post-Test Berhasil Dikirim',
         text: result.passed
-          ? `Nilai Anda ${result.score}/100 dan telah memenuhi passing grade.`
+          ? `Nilai Anda ${result.score}/100 dan telah memenuhi passing grade. Silakan isi review pelatihan untuk menerbitkan sertifikat.`
           : `Nilai Anda ${result.score}/100. Anda masih dapat mencoba kembali jika kesempatan tersedia.`,
-        timer: 2200,
+        timer: 2600,
         showConfirmButton: false
       });
     } catch (error) {
@@ -231,8 +236,21 @@ export default function PosttestPage() {
         updated_at: new Date().toISOString()
       }, { onConflict: 'training_id,user_id' });
       if (error) throw error;
+
       setReviewSubmitted(true);
-      await Swal.fire({ icon: 'success', title: 'Terima kasih!', text: 'Review pelatihan Anda telah tersimpan.', timer: 1800, showConfirmButton: false });
+      let certificate = StorageAPI.getCertificateForUser(currentUser.id, training.id);
+      if (!certificate) {
+        certificate = await StorageAPI.ensureMyCertificate(training.id);
+      }
+      setCertificateIssued(!!certificate);
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Terima kasih!',
+        text: certificate ? 'Review tersimpan dan sertifikat Anda telah diterbitkan.' : 'Review tersimpan. Sertifikat akan tersedia setelah fitur sertifikat diaktifkan admin.',
+        timer: 2200,
+        showConfirmButton: false
+      });
     } catch (error) {
       await Swal.fire('Review Gagal Disimpan', error instanceof Error ? error.message : 'Silakan coba kembali.', 'error');
     } finally {
@@ -309,12 +327,12 @@ export default function PosttestPage() {
               <div className="space-y-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-3 py-1 rounded-full">LULUS PELATIHAN ✓</span>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white pt-2">Selamat! Anda Lulus</h2>
-                <p className="text-xs text-slate-500 max-w-md mx-auto">{certificateIssued ? `Nilai Anda memenuhi passing grade (${training.passing_score}). Sertifikat pelatihan Anda telah resmi diterbitkan.` : `Nilai Anda memenuhi passing grade (${training.passing_score}). Sertifikat belum diterbitkan; hubungi admin untuk memeriksa pengaturan sertifikat.`}</p>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">{certificateIssued ? `Nilai Anda memenuhi passing grade (${training.passing_score}). Sertifikat pelatihan Anda telah resmi diterbitkan.` : reviewSubmitted ? 'Review pelatihan sudah tersimpan. Sertifikat belum tersedia; periksa kembali pengaturan sertifikat atau hubungi admin.' : `Nilai Anda memenuhi passing grade (${training.passing_score}). Isi review pelatihan untuk menerbitkan sertifikat.`}</p>
               </div>
             </>
           ) : (
             <>
-              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto shadow-sm"><XCircle className="w-10 h-10" /></div>
+              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto shadow-sm"><XCircle2 className="w-10 h-10" /></div>
               <div className="space-y-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/60 px-3 py-1 rounded-full">BELUM LULUS</span>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white pt-2">Nilai Belum Memenuhi</h2>
