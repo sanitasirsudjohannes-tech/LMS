@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,8 @@ import { StorageAPI } from '@/lib/storage';
 import { Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
 import LontarLogo from '@/components/LontarLogo';
+
+const RECENT_LOGIN_KEY = 'lms_recent_login_at';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +19,11 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    router.prefetch('/admin');
+    router.prefetch('/dashboard');
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +79,8 @@ export default function LoginPage() {
       }
 
       StorageAPI.setCurrentUser(profileData);
-      router.push(profileData.role === 'admin' ? '/admin' : '/dashboard');
+      sessionStorage.setItem(RECENT_LOGIN_KEY, String(Date.now()));
+      router.replace(profileData.role === 'admin' ? '/admin' : '/dashboard');
     } catch (err: unknown) {
       setError(`Terjadi kesalahan: ${err instanceof Error ? err.message : 'Tidak diketahui'}`);
       setLoading(false);
