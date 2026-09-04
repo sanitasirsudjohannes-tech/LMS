@@ -1,12 +1,34 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { UserProfile } from '@/types';
+import {
+  Award,
+  BookOpen,
+  Clock3,
+  FileCheck2,
+  HelpCircle,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquareText,
+  Sliders,
+  User,
+  Users,
+  X,
+} from 'lucide-react';
 import { StorageAPI, initCurrentUser } from '@/lib/storage';
-import { LogOut, Shield, User, Menu, X, Award } from 'lucide-react';
+import { UserProfile } from '@/types';
 import LontarLogo from '@/components/LontarLogo';
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+  certificateGroup?: boolean;
+};
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -14,10 +36,6 @@ export default function Navbar() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const brandHref = currentUser
-    ? currentUser.role === 'admin' ? '/admin' : '/dashboard'
-    : 'https://lmsrsudjohannes.vercel.app';
-  const isAdminCertificatePath = pathname.startsWith('/admin/certificates') || pathname.startsWith('/admin/certificate-training') || pathname.startsWith('/admin/certificate-general') || pathname.startsWith('/admin/certificate-settings');
 
   useEffect(() => {
     let mounted = true;
@@ -28,7 +46,7 @@ export default function Navbar() {
         const user = await initCurrentUser();
         if (mounted) setCurrentUser(user);
       } catch (error) {
-        console.error('Gagal memulihkan sesi di navbar:', error);
+        console.error('Gagal memulihkan sesi di sidebar:', error);
         if (mounted) setCurrentUser(null);
       } finally {
         if (mounted) setAuthLoading(false);
@@ -39,107 +57,156 @@ export default function Navbar() {
     return () => { mounted = false; };
   }, [pathname]);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   const handleLogout = async () => {
     await StorageAPI.logout();
     setCurrentUser(null);
     setAuthLoading(false);
+    setIsMobileMenuOpen(false);
     router.push('/login');
   };
 
-  if (pathname.startsWith('/verify/') && false) return null;
+  const navItems = useMemo<NavItem[]>(() => {
+    if (!currentUser) return [];
 
-  return (
-    <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link href={brandHref} className="flex items-center gap-2.5 group">
-            <LontarLogo priority className="shadow-sm ring-1 ring-slate-200 transition-transform group-hover:scale-105 dark:ring-slate-700" />
-            <div>
-              <span className="font-bold text-[#07375c] dark:text-sky-300 tracking-[0.12em] text-base block">LONTAR</span>
-              <span className="hidden min-[390px]:block text-[9px] text-slate-500 font-medium -mt-0.5">LMS Online & Pelatihan Terpadu</span>
-            </div>
-          </Link>
+    if (currentUser.role === 'admin') {
+      return [
+        { href: '/admin', label: 'Ringkasan', icon: LayoutDashboard, exact: true },
+        { href: '/admin/participants', label: 'Peserta', icon: Users },
+        { href: '/admin/materials', label: 'Materi', icon: BookOpen },
+        { href: '/admin/questions', label: 'Soal Tes', icon: HelpCircle },
+        { href: '/admin/results', label: 'Hasil Tes', icon: FileCheck2 },
+        { href: '/admin/reviews', label: 'Review', icon: MessageSquareText },
+        { href: '/admin/certificates', label: 'Sertifikat', icon: Award, certificateGroup: true },
+        { href: '/admin/posttest-settings', label: 'Jadwal Post-Test', icon: Clock3 },
+        { href: '/admin/training-settings', label: 'Kelola Pelatihan', icon: Sliders },
+      ];
+    }
 
-          <nav className="hidden md:flex items-center gap-6 min-h-[40px]">
-            {authLoading ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-500" role="status" aria-live="polite">
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 border-t-slate-700 dark:border-slate-600 dark:border-t-slate-200 animate-spin" aria-hidden="true" />
-                <span>Memuat akun...</span>
-              </div>
-            ) : currentUser ? (
-              <>
-                {currentUser.role === 'admin' ? (
-                  <>
-                    <Link href="/admin" className={`text-sm font-medium transition-colors ${pathname === '/admin' ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Ringkasan</Link>
-                    <Link href="/admin/participants" className={`text-sm font-medium transition-colors ${pathname.startsWith('/admin/participants') ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Peserta</Link>
-                    <Link href="/admin/materials" className={`text-sm font-medium transition-colors ${pathname.startsWith('/admin/materials') ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Materi</Link>
-                    <Link href="/admin/questions" className={`text-sm font-medium transition-colors ${pathname.startsWith('/admin/questions') ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Soal</Link>
-                    <Link href="/admin/certificates" className={`text-sm font-medium transition-colors ${isAdminCertificatePath ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Sertifikat</Link>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/dashboard" className={`text-sm font-medium transition-colors ${pathname === '/dashboard' ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Dashboard Saya</Link>
-                    <Link href="/certificates" className={`text-sm font-medium transition-colors ${pathname === '/certificates' ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Arsip Sertifikat</Link>
-                  </>
-                )}
+    return [
+      { href: '/dashboard', label: 'Dashboard Saya', icon: LayoutDashboard, exact: true },
+      { href: '/certificates', label: 'Arsip Sertifikat', icon: Award },
+    ];
+  }, [currentUser]);
 
-                <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
-                  <div className="text-right hidden lg:block">
-                    <p className="text-xs font-semibold text-slate-900 dark:text-white leading-none">{currentUser.full_name}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 capitalize">{currentUser.role} • {currentUser.institution}</p>
-                  </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${currentUser.role === 'admin' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
-                    {currentUser.role === 'admin' ? <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Admin</span> : <span className="flex items-center gap-1"><User className="w-3 h-3" /> Peserta</span>}
-                  </span>
-                  <button onClick={handleLogout} title="Keluar" className="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><LogOut className="w-4 h-4" /></button>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Link href="/login" className="text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5">Masuk</Link>
-                <Link href="/register" className="text-sm font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 px-4 py-1.5 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-sm">Daftar Akun</Link>
-              </div>
-            )}
-          </nav>
+  const isActive = (item: NavItem) => {
+    if (item.certificateGroup) {
+      return pathname.startsWith('/admin/certificates')
+        || pathname.startsWith('/admin/certificate-settings')
+        || pathname.startsWith('/admin/certificate-general')
+        || pathname.startsWith('/admin/certificate-training');
+    }
+    if (item.exact) return pathname === item.href;
+    return pathname.startsWith(item.href);
+  };
 
-          <div className="flex md:hidden items-center gap-2">
-            {!authLoading && currentUser && <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{currentUser.full_name.split(' ')[0]}</span>}
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" aria-label="Toggle menu">{isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
+  if (authLoading || !currentUser) return null;
+
+  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
+    <div className="flex h-full flex-col bg-white dark:bg-slate-900">
+      <div className="flex h-20 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
+        <Link
+          href={currentUser.role === 'admin' ? '/admin' : '/dashboard'}
+          className="flex min-w-0 items-center gap-3"
+          onClick={() => mobile && setIsMobileMenuOpen(false)}
+        >
+          <LontarLogo priority className="shrink-0 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700" />
+          <div className="min-w-0">
+            <span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span>
+            <span className="block truncate text-[10px] font-medium text-slate-500">LMS Online & Pelatihan Terpadu</span>
           </div>
-        </div>
+        </Link>
+        {mobile && (
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="ml-auto rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            aria-label="Tutup menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
+      <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label="Navigasi utama">
+        <div className="space-y-1.5">
+          {navItems.map((item) => {
+            const active = isActive(item);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => mobile && setIsMobileMenuOpen(false)}
+                className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
+                  active
+                    ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+                }`}
+              >
+                <item.icon className="h-4.5 w-4.5 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+        <div className="mb-3 flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+            <User className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{currentUser.full_name}</p>
+            <p className="truncate text-[10px] capitalize text-slate-500">{currentUser.role} • {currentUser.institution}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Keluar</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-white lg:block dark:border-slate-800 dark:bg-slate-900">
+        <div className="sticky top-0 h-screen">
+          <SidebarContent />
+        </div>
+      </aside>
+
+      <button
+        type="button"
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-700 shadow-md backdrop-blur lg:hidden dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200"
+        aria-label="Buka menu"
+        aria-expanded={isMobileMenuOpen}
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
       {isMobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-2">
-          {authLoading ? (
-            <div className="py-3 text-center text-xs text-slate-500">Memuat akun...</div>
-          ) : currentUser ? (
-            <>
-              <div className="py-2 border-b border-slate-100 dark:border-slate-800 mb-2"><p className="text-sm font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p><p className="text-xs text-slate-500">{currentUser.email} • {currentUser.institution}</p></div>
-              {currentUser.role === 'admin' ? (
-                <>
-                  <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm font-medium text-slate-700 dark:text-slate-300">Ringkasan Admin</Link>
-                  <Link href="/admin/participants" onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm font-medium text-slate-700 dark:text-slate-300">Kelola Peserta</Link>
-                  <Link href="/admin/materials" onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm font-medium text-slate-700 dark:text-slate-300">Kelola Materi</Link>
-                  <Link href="/admin/questions" onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm font-medium text-slate-700 dark:text-slate-300">Kelola Soal</Link>
-                  <Link href="/admin/certificates" onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm font-medium text-slate-700 dark:text-slate-300">Sertifikat</Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm font-medium text-slate-700 dark:text-slate-300">Dashboard Saya</Link>
-                  <Link href="/certificates" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-300"><Award className="w-4 h-4" /> Arsip Sertifikat</Link>
-                </>
-              )}
-              <button onClick={() => { setIsMobileMenuOpen(false); void handleLogout(); }} className="w-full text-left py-2 text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800"><LogOut className="w-4 h-4" /> Keluar</button>
-            </>
-          ) : (
-            <div className="space-y-2 pt-2">
-              <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-center py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg">Masuk</Link>
-              <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-center py-2 text-sm font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-lg">Daftar Akun</Link>
-            </div>
-          )}
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Tutup menu"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]"
+          />
+          <aside className="relative h-full w-[min(86vw,18rem)] border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <SidebarContent mobile />
+          </aside>
         </div>
       )}
-    </header>
+    </>
   );
 }
