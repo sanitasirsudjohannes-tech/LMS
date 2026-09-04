@@ -10,6 +10,7 @@ import {
   FileCheck2,
   HelpCircle,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Menu,
   MessageSquareText,
@@ -36,11 +37,13 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
+      if (isLoggingOut) return;
       setAuthLoading(true);
       try {
         const user = await initCurrentUser();
@@ -55,18 +58,30 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
 
     void load();
     return () => { mounted = false; };
-  }, [pathname]);
+  }, [pathname, isLoggingOut]);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
   const handleLogout = async () => {
-    await StorageAPI.logout();
-    setCurrentUser(null);
-    setAuthLoading(false);
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
     setIsMobileMenuOpen(false);
-    router.push('/login');
+
+    try {
+      await StorageAPI.logout();
+    } catch (error) {
+      // Cache lokal sudah dibersihkan oleh StorageAPI.logout(). Jangan tampilkan
+      // error auth dari halaman lama selama transisi keluar.
+      console.error('Logout Supabase gagal:', error);
+    } finally {
+      setCurrentUser(null);
+      setAuthLoading(false);
+      router.replace('/login');
+      router.refresh();
+    }
   };
 
   const navItems = useMemo<NavItem[]>(() => {
@@ -102,6 +117,22 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     if (item.exact) return pathname === item.href;
     return pathname.startsWith(item.href);
   };
+
+  if (isLoggingOut) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <Loader2 className="h-5 w-5 animate-spin text-[#07375c] dark:text-sky-300" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Keluar dari akun…</p>
+            <p className="mt-1 text-xs text-slate-500">Mengakhiri sesi LONTAR dengan aman</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (authLoading) {
     return <div className="min-h-screen">{children}</div>;
@@ -174,7 +205,8 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => void handleLogout()}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+          disabled={isLoggingOut}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/30"
         >
           <LogOut className="h-4 w-4" />
           <span>Keluar</span>
