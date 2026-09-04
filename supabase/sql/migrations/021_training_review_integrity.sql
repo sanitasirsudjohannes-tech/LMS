@@ -4,7 +4,6 @@
 
 BEGIN;
 
--- Pastikan tabel tersedia bila 020 belum sempat dijalankan.
 CREATE TABLE IF NOT EXISTS public.training_reviews (
   id uuid primary key default gen_random_uuid(),
   training_id uuid not null references public.trainings(id) on delete cascade,
@@ -20,11 +19,11 @@ CREATE TABLE IF NOT EXISTS public.training_reviews (
 );
 
 ALTER TABLE public.training_reviews ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.training_reviews TO authenticated;
 
 CREATE INDEX IF NOT EXISTS training_reviews_training_id_idx
 ON public.training_reviews(training_id);
 
--- Hanya peserta yang benar-benar lulus Post-Test yang boleh membuat/mengubah review miliknya.
 DROP POLICY IF EXISTS "participants insert own training reviews" ON public.training_reviews;
 CREATE POLICY "participants insert own training reviews"
 ON public.training_reviews FOR INSERT
@@ -34,12 +33,12 @@ WITH CHECK (
   AND EXISTS (
     SELECT 1
     FROM public.trainings t
-    WHERE t.id = training_id
+    WHERE t.id = training_reviews.training_id
       AND EXISTS (
         SELECT 1
         FROM public.test_attempts a
         WHERE a.user_id = auth.uid()
-          AND a.training_id = training_id
+          AND a.training_id = training_reviews.training_id
           AND a.test_type = 'posttest'
           AND a.score >= t.passing_score
       )
@@ -56,35 +55,30 @@ WITH CHECK (
   AND EXISTS (
     SELECT 1
     FROM public.trainings t
-    WHERE t.id = training_id
+    WHERE t.id = training_reviews.training_id
       AND EXISTS (
         SELECT 1
         FROM public.test_attempts a
         WHERE a.user_id = auth.uid()
-          AND a.training_id = training_id
+          AND a.training_id = training_reviews.training_id
           AND a.test_type = 'posttest'
           AND a.score >= t.passing_score
       )
   )
 );
 
--- Gunakan helper admin yang sudah di-hardening agar kebijakan konsisten dan tidak memicu recursive RLS.
 DROP POLICY IF EXISTS "admin read all training reviews" ON public.training_reviews;
 CREATE POLICY "admin read all training reviews"
 ON public.training_reviews FOR SELECT
 TO authenticated
 USING (private.is_lms_admin(auth.uid()));
 
--- Pertahankan kemampuan peserta membaca review miliknya sendiri.
 DROP POLICY IF EXISTS "participants read own training reviews" ON public.training_reviews;
 CREATE POLICY "participants read own training reviews"
 ON public.training_reviews FOR SELECT
 TO authenticated
 USING (auth.uid() = user_id);
 
--- Tambahkan review sebagai syarat server-side kelayakan sertifikat baru.
--- Sertifikat yang sudah terbit tidak terpengaruh karena issue_lms_certificate
--- selalu mengembalikan TRUE lebih dahulu bila sertifikat existing ditemukan.
 CREATE OR REPLACE FUNCTION private.lms_certificate_eligible_score(
   p_user_id UUID,
   p_training_id UUID
@@ -171,8 +165,6 @@ $$;
 REVOKE ALL ON FUNCTION private.lms_certificate_eligible_score(UUID, UUID)
 FROM PUBLIC, anon, authenticated;
 
--- Setelah review berhasil disimpan, coba terbitkan sertifikat secara otomatis.
--- Jika pengaturan sertifikat belum aktif, fungsi hanya mengembalikan FALSE dan review tetap tersimpan.
 CREATE OR REPLACE FUNCTION private.issue_certificate_after_training_review()
 RETURNS TRIGGER
 LANGUAGE plpgsql
