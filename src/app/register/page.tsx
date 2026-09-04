@@ -133,10 +133,10 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Instansi / Unit Kerja */}
+          {/* Instalasi / Unit Kerja */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Instansi / Unit Kerja <span className="text-red-500">*</span>
+              Ruangan /Unit /Instalasi / Bidang <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Building className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
