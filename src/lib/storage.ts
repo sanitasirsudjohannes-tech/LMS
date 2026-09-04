@@ -254,17 +254,8 @@ export const StorageAPI = {
   },
 
   logout: async () => {
-    cacheState.currentUser = null;
-    cacheState.testAttempts = [];
-    cacheState.materialProgress = [];
-    cacheState.certificates = [];
-    lastInitializedAt = 0;
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('lms_current_user');
-      sessionStorage.removeItem('lms_selected_training_id');
-      localStorage.clear();
-    }
-    await supabase.auth.signOut();
+    const { logoutFromLontar } = await import('./logout');
+    await logoutFromLontar();
   },
 
   getTrainings: (): Training[] => {

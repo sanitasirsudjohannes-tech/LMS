@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import { Certificate, CertificateSettings, UserProfile } from '@/types';
 import CertificateTemplate from '@/components/CertificateTemplate';
 import { generateCertificatePDF } from '@/lib/pdf';
@@ -55,11 +56,24 @@ export default function CertificatePage() {
 
         const passed = training && StorageAPI.getTestAttempts(user.id, 'posttest', training.id)
           .some(attempt => attempt.score >= training.passing_score);
+        
         if (!cert && training && passed) {
-          try {
-            cert = await StorageAPI.ensureMyCertificate(training.id);
-          } catch (error) {
-            setCertificateRecoveryError(error instanceof Error ? error.message : 'Sertifikat belum dapat diterbitkan.');
+          // Periksa apakah user sudah memberikan review sebelum mencoba me-issue sertifikat secara otomatis
+          const { data: existingReview } = await supabase
+            .from('training_reviews')
+            .select('id')
+            .eq('training_id', training.id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (existingReview) {
+            try {
+              cert = await StorageAPI.ensureMyCertificate(training.id);
+            } catch (error) {
+              setCertificateRecoveryError(error instanceof Error ? error.message : 'Sertifikat belum dapat diterbitkan.');
+            }
+          } else {
+            setCertificateRecoveryError('Anda wajib memberikan review pelatihan pada halaman Post-Test terlebih dahulu.');
           }
         }
         setCertificate(cert);

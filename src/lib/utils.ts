@@ -78,7 +78,17 @@ export function isTrainingAvailable(
   if (!training.active) return false;
   const nowMs = now.getTime();
   const startMs = training.start_date ? new Date(training.start_date).getTime() : Number.NEGATIVE_INFINITY;
-  const endMs = training.end_date ? new Date(training.end_date).getTime() : Number.POSITIVE_INFINITY;
+  
+  let endMs = Number.POSITIVE_INFINITY;
+  if (training.end_date) {
+    const end = new Date(training.end_date);
+    // Jika format ISO date tanpa jam/menit spesifik (misal T00:00:00.000Z), set ke akhir hari tersebut
+    if (training.end_date.includes('T00:00:00')) {
+      end.setHours(23, 59, 59, 999);
+    }
+    endMs = end.getTime();
+  }
+
   if (Number.isNaN(startMs) || Number.isNaN(endMs)) return false;
   return startMs <= nowMs && endMs >= nowMs;
 }

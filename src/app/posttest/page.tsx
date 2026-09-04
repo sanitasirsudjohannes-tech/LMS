@@ -196,7 +196,7 @@ export default function PosttestPage() {
       setAttempts(refreshedAttempts);
       setLastAttemptScore(result.score);
       setIsPassed(result.passed);
-      setCertificateIssued(result.passed ? false : result.certificate_issued);
+      setCertificateIssued(result.certificate_issued);
       setIsSubmitted(true);
       await Swal.fire({
         icon: result.passed ? 'success' : 'info',

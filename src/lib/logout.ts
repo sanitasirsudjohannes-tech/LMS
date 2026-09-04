@@ -56,19 +56,17 @@ export async function logoutFromLontar(): Promise<void> {
     window.setTimeout(clearLogoutPending, LOGOUT_PENDING_TTL_MS);
   }
 
-  void supabase.auth.signOut()
-    .then(({ error }) => {
-      if (error && !isMissingSessionError(error)) {
-        console.error('Logout Supabase gagal:', error);
-      }
-    })
-    .catch((error) => {
-      if (!isMissingSessionError(error)) {
-        console.error('Logout Supabase gagal:', error);
-      }
-    })
-    .finally(() => {
-      clearLontarBrowserState();
-      clearLogoutPending();
-    });
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error && !isMissingSessionError(error)) {
+      console.error('Logout Supabase gagal:', error);
+    }
+  } catch (error) {
+    if (!isMissingSessionError(error)) {
+      console.error('Logout Supabase gagal:', error);
+    }
+  } finally {
+    clearLontarBrowserState();
+    clearLogoutPending();
+  }
 }
