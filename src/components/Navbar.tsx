@@ -78,8 +78,8 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     } finally {
       setCurrentUser(null);
       setAuthLoading(false);
+      setIsLoggingOut(false);
       router.replace('/login');
-      router.refresh();
     }
   };
 
