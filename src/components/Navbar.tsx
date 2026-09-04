@@ -19,7 +19,8 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { StorageAPI, initCurrentUser } from '@/lib/storage';
+import { initCurrentUser } from '@/lib/storage';
+import { logoutFromLontar } from '@/lib/logout';
 import { UserProfile } from '@/types';
 import LontarLogo from '@/components/LontarLogo';
 
@@ -71,10 +72,8 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     setIsMobileMenuOpen(false);
 
     try {
-      await StorageAPI.logout();
+      await logoutFromLontar();
     } catch (error) {
-      // Cache lokal sudah dibersihkan oleh StorageAPI.logout(). Jangan tampilkan
-      // error auth dari halaman lama selama transisi keluar.
       console.error('Logout Supabase gagal:', error);
     } finally {
       setCurrentUser(null);
