@@ -5,9 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { StorageAPI } from '@/lib/storage';
-import { Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
-import LontarLogo from '@/components/LontarLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,10 +23,9 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1. Autentikasi via Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        password: password,
+        password,
       });
 
       if (authError) {
@@ -42,7 +40,6 @@ export default function LoginPage() {
         return;
       }
 
-      // 2. Ambil profil dari tabel profiles berdasarkan auth user id
       let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -50,9 +47,6 @@ export default function LoginPage() {
         .single();
 
       if (profileError || !profileData) {
-        // Pulihkan profil peserta lama yang Auth-nya ada tetapi baris profiles-nya
-        // belum pernah terbentuk. Role selalu peserta agar metadata tidak dapat
-        // dipakai untuk menaikkan hak akses menjadi admin.
         const metadata = authData.user.user_metadata || {};
         const recoveryProfile = {
           id: authData.user.id,
@@ -62,7 +56,7 @@ export default function LoginPage() {
           nip_nik: String(metadata.nip_nik || ''),
           phone: String(metadata.phone || ''),
           role: 'peserta' as const,
-          created_at: authData.user.created_at || new Date().toISOString()
+          created_at: authData.user.created_at || new Date().toISOString(),
         };
         const recovered = await supabase.from('profiles').insert(recoveryProfile).select('*').single();
         profileData = recovered.data;
@@ -76,14 +70,8 @@ export default function LoginPage() {
         }
       }
 
-      // 3. Simpan user ke state & redirect berdasarkan role
       StorageAPI.setCurrentUser(profileData);
-
-      if (profileData.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push(profileData.role === 'admin' ? '/admin' : '/dashboard');
     } catch (err: unknown) {
       setError(`Terjadi kesalahan: ${err instanceof Error ? err.message : 'Tidak diketahui'}`);
       setLoading(false);
@@ -91,94 +79,95 @@ export default function LoginPage() {
   };
 
   if (checkingSession) {
-    return <div className="max-w-md mx-auto py-12 text-center text-sm text-slate-500">Memeriksa sesi...</div>;
+    return <div className="pt-24 text-center text-sm text-slate-500">Memeriksa sesi...</div>;
   }
 
   return (
-    <div className="max-w-md mx-auto py-6 sm:py-12">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-        
-        <div className="text-center space-y-1">
-          <LontarLogo className="mx-auto mb-3 ring-1 ring-slate-200 dark:ring-slate-700" />
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Masuk ke LONTAR</h1>
-          <p className="text-xs text-slate-500">Masukkan email dan kata sandi Anda</p>
+    <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center px-0 py-14 sm:px-2 lg:py-20">
+      <div className="grid w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="hidden bg-[#07375c] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div>
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-sky-100">
+              <ShieldCheck className="h-4 w-4" />
+              Portal Pelatihan Terpadu
+            </div>
+            <h1 className="max-w-md text-4xl font-bold leading-tight">Belajar, evaluasi, dan akses sertifikat dalam satu sistem.</h1>
+            <p className="mt-5 max-w-md text-sm leading-6 text-sky-100/90">LONTAR mendukung proses pelatihan internal RSUD Prof. Dr. W.Z. Johannes Kupang secara lebih terstruktur dan mudah diakses.</p>
+          </div>
+          <p className="text-xs text-sky-100/70">LMS Online & Pelatihan Terpadu RSUD Johannes</p>
         </div>
 
-        {error && (
-          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Alamat Email
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@email.com"
-                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100"
-              />
+        <div className="p-6 sm:p-10 lg:p-12">
+          <div className="mx-auto max-w-md">
+            <div className="mb-8">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#07375c] dark:text-sky-300">Selamat datang kembali</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Masuk ke LONTAR</h2>
+              <p className="mt-2 text-sm text-slate-500">Gunakan email dan kata sandi akun Anda.</p>
             </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Password
-              </label>
-              <Link href="/forgot-password" className="text-[11px] text-slate-500 hover:text-slate-900 dark:hover:text-white">
-                Lupa Password?
-              </Link>
-            </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(v => !v)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <span>Memproses...</span>
-            ) : (
-              <>
-                <span>Masuk Sekarang</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
+            {error && (
+              <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                <span>{error}</span>
+              </div>
             )}
-          </button>
-        </form>
 
-        <div className="text-center text-xs text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
-          Belum memiliki akun?{' '}
-          <Link href="/register" className="font-semibold text-slate-900 dark:text-white underline">
-            Daftar Akun Baru
-          </Link>
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">Alamat Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nama@email.com"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#07375c]/25 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Password</label>
+                  <Link href="/forgot-password" className="text-[11px] font-medium text-slate-500 hover:text-[#07375c] dark:hover:text-sky-300">Lupa Password?</Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-11 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#07375c]/25 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#07375c] py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#052c4a] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? <span>Memproses...</span> : <><span>Masuk Sekarang</span><ArrowRight className="h-4 w-4" /></>}
+              </button>
+            </form>
+
+            <div className="mt-7 border-t border-slate-100 pt-5 text-center text-xs text-slate-500 dark:border-slate-800">
+              Belum memiliki akun?{' '}
+              <Link href="/register" className="font-semibold text-[#07375c] hover:underline dark:text-sky-300">Daftar Akun Baru</Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
