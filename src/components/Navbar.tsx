@@ -12,6 +12,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const brandHref = currentUser
     ? currentUser.role === 'admin' ? '/admin' : '/dashboard'
@@ -19,21 +20,33 @@ export default function Navbar() {
   const isAdminCertificatePath = pathname.startsWith('/admin/certificates') || pathname.startsWith('/admin/certificate-training') || pathname.startsWith('/admin/certificate-general') || pathname.startsWith('/admin/certificate-settings');
 
   useEffect(() => {
+    let mounted = true;
+
     const load = async () => {
-      setCurrentUser(await initCurrentUser());
+      setAuthLoading(true);
+      try {
+        const user = await initCurrentUser();
+        if (mounted) setCurrentUser(user);
+      } catch (error) {
+        console.error('Gagal memulihkan sesi di navbar:', error);
+        if (mounted) setCurrentUser(null);
+      } finally {
+        if (mounted) setAuthLoading(false);
+      }
     };
-    load();
+
+    void load();
+    return () => { mounted = false; };
   }, [pathname]);
 
   const handleLogout = async () => {
     await StorageAPI.logout();
     setCurrentUser(null);
+    setAuthLoading(false);
     router.push('/login');
   };
 
-  if (pathname.startsWith('/verify/') && false) {
-    return null;
-  }
+  if (pathname.startsWith('/verify/') && false) return null;
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -47,8 +60,13 @@ export default function Navbar() {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
-            {currentUser ? (
+          <nav className="hidden md:flex items-center gap-6 min-h-[40px]">
+            {authLoading ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-500" role="status" aria-live="polite">
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 border-t-slate-700 dark:border-slate-600 dark:border-t-slate-200 animate-spin" aria-hidden="true" />
+                <span>Memuat akun...</span>
+              </div>
+            ) : currentUser ? (
               <>
                 {currentUser.role === 'admin' ? (
                   <>
@@ -85,7 +103,7 @@ export default function Navbar() {
           </nav>
 
           <div className="flex md:hidden items-center gap-2">
-            {currentUser && <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{currentUser.full_name.split(' ')[0]}</span>}
+            {!authLoading && currentUser && <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{currentUser.full_name.split(' ')[0]}</span>}
             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" aria-label="Toggle menu">{isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
           </div>
         </div>
@@ -93,7 +111,9 @@ export default function Navbar() {
 
       {isMobileMenuOpen && (
         <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-2">
-          {currentUser ? (
+          {authLoading ? (
+            <div className="py-3 text-center text-xs text-slate-500">Memuat akun...</div>
+          ) : currentUser ? (
             <>
               <div className="py-2 border-b border-slate-100 dark:border-slate-800 mb-2"><p className="text-sm font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p><p className="text-xs text-slate-500">{currentUser.email} • {currentUser.institution}</p></div>
               {currentUser.role === 'admin' ? (
