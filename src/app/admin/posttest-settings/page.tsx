@@ -5,6 +5,7 @@ import { Clock3, LockKeyhole, Save, Unlock } from 'lucide-react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { Training } from '@/types';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 
 function formatWitaDateTimeInput(iso?: string | null): string {
   if (!iso) return '';
@@ -153,7 +154,11 @@ export default function PosttestSettingsPage() {
   };
 
   if (loading) {
-    return <div className="py-10 text-center text-sm text-slate-500">Memuat pengaturan Post-Test...</div>;
+    return (
+      <div className="py-16 text-center">
+        <LontarLoadingSpinner size="lg" text="Memuat pengaturan Post-Test..." />
+      </div>
+    );
   }
 
   return (
@@ -194,7 +199,7 @@ export default function PosttestSettingsPage() {
             <div className="rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 p-4 text-xs text-slate-600 dark:text-slate-300"><strong>Status saat ini:</strong> {scheduled && startAt ? `Ditahan sampai ${formatWitaDisplay(witaInputToIso(startAt))}` : 'Terbuka setelah seluruh materi selesai'}.</div>
             {error && <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 p-3 text-xs text-red-700 dark:text-red-300">{error}</div>}
 
-            <div className="flex justify-end"><button type="button" onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-bold disabled:opacity-50"><Save className="w-4 h-4" /> {saving ? 'Menyimpan...' : 'Simpan Jadwal'}</button></div>
+            <div className="flex justify-end"><button type="button" onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#07375c] hover:bg-[#052c4a] text-white text-xs font-bold shadow-sm disabled:opacity-50"><Save className="w-4 h-4" /> {saving ? 'Menyimpan...' : 'Simpan Jadwal'}</button></div>
           </>
         ) : <div className="text-sm text-slate-500">Belum ada pelatihan yang dapat diatur.</div>}
       </div>

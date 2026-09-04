@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { ParticipantQuestion, UserProfile, Training, TestAttempt } from '@/types';
 import { GraduationCap, CheckCircle2, XCircle as XCircle2, ArrowRight, Lock, RefreshCw, Award, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { useTestSession } from '@/hooks/useTestSession';
 import { getDisplayOptions, orderTestQuestions } from '@/lib/testSession';
 
@@ -273,7 +274,11 @@ export default function PosttestPage() {
   };
 
   if (loading || !currentUser || !training) {
-    return <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm">Memuat Post-Test...</div>;
+    return (
+      <div className="max-w-md mx-auto py-16 text-center">
+        <LontarLoadingSpinner size="lg" text="Memuat Post-Test..." />
+      </div>
+    );
   }
 
   if (!isAccessAllowed) {

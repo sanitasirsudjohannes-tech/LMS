@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
@@ -154,7 +155,11 @@ export default function DashboardPage() {
   }
 
   if (loading || !currentUser) {
-    return <div className="max-w-xl mx-auto py-12 text-center text-slate-500 text-sm">Memuat dashboard pelatihan...</div>;
+    return (
+      <div className="flex min-h-[50vh] w-full items-center justify-center py-16">
+        <LontarLoadingSpinner size="lg" text="Memuat dashboard pelatihan..." />
+      </div>
+    );
   }
 
   const hasCompletedPretest = !!pretestAttempt;

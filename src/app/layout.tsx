@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import '@loadingio/loading-bar/dist/loading-bar.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PwaRegister from '@/components/PwaRegister';

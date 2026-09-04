@@ -240,7 +240,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || success}
-            className="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3 bg-[#07375c] hover:bg-[#052c4a] text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2 mt-2 disabled:opacity-60"
           >
             {loading ? (
               <span>Mendaftarkan...</span>

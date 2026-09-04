@@ -10,6 +10,7 @@ import CertificateTemplate from '@/components/CertificateTemplate';
 import { generateCertificatePDF } from '@/lib/pdf';
 import { Download, Printer, Share2, Lock, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 
 const CERTIFICATE_WIDTH = 1000;
 const CERTIFICATE_HEIGHT = 707;
@@ -177,7 +178,11 @@ export default function CertificatePage() {
   }
 
   if (loading || !currentUser) {
-    return <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm">Memuat Sertifikat...</div>;
+    return (
+      <div className="max-w-md mx-auto py-16 text-center">
+        <LontarLoadingSpinner size="lg" text="Memuat Sertifikat..." />
+      </div>
+    );
   }
 
   if (!certificate) {

@@ -8,6 +8,8 @@ import { formatDateIndonesian } from '@/lib/utils';
 import { Search, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
+
 const PAGE_SIZE = 20;
 
 export default function CertificatesAdminPage() {
@@ -146,7 +148,7 @@ export default function CertificatesAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-              {loading ? <tr><td colSpan={6} className="p-8 text-center text-slate-400">Memuat data...</td></tr> : loadError ? <tr><td colSpan={6} className="p-8 text-center text-red-600">Data gagal dimuat. Periksa pesan kesalahan di atas.</td></tr> : certificates.length > 0 ? (
+              {loading ? <tr><td colSpan={6} className="p-8 text-center text-slate-400"><LontarLoadingSpinner size="md" text="Memuat data sertifikat..." /></td></tr> : loadError ? <tr><td colSpan={6} className="p-8 text-center text-red-600">Data gagal dimuat. Periksa pesan kesalahan di atas.</td></tr> : certificates.length > 0 ? (
                 certificates.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                     <td className="p-4">

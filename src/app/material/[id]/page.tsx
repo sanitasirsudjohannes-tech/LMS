@@ -7,6 +7,7 @@ import { Material, UserProfile, MaterialProgress } from '@/types';
 import TimerWidget from '@/components/TimerWidget';
 import { BookOpen, ArrowLeft, ArrowRight, Lock, Video, FileText } from 'lucide-react';
 import Link from 'next/link';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { getMediaType, formatGoogleDriveEmbedUrl, formatVideoEmbedUrl } from '@/lib/mediaUtils';
 
 export default function MaterialDetailPage() {
@@ -121,8 +122,7 @@ export default function MaterialDetailPage() {
   if (loading) {
     return (
       <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm space-y-2">
-        <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin mx-auto" />
-        <p>Memuat materi...</p>
+        <LontarLoadingSpinner size="lg" text="Memuat materi..." />
       </div>
     );
   }

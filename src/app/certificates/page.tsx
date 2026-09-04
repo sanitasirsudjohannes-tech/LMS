@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { Award, CalendarDays, ExternalLink, FileCheck2 } from 'lucide-react';
 import { Certificate, UserProfile } from '@/types';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
@@ -66,20 +67,32 @@ export default function CertificateArchivePage() {
   }
 
   if (loading || !user) {
-    return <div className="max-w-3xl mx-auto py-12 text-center text-sm text-slate-500">Memuat arsip sertifikat...</div>;
+    return (
+      <div className="max-w-3xl mx-auto py-16 text-center">
+        <LontarLoadingSpinner size="lg" text="Memuat arsip sertifikat..." />
+      </div>
+    );
   }
 
   return (
     <div className="max-w-3xl mx-auto py-2 space-y-6">
       {loadError && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{loadError}</div>}
-      <div className="bg-gradient-to-r from-teal-800 via-emerald-800 to-slate-900 dark:from-slate-900 dark:to-slate-900 text-white rounded-2xl p-6 shadow-md border border-teal-700/30 dark:border-slate-800 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-teal-500/30 dark:bg-amber-500 flex items-center justify-center shrink-0 border border-teal-400/30">
-          <Award className="w-7 h-7 text-teal-200 dark:text-slate-900" />
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider font-bold text-teal-300 dark:text-amber-300">Dokumen Peserta</p>
-          <h1 className="text-xl sm:text-2xl font-bold">Arsip Sertifikat Saya</h1>
-          <p className="text-xs text-teal-100/80 dark:text-slate-300 mt-1">Sertifikat tetap tersedia meskipun pelatihannya sudah dinonaktifkan admin.</p>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/60 p-4">
+          <div className="w-11 h-11 shrink-0 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-sm">
+            <Award className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700 dark:text-amber-400 block">
+              DOKUMEN PESERTA • LONTAR
+            </span>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
+              Arsip Sertifikat Saya
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Sertifikat pelatihan RSUD Prof. Dr. W.Z. Johannes Kupang tetap tersimpan permanen
+            </p>
+          </div>
         </div>
       </div>
 
@@ -108,7 +121,7 @@ export default function CertificateArchivePage() {
               <button
                 type="button"
                 onClick={() => openCertificate(certificate)}
-                className="w-full px-4 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2"
+                className="w-full px-4 py-2.5 bg-[#07375c] hover:bg-[#052c4a] text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors shadow-sm"
               >
                 Buka & Unduh Sertifikat <ExternalLink className="w-3.5 h-3.5" />
               </button>
@@ -120,7 +133,7 @@ export default function CertificateArchivePage() {
           <Award className="w-10 h-10 text-slate-300 mx-auto" />
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Belum Ada Sertifikat</h2>
           <p className="text-xs text-slate-500">Sertifikat akan masuk ke arsip setelah Anda menyelesaikan dan lulus pelatihan.</p>
-          <Link href="/dashboard" className="inline-block px-4 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold">Lihat Pelatihan Aktif</Link>
+          <Link href="/dashboard" className="inline-block px-4 py-2 bg-[#07375c] hover:bg-[#052c4a] text-white rounded-xl text-xs font-semibold transition-colors shadow-sm">Lihat Pelatihan Aktif</Link>
         </div>
       )}
     </div>

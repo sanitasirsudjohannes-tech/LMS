@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 
 interface ReviewRow {
   id: string;
@@ -62,7 +63,7 @@ export default function AdminReviewsPage() {
     return { material, ease, relevance, speaker, overall: (material + ease + relevance + speaker) / 4 };
   }, [filtered]);
 
-  if (loading) return <div className="py-10 text-center text-sm text-slate-500">Memuat review pelatihan...</div>;
+  if (loading) return <div className="py-16 text-center"><LontarLoadingSpinner size="lg" text="Memuat review pelatihan..." /></div>;
   if (error) return <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error}</div>;
 
   return (

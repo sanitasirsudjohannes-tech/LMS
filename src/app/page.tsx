@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { useRouter } from 'next/navigation';
 import { getValidatedCurrentUser } from '@/lib/authSession';
 import { UserProfile } from '@/types';
@@ -71,20 +72,20 @@ export default function Home() {
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2 min-h-[48px]">
           {authLoading ? (
             <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-sm font-medium" role="status" aria-live="polite">
-              <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-slate-700 dark:border-slate-600 dark:border-t-slate-200 animate-spin" aria-hidden="true" />
+              <LontarLoadingSpinner size="sm" />
               <span>Memuat akun...</span>
             </div>
           ) : currentUser ? (
             <Link
               href={currentUser.role === 'admin' ? '/admin' : '/dashboard'}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-all shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#07375c] hover:bg-[#052c4a] text-white font-medium rounded-xl text-sm transition-all shadow-sm"
             >
               <span>Buka {currentUser.role === 'admin' ? 'Dashboard Admin' : 'Dashboard Saya'}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           ) : (
             <>
-              <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-all shadow-sm">
+              <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-[#07375c] hover:bg-[#052c4a] text-white font-medium rounded-xl text-sm transition-all shadow-sm">
                 <span>Masuk Akun</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
@@ -121,17 +122,40 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-gradient-to-r from-teal-800 via-emerald-800 to-slate-900 dark:from-slate-900 dark:to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-md border border-teal-700/30 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400"><ShieldCheck className="w-4 h-4" /><span>Verifikasi Keaslian Sertifikat</span></div>
-            <h3 className="text-lg sm:text-xl font-bold">Punya Kode Sertifikat?</h3>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-md">Masukkan kode verifikasi 10 karakter yang tertera pada sertifikat untuk mengecek keabsahannya secara langsung.</p>
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/60 p-5">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400 block">
+                VERIFIKASI KEASLIAN • LONTAR
+              </span>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                Punya Kode Sertifikat Pelatihan?
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-md">
+                Masukkan kode verifikasi unik untuk mengecek keabsahan dokumen pelatihan RSUD Johannes.
+              </p>
+            </div>
           </div>
 
-          <form onSubmit={handleVerifySubmit} className="w-full md:w-auto flex flex-col sm:flex-row gap-2">
-            <input type="text" placeholder="Contoh: SAMPLE123" value={verifyCodeInput} onChange={(e) => setVerifyCodeInput(e.target.value)} className="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono tracking-wider uppercase" required />
-            <button type="submit" className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-colors shadow-sm whitespace-nowrap">Cek Sertifikat</button>
+          <form onSubmit={handleVerifySubmit} className="w-full md:w-auto flex flex-col sm:flex-row gap-2 shrink-0">
+            <input
+              type="text"
+              placeholder="Contoh: SAMPLE123"
+              value={verifyCodeInput}
+              onChange={(e) => setVerifyCodeInput(e.target.value)}
+              className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-xs font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              required
+            />
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm whitespace-nowrap"
+            >
+              Cek Sertifikat
+            </button>
           </form>
         </div>
       </section>

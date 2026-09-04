@@ -5,6 +5,7 @@ import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Training } from '@/types';
 import { Search, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, Filter } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 
 interface ResultRow {
   user_id: string;
@@ -185,7 +186,7 @@ export default function ResultsAdminPage() {
               <tr><th className="p-4">Peserta</th><th className="p-4 text-center">Pre-Test</th><th className="p-4 text-center">Post-Test Terbaik</th><th className="p-4 text-center">Percobaan</th><th className="p-4 text-center">Status</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-              {loading ? <tr><td colSpan={5} className="p-8 text-center text-slate-400">Memuat data...</td></tr> : loadError ? <tr><td colSpan={5} className="p-8 text-center text-red-600">Data gagal dimuat. Periksa pesan kesalahan di atas.</td></tr> : rows.length ? rows.map(row => (
+              {loading ? <tr><td colSpan={5} className="p-8 text-center text-slate-400"><LontarLoadingSpinner size="md" text="Memuat hasil tes..." /></td></tr> : loadError ? <tr><td colSpan={5} className="p-8 text-center text-red-600">Data gagal dimuat. Periksa pesan kesalahan di atas.</td></tr> : rows.length ? rows.map(row => (
                 <tr key={row.user_id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                   <td className="p-4"><p className="font-bold text-slate-900 dark:text-white">{row.full_name}</p><p className="text-slate-400 text-[11px]">{row.email}</p></td>
                   <td className="p-4 text-center font-mono font-bold">{row.pre_score ?? '-'}</td>

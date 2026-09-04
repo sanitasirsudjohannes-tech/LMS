@@ -190,7 +190,7 @@ export default function MaterialsAdminPage() {
             </select>
           </div>
 
-          <button onClick={handleOpenCreate} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5">
+          <button onClick={handleOpenCreate} className="px-4 py-2 bg-[#07375c] hover:bg-[#052c4a] text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5">
             <Plus className="w-4 h-4" /><span>Tambah Materi</span>
           </button>
         </div>
@@ -255,7 +255,7 @@ export default function MaterialsAdminPage() {
               <div className="flex items-center gap-2 pt-2"><input type="checkbox" id="activeCheck" checked={active} onChange={(e) => setActive(e.target.checked)} className="rounded border-slate-300 text-slate-900 focus:ring-slate-900" /><label htmlFor="activeCheck" className="text-xs font-medium text-slate-700 dark:text-slate-300">Status Materi Aktif</label></div>
               <div className="pt-4 flex items-center justify-end gap-2">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl text-xs font-semibold">Batal</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-bold">{saving ? 'Menyimpan...' : 'Simpan Materi'}</button>
+                <button type="submit" disabled={saving} className="px-5 py-2 bg-[#07375c] hover:bg-[#052c4a] text-white rounded-xl text-xs font-bold disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan Materi'}</button>
               </div>
             </form>
           </div>

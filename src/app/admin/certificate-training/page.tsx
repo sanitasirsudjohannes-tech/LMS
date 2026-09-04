@@ -160,7 +160,7 @@ export default function CertificateTrainingPage() {
 
       <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5"><div><h3 className="text-sm font-bold text-slate-900 dark:text-white">Preview Sertifikat</h3><p className="mt-0.5 text-[11px] text-slate-500">Preview mengikuti pelatihan, penomoran, nilai Post-Test, serta pengaturan direktur yang tersimpan.</p></div><ResponsiveCertificatePreview certificate={previewCertificate} settings={previewSettings} /></section>
 
-      <button disabled={saving || switching || !trainingId} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{saving ? 'Menyimpan...' : 'Simpan Pengaturan Pelatihan'}</button>
+      <button disabled={saving || switching || !trainingId} className="inline-flex items-center gap-2 rounded-xl bg-[#07375c] hover:bg-[#052c4a] px-5 py-3 text-xs font-bold text-white shadow-sm disabled:opacity-50"><Save className="h-4 w-4" />{saving ? 'Menyimpan...' : 'Simpan Pengaturan Pelatihan'}</button>
     </form>
   </div>;
 }

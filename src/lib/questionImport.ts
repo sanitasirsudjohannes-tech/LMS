@@ -85,8 +85,14 @@ const questionKey = (row: Pick<QuestionImportRow, 'test_type' | 'question'>) =>
 export async function readQuestionImportFile(file: File): Promise<unknown[][]> {
   const extension = file.name.split('.').pop()?.toLowerCase();
   if (extension === 'xlsx') {
-    const { readSheet } = await import('read-excel-file/browser');
-    return readSheet(file);
+    try {
+      const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+      const readExcelFileModule = await dynamicImport('read-excel-file');
+      const readExcelFile = readExcelFileModule.default || readExcelFileModule;
+      return (await readExcelFile(file)) as unknown[][];
+    } catch {
+      throw new Error('Gagal membaca file .xlsx. Pastikan format file sesuai atau gunakan format .csv.');
+    }
   }
   if (extension === 'csv') return parseCsv(await file.text());
   throw new Error('Format file tidak didukung. Gunakan file .xlsx atau .csv.');

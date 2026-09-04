@@ -37,7 +37,34 @@ export default function LoginPage() {
       });
 
       if (authError) {
-        setError(`Login gagal: ${authError.message}`);
+        let msg = authError.message || '';
+        const lower = msg.toLowerCase();
+
+        if (
+          lower.includes('invalid') ||
+          lower.includes('credentials') ||
+          lower.includes('grant') ||
+          authError.status === 400
+        ) {
+          // Panggil RPC database untuk mengecek keberadaan email tanpa terhalang RLS
+          const { data: isRegistered } = await supabase.rpc('check_email_exists', { p_email: email.trim() });
+
+          if (isRegistered === false) {
+            msg = 'Email belum terdaftar. Silakan daftar akun terlebih dahulu.';
+          } else if (isRegistered === true) {
+            msg = 'Password yang Anda masukkan salah.';
+          } else {
+            msg = 'Email atau password yang Anda masukkan tidak sesuai.';
+          }
+        } else if (lower.includes('email not confirmed')) {
+          msg = 'Email Anda belum dikonfirmasi. Silakan periksa pesan konfirmasi di email Anda.';
+        } else if (lower.includes('too many') || lower.includes('rate limit')) {
+          msg = 'Terlalu banyak percobaan login. Silakan tunggu beberapa saat lagi.';
+        } else {
+          msg = `Login gagal: ${msg}`;
+        }
+
+        setError(msg);
         setLoading(false);
         return;
       }

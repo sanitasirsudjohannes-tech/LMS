@@ -7,6 +7,7 @@ import { Certificate } from '@/types';
 import { formatDateIndonesian, formatDateInputWita } from '@/lib/utils';
 import { ShieldCheck, ShieldAlert, Award, Calendar, Building, User, ArrowLeft, Clock3, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 
 export default function VerifyCertificatePage() {
   const params = useParams();
@@ -32,8 +33,8 @@ export default function VerifyCertificatePage() {
 
   if (loading) {
     return (
-      <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm">
-        Memverifikasi data sertifikat...
+      <div className="flex min-h-[50vh] w-full items-center justify-center py-16">
+        <LontarLoadingSpinner size="lg" text="Memverifikasi data sertifikat..." />
       </div>
     );
   }

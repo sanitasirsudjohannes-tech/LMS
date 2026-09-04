@@ -138,7 +138,7 @@ export default function AdminOverviewPage() {
           </div>
           <Link
             href="/admin/training-settings"
-            className="px-4 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity whitespace-nowrap self-start sm:self-auto"
+            className="px-4 py-2 bg-[#07375c] hover:bg-[#052c4a] text-white rounded-xl text-xs font-semibold transition-colors shadow-sm whitespace-nowrap self-start sm:self-auto"
           >
             + Tambah / Kelola Pelatihan
           </Link>
@@ -189,7 +189,7 @@ export default function AdminOverviewPage() {
                       onClick={() => handleSelectTraining(t)}
                       className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between gap-3 text-left ${
                         isSelected
-                          ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 shadow-md ring-1 ring-slate-900 dark:ring-slate-100'
+                          ? 'bg-[#07375c] text-white border-[#052c4a] shadow-md ring-1 ring-[#07375c]'
                           : 'bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 hover:border-slate-400'
                       }`}
                     >
@@ -261,36 +261,36 @@ export default function AdminOverviewPage() {
       </div>
 
       {selectedTraining && (
-        <div className="bg-slate-900 dark:bg-slate-800 text-white rounded-2xl p-5 shadow-sm flex items-center justify-between gap-4">
+        <div className="bg-[#07375c] text-white rounded-2xl p-5 shadow-sm flex items-center justify-between gap-4 border border-[#052c4a]">
           <div>
-            <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Ringkasan Pelatihan yang Sedang Dikelola</span>
+            <span className="text-[11px] font-bold text-sky-200 uppercase tracking-wider block">Ringkasan Pelatihan yang Sedang Dikelola</span>
             <h3 className="text-base font-bold">{selectedTraining.title}</h3>
           </div>
-          <div className="text-right text-xs text-slate-300 font-mono hidden sm:block">
+          <div className="text-right text-xs text-sky-100/90 font-mono hidden sm:block">
             <p>Passing Score: {selectedTraining.passing_score}</p>
             <p>Maks. Post-Test: {selectedTraining.max_posttest_attempts}x</p>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {statCards.map((card, idx) => (
           <div
             key={idx}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm space-y-2 sm:space-y-3 flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">{card.title}</span>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${card.color}`}>
-                <card.icon className="w-5 h-5" />
+            <div className="flex items-start justify-between gap-1.5">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 leading-tight line-clamp-2">{card.title}</span>
+              <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${card.color}`}>
+                <card.icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
             </div>
 
-            <div className="space-y-0.5">
-              <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-900 dark:text-white">
+            <div className="space-y-0.5 pt-1">
+              <span className="text-xl sm:text-3xl font-bold font-mono text-slate-900 dark:text-white block">
                 {loadingStats ? '…' : (card.count ?? 0).toLocaleString('id-ID')}
               </span>
-              <p className="text-[11px] text-slate-400">{card.label}</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 line-clamp-1">{card.label}</p>
             </div>
           </div>
         ))}

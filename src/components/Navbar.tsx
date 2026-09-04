@@ -10,7 +10,6 @@ import {
   FileCheck2,
   HelpCircle,
   LayoutDashboard,
-  Loader2,
   LogOut,
   Menu,
   MessageSquareText,
@@ -23,6 +22,7 @@ import { logoutFromLontar } from '@/lib/logout';
 import { getValidatedCurrentUser, clearValidatedUser } from '@/lib/authSession';
 import { supabase } from '@/lib/supabase';
 import { UserProfile } from '@/types';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import LontarLogo from '@/components/LontarLogo';
 
 type NavItem = {
@@ -149,15 +149,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   if (isLoggingOut) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-            <Loader2 className="h-5 w-5 animate-spin text-[#07375c] dark:text-sky-300" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Keluar dari akun…</p>
-            <p className="mt-1 text-xs text-slate-500">Mengakhiri sesi LONTAR dengan aman</p>
-          </div>
-        </div>
+        <LontarLoadingSpinner size="lg" text="Keluar dari akun..." />
       </div>
     );
   }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { ParticipantQuestion, UserProfile, Training } from '@/types';
 import { FileCheck2, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
@@ -113,8 +114,12 @@ export default function PretestPage() {
     }
   };
 
-  if (loading || !currentUser) {
-    return <div className="max-w-md mx-auto py-12 text-center text-slate-500 text-sm">Memuat soal Pre-Test...</div>;
+  if (loading) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center">
+        <LontarLoadingSpinner size="lg" text="Memuat soal Pre-Test..." />
+      </div>
+    );
   }
 
   if (!training || questions.length === 0) {

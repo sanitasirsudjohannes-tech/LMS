@@ -1,4 +1,3 @@
-import JSZip from 'jszip';
 import { TrainingBackup } from '@/types';
 
 function csvCell(value: unknown): string {
@@ -27,7 +26,8 @@ function safeFilename(value: string): string {
     .slice(0, 80) || 'pelatihan';
 }
 
-async function addPublicStorageAssets(zip: JSZip, backup: TrainingBackup): Promise<void> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function addPublicStorageAssets(zip: any, backup: TrainingBackup): Promise<void> {
   const urls = new Set<string>();
   const collect = (value: unknown) => {
     if (typeof value === 'string' && value.includes('/storage/v1/object/public/')) urls.add(value);
@@ -61,6 +61,21 @@ async function addPublicStorageAssets(zip: JSZip, backup: TrainingBackup): Promi
 }
 
 export async function downloadTrainingBackupZip(backup: TrainingBackup): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let JSZip: any = null;
+  try {
+    if (typeof window !== 'undefined' && (window as unknown as { JSZip: unknown }).JSZip) {
+      JSZip = (window as unknown as { JSZip: unknown }).JSZip;
+    } else {
+      // Gunakan dynamic Function agar bundler Turbopack Next.js tidak mencoba me-resolve 'jszip' secara statis saat kompilasi
+      const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+      const module = await dynamicImport('jszip');
+      JSZip = module.default || module;
+    }
+  } catch {
+    throw new Error('Fitur Backup ZIP memerlukan modul jszip. Pastikan koneksi internet aktif atau jalankan `npm install jszip`.');
+  }
+
   const zip = new JSZip();
   const manifest = {
     format: backup.format,
