@@ -38,13 +38,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className="h-full">
-      <body className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans">
+      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans dark:bg-slate-950 dark:text-slate-100">
         <PwaRegister />
-        <Navbar />
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
-          {children}
-        </main>
-        <Footer />
+        <div className="flex min-h-screen w-full">
+          <Navbar />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </div>
       </body>
     </html>
   );
