@@ -4,6 +4,13 @@ import { clearValidatedUser } from './authSession';
 const LOGOUT_PENDING_KEY = 'lontar_logout_pending_at';
 const LOGOUT_PENDING_TTL_MS = 10_000;
 
+function isMissingSessionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { name?: string; message?: string };
+  return candidate.name === 'AuthSessionMissingError'
+    || /auth session missing/i.test(candidate.message || '');
+}
+
 function clearLontarBrowserState() {
   clearValidatedUser();
 
@@ -51,10 +58,14 @@ export async function logoutFromLontar(): Promise<void> {
 
   void supabase.auth.signOut()
     .then(({ error }) => {
-      if (error) console.error('Logout Supabase gagal:', error);
+      if (error && !isMissingSessionError(error)) {
+        console.error('Logout Supabase gagal:', error);
+      }
     })
     .catch((error) => {
-      console.error('Logout Supabase gagal:', error);
+      if (!isMissingSessionError(error)) {
+        console.error('Logout Supabase gagal:', error);
+      }
     })
     .finally(() => {
       clearLontarBrowserState();
