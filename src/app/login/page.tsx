@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { StorageAPI } from '@/lib/storage';
 import { Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useGuestRouteGuard } from '@/hooks/useGuestRouteGuard';
+import LontarLogo from '@/components/LontarLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -99,9 +100,9 @@ export default function LoginPage() {
 
         <div className="p-6 sm:p-10 lg:p-12">
           <div className="mx-auto max-w-md">
-            <div className="mb-8">
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#07375c] dark:text-sky-300">Selamat datang kembali</p>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Masuk ke LONTAR</h2>
+            <div className="mb-8 flex flex-col items-center text-center">
+              <LontarLogo variant="full" priority className="mb-5 max-w-[210px] rounded-xl" />
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Masuk</h2>
               <p className="mt-2 text-sm text-slate-500">Gunakan email dan kata sandi akun Anda.</p>
             </div>
 
