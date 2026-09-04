@@ -58,6 +58,9 @@ export default function PosttestPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [review, setReview] = useState({ material_rating: 0, material_ease_rating: 0, relevance_rating: 0, speaker_rating: 0, suggestion: '' });
   const { session, answers, saveStatus, initialize, selectAnswer, submit, beginNewAttempt } = useTestSession();
 
   useEffect(() => {
@@ -129,6 +132,15 @@ export default function PosttestPage() {
           }
           setCertificateIssued(!!certificate);
           setLastAttemptScore(existingAttempts.at(-1)?.score ?? null);
+          if (passed) {
+            const { data: existingReview } = await supabase
+              .from('training_reviews')
+              .select('id')
+              .eq('training_id', tr.id)
+              .eq('user_id', user.id)
+              .maybeSingle();
+            setReviewSubmitted(!!existingReview);
+          }
 
           if (passed || existingAttempts.length >= tr.max_posttest_attempts) {
             setIsSubmitted(true);
@@ -196,6 +208,35 @@ export default function PosttestPage() {
       await Swal.fire('Post-Test Gagal Dikirim', message, 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !training) return;
+    if ([review.material_rating, review.material_ease_rating, review.relevance_rating, review.speaker_rating].some(v => v < 1 || v > 5)) {
+      await Swal.fire('Review Belum Lengkap', 'Mohon beri penilaian pada seluruh pertanyaan review.', 'warning');
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      const { error } = await supabase.from('training_reviews').upsert({
+        training_id: training.id,
+        user_id: currentUser.id,
+        material_rating: review.material_rating,
+        material_ease_rating: review.material_ease_rating,
+        relevance_rating: review.relevance_rating,
+        speaker_rating: review.speaker_rating,
+        suggestion: review.suggestion.trim() || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'training_id,user_id' });
+      if (error) throw error;
+      setReviewSubmitted(true);
+      await Swal.fire({ icon: 'success', title: 'Terima kasih!', text: 'Review pelatihan Anda telah tersimpan.', timer: 1800, showConfirmButton: false });
+    } catch (error) {
+      await Swal.fire('Review Gagal Disimpan', error instanceof Error ? error.message : 'Silakan coba kembali.', 'error');
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -288,12 +329,49 @@ export default function PosttestPage() {
             <span className="text-xs text-slate-400 block font-mono">/ 100</span>
           </div>
 
+          {isPassed && !reviewSubmitted && (
+            <form onSubmit={handleReviewSubmit} className="w-full text-left space-y-5 border-t border-slate-200 dark:border-slate-700 pt-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Review Pelatihan</h3>
+                <p className="text-xs text-slate-500 mt-1">Mohon isi evaluasi singkat berikut sebelum melanjutkan ke sertifikat.</p>
+              </div>
+              {[
+                ['material_rating', 'Bagaimana penilaian Anda terhadap materi yang disampaikan dalam pelatihan ini?'],
+                ['material_ease_rating', 'Bagaimana tingkat kemudahan materi pelatihan untuk dipahami?'],
+                ['relevance_rating', 'Seberapa relevan materi pelatihan dengan pekerjaan atau tugas Anda?'],
+                ['speaker_rating', 'Bagaimana penilaian Anda terhadap penyampaian materi oleh narasumber/pemateri?']
+              ].map(([key, label]) => (
+                <div key={key} className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{label}</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[1,2,3,4,5].map(value => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setReview(prev => ({ ...prev, [key]: value }))}
+                        className={`rounded-xl border px-2 py-2 text-xs font-bold transition-all ${review[key as keyof typeof review] === value ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'}`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-400"><span>Sangat Kurang</span><span>Sangat Baik</span></div>
+                </div>
+              ))}
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Apa saran atau masukan Anda untuk meningkatkan pelatihan berikutnya?</p>
+                <textarea value={review.suggestion} onChange={(e) => setReview(prev => ({ ...prev, suggestion: e.target.value }))} rows={4} maxLength={1000} className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white" placeholder="Tuliskan saran atau masukan..." />
+              </div>
+              <button type="submit" disabled={reviewSubmitting} className="w-full px-6 py-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold rounded-xl text-sm disabled:opacity-50">{reviewSubmitting ? 'Mengirim Review...' : 'Kirim Review Pelatihan'}</button>
+            </form>
+          )}
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            {isPassed && certificateIssued ? (
+            {isPassed && reviewSubmitted && certificateIssued ? (
               <Link href="/certificate" onClick={() => { if (!currentUser || !training) return; const certificate = StorageAPI.getCertificateForUser(currentUser.id, training.id); if (certificate) StorageAPI.selectCertificate(certificate.id); }} className="w-full sm:w-auto px-8 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-sm transition-all shadow-md inline-flex items-center justify-center gap-2"><Award className="w-5 h-5" /><span>Lihat & Unduh Sertifikat</span></Link>
-            ) : isPassed ? (
+            ) : isPassed && reviewSubmitted ? (
               <Link href="/certificates" className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold rounded-xl text-sm transition-all inline-flex items-center justify-center gap-2"><Award className="w-4 h-4" /><span>Cek Arsip Sertifikat</span></Link>
-            ) : remainingAttempts > 0 ? (
+            ) : isPassed ? null : remainingAttempts > 0 ? (
               <button onClick={handleRetake} className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold rounded-xl text-sm transition-all inline-flex items-center justify-center gap-2"><RefreshCw className="w-4 h-4" /><span>Ulangi Post-Test ({remainingAttempts} Sisa Percobaan)</span></button>
             ) : (
               <div className="text-xs text-slate-500">Kesempatan post-test Anda telah habis ({training.max_posttest_attempts}x). Hubungi Admin jika memerlukan reset.</div>
