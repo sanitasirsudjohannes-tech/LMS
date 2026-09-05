@@ -41,7 +41,7 @@ export default function PretestPage() {
         const tr = StorageAPI.getTraining();
         setTraining(tr);
 
-        const existing = StorageAPI.getTestAttempts(user.id, 'pretest');
+        const existing = tr ? StorageAPI.getTestAttempts(user.id, 'pretest', tr.id) : [];
         if (existing.length > 0) {
           const qList = tr ? await StorageAPI.loadQuestionsForTest(tr.id, 'pretest') : [];
           setQuestions(qList);
