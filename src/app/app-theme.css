@@ -1,8 +1,8 @@
 /*
- * LONTAR global color system
- * Light mode follows the current participant visual language.
- * Dark mode follows the existing admin slate palette.
- * This file is loaded last so every surface shares one predictable theme.
+ * LONTAR global color system.
+ * Light mode follows the participant visual language.
+ * Dark mode follows the established admin slate palette.
+ * This is the single final theme layer loaded by the app.
  */
 
 :root {
@@ -20,6 +20,19 @@
   --lontar-muted: #6f7f91;
 }
 
+/* Reusable semantic helpers for new/refactored components. */
+.lontar-primary-action {
+  background: var(--lontar-primary);
+  color: #fff;
+}
+.lontar-primary-action:hover { background: var(--lontar-primary-hover); }
+.lontar-primary-text { color: var(--lontar-primary); }
+.lontar-primary-soft { background: var(--lontar-primary-soft); }
+.lontar-panel {
+  background: var(--lontar-surface);
+  border: 1px solid var(--lontar-border);
+}
+
 @media (prefers-color-scheme: light) {
   html { color-scheme: light; }
 
@@ -28,7 +41,6 @@
     color: var(--lontar-text) !important;
   }
 
-  /* Shared shells and neutral surfaces. */
   body .bg-slate-50 { background-color: var(--lontar-surface-soft) !important; }
   body .bg-slate-100 { background-color: var(--lontar-surface-raised) !important; }
   body .bg-white { background-color: var(--lontar-surface) !important; }
@@ -43,7 +55,7 @@
   body .text-slate-500,
   body .text-slate-400 { color: var(--lontar-muted) !important; }
 
-  /* Legacy brand color becomes the single application primary. */
+  /* Legacy brand aliases resolve to the current primary until source migration is complete. */
   body .bg-\[\#07375c\] { background-color: var(--lontar-primary) !important; }
   body .text-\[\#07375c\] { color: var(--lontar-primary) !important; }
   body .border-\[\#07375c\] { border-color: var(--lontar-primary) !important; }
@@ -53,7 +65,6 @@
   body .hover\:text-\[\#07375c\]:hover { color: var(--lontar-primary-hover) !important; }
   body .focus\:ring-\[\#07375c\]\/25:focus { --tw-ring-color: rgb(0 119 255 / 0.25) !important; }
 
-  /* Dark slate is only an action color in light mode, never a primary CTA. */
   body a.bg-slate-950,
   body a.bg-slate-900,
   body button.bg-slate-950,
@@ -66,7 +77,6 @@
     background-color: var(--lontar-primary-hover) !important;
   }
 
-  /* Soft blue selection and focus language. */
   body .bg-blue-50,
   body .bg-blue-100,
   body .bg-\[\#07375c\]\/10 { background-color: var(--lontar-primary-soft) !important; }
@@ -75,23 +85,69 @@
   body .border-blue-200,
   body .border-blue-300 { border-color: #bfd9ff !important; }
 
-  /* Replace old beige landing/logo frame with the same light surface family. */
   body .bg-\[\#f8f6ef\] { background-color: var(--lontar-surface-soft) !important; }
   body .border-\[\#e6e0d2\] { border-color: var(--lontar-border) !important; }
 
-  /* Main blue/cyan gradient language. */
-  body .from-emerald-700.via-emerald-600.to-teal-600 {
-    background-image: linear-gradient(135deg, #0077ff 0%, #1685ff 58%, #36c7e8 100%) !important;
-  }
   body .from-emerald-600.to-teal-500 {
     background-image: linear-gradient(90deg, #0077ff, #36c7e8) !important;
+  }
+
+  /* Participant welcome card mirrors the Admin panel visual language. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
+    background-image: none !important;
+    background-color: #eff8ff !important;
+    color: #0f172a !important;
+    margin: 1rem !important;
+    border: 1px solid #dbeafe !important;
+    border-radius: 1rem !important;
+  }
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .bg-white\/10 {
+    background-color: #fff !important;
+    border: 1px solid #dbeafe !important;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
+  }
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50\/90,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-100 {
+    color: #475569 !important;
+  }
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 > .pointer-events-none { display: none !important; }
+
+  /* Pelatihan Saya header uses the same soft panel language. */
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] {
+    background-color: #eff8ff !important;
+    color: #0f172a !important;
+    border: 1px solid #dbeafe !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
+  }
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-200,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100\/80 { color: #64748b !important; }
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .bg-white\/10 {
+    background-color: #fff !important;
+    border: 1px solid #dbeafe !important;
+  }
+
+  /* Participant certificate actions are primary actions, not warnings. */
+  body:has(a[href="/trainings"]) a.bg-amber-500,
+  body:has(a[href="/trainings"]) a.bg-amber-600,
+  body:has(a[href="/trainings"]) button.bg-amber-500,
+  body:has(a[href="/trainings"]) button.bg-amber-600 {
+    background-color: var(--lontar-primary) !important;
+    color: #fff !important;
+  }
+  body:has(a[href="/trainings"]) a.hover\:bg-amber-500:hover,
+  body:has(a[href="/trainings"]) a.hover\:bg-amber-600:hover,
+  body:has(a[href="/trainings"]) button.hover\:bg-amber-500:hover,
+  body:has(a[href="/trainings"]) button.hover\:bg-amber-600:hover {
+    background-color: var(--lontar-primary-hover) !important;
   }
 }
 
 @media (prefers-color-scheme: dark) {
   html { color-scheme: dark; }
 
-  /* Dark mode deliberately matches the established admin palette. */
   :root {
     --lontar-primary: #38bdf8;
     --lontar-primary-hover: #7dd3fc;
@@ -112,31 +168,63 @@
     color: #f1f5f9 !important;
   }
 
-  /* Neutralize the older participant-only dark tokens so participant and admin match. */
+  /* Compatibility for older participant tokens still declared in globals.css. */
   body:has(a[href="/trainings"]) {
-    --participant-primary: #38bdf8 !important;
-    --participant-primary-hover: #7dd3fc !important;
-    --participant-primary-soft: #0c4a6e !important;
-    --participant-accent: #22d3ee !important;
-    --participant-bg: #020617 !important;
-    --participant-surface: #0f172a !important;
-    --participant-surface-soft: #1e293b !important;
-    --participant-surface-raised: #334155 !important;
-    --participant-border: #1e293b !important;
-    --participant-text: #f8fafc !important;
-    --participant-text-secondary: #cbd5e1 !important;
-    --participant-muted: #94a3b8 !important;
-    background: #020617 !important;
-    color: #f1f5f9 !important;
+    --participant-primary: var(--lontar-primary) !important;
+    --participant-primary-hover: var(--lontar-primary-hover) !important;
+    --participant-primary-soft: var(--lontar-primary-soft) !important;
+    --participant-accent: var(--lontar-accent) !important;
+    --participant-bg: var(--lontar-bg) !important;
+    --participant-surface: var(--lontar-surface) !important;
+    --participant-surface-soft: var(--lontar-surface-soft) !important;
+    --participant-surface-raised: var(--lontar-surface-raised) !important;
+    --participant-border: var(--lontar-border) !important;
+    --participant-text: var(--lontar-text) !important;
+    --participant-text-secondary: var(--lontar-text-secondary) !important;
+    --participant-muted: var(--lontar-muted) !important;
+    background: var(--lontar-bg) !important;
+    color: var(--lontar-text) !important;
   }
 
-  /* Keep legacy brand references aligned with admin's sky accent in dark mode. */
   body .dark\:text-sky-300 { color: #7dd3fc !important; }
   body .dark\:bg-sky-400 { background-color: #38bdf8 !important; }
   body .dark\:border-sky-400 { border-color: #38bdf8 !important; }
 
-  /* Participant hero uses a restrained dark blue gradient compatible with admin slate. */
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
-    background-image: linear-gradient(135deg, #0f172a 0%, #0c4a6e 55%, #164e63 100%) !important;
+    background-image: none !important;
+    background-color: rgb(8 47 73 / 0.4) !important;
+    color: #f8fafc !important;
+    margin: 1rem !important;
+    border: 1px solid rgb(12 74 110 / 0.6) !important;
+    border-radius: 1rem !important;
+  }
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .bg-white\/10 {
+    background-color: rgb(15 23 42 / 0.72) !important;
+    border: 1px solid #334155 !important;
+  }
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50\/90,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-100 { color: #94a3b8 !important; }
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 > .pointer-events-none { display: none !important; }
+
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] {
+    background-color: rgb(8 47 73 / 0.4) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgb(12 74 110 / 0.6) !important;
+    border-radius: 1rem !important;
+    box-shadow: none !important;
+  }
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-200,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100\/80 { color: #94a3b8 !important; }
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .bg-white\/10 {
+    background-color: rgb(15 23 42 / 0.72) !important;
+    border: 1px solid #334155 !important;
+  }
+
+  body:has(a[href="/trainings"]) .bg-slate-900:has(> iframe),
+  body:has(a[href="/trainings"]) .bg-slate-950:has(> iframe) {
+    background-color: #0b111b !important;
+    border-color: #273449 !important;
   }
 }
