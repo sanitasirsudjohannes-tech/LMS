@@ -32,7 +32,6 @@ export default function LontarLoadingSpinner({
     mountedRef.current = true;
 
     const init = async () => {
-      // Dynamic import agar hanya berjalan di client-side
       const ldBarModule = await import('@loadingio/loading-bar');
       const LdBar = ldBarModule.default || ldBarModule;
 
@@ -43,16 +42,21 @@ export default function LontarLoadingSpinner({
       delete (el as any).ldBar;
       el.innerHTML = '';
 
-      // Inisialisasi ldBar dengan preset bubble dari library
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const primary = prefersDark ? '#38bdf8' : '#0077ff';
+      const secondary = prefersDark ? '#22d3ee' : '#36c7e8';
+      const trail = prefersDark ? '#334155' : '#cbd5e1';
+      const background = prefersDark ? '#1e293b' : '#e2e8f0';
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const instance = new (LdBar as any)(el, {
         preset: 'bubble',
-        'fill': 'data:ldbar/res,bubble(#07375c,#a5d8ff)',
-        'fill-background': '#e2e8f0',
+        'fill': `data:ldbar/res,bubble(${primary},${secondary})`,
+        'fill-background': background,
         'fill-background-extrude': 2,
-        'stroke': '#07375c',
+        'stroke': primary,
         'stroke-width': 3,
-        'stroke-trail': '#cbd5e1',
+        'stroke-trail': trail,
         'stroke-trail-width': 0.5,
         'pattern-size': 150,
         'set-dim': false,
@@ -60,11 +64,9 @@ export default function LontarLoadingSpinner({
         'duration': 0.6
       });
 
-      // Sembunyikan label persentase teks bawaan library
       const label = el.querySelector('.ldBar-label') as HTMLElement | null;
       if (label) label.style.display = 'none';
 
-      // Animasi berputar terus menerus (0 <-> 100)
       let val = 0;
       let step = 1.2;
       const loop = () => {
@@ -99,7 +101,6 @@ export default function LontarLoadingSpinner({
           className="rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse"
         />
       ) : (
-        /* Element murni tanpa React Children untuk mencegah konflik removeChild pada unmount */
         <div
           ref={containerRef}
           className="ldBar label-center"
