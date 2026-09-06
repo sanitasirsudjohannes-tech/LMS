@@ -25,6 +25,94 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/*
+ * Participant-only color layer inspired by the VK Education LMS redesign.
+ * The selector keys off the participant navigation item (/trainings), which
+ * is not rendered in the admin shell, so admin colors stay untouched.
+ */
+body:has(a[href="/trainings"]) {
+  --participant-primary: #0077ff;
+  --participant-primary-hover: #0068e6;
+  --participant-primary-soft: #eaf3ff;
+  --participant-primary-softer: #f5f9ff;
+  --participant-cyan: #36c7e8;
+  --participant-border: #dfe7f1;
+  --participant-muted: #6f7f91;
+}
+
+body:has(a[href="/trainings"]) > div {
+  background: #f5f8fc;
+}
+
+body:has(a[href="/trainings"]) .bg-\[\#07375c\] {
+  background-color: var(--participant-primary) !important;
+}
+
+body:has(a[href="/trainings"]) .text-\[\#07375c\] {
+  color: var(--participant-primary) !important;
+}
+
+body:has(a[href="/trainings"]) .border-\[\#07375c\] {
+  border-color: var(--participant-primary) !important;
+}
+
+body:has(a[href="/trainings"]) .ring-\[\#07375c\] {
+  --tw-ring-color: var(--participant-primary) !important;
+}
+
+body:has(a[href="/trainings"]) .hover\:bg-\[\#052c4a\]:hover {
+  background-color: var(--participant-primary-hover) !important;
+}
+
+body:has(a[href="/trainings"]) button.bg-slate-900,
+body:has(a[href="/trainings"]) a.bg-slate-900 {
+  background-color: var(--participant-primary) !important;
+}
+
+body:has(a[href="/trainings"]) button.hover\:bg-slate-800:hover,
+body:has(a[href="/trainings"]) a.hover\:bg-slate-800:hover {
+  background-color: var(--participant-primary-hover) !important;
+}
+
+body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
+  background-image: linear-gradient(135deg, #0077ff 0%, #1685ff 58%, #36c7e8 100%) !important;
+}
+
+body:has(a[href="/trainings"]) .bg-\[\#07375c\]\/10 {
+  background-color: rgba(0, 119, 255, 0.10) !important;
+}
+
+body:has(a[href="/trainings"]) .bg-\[\#07375c\]\/5 {
+  background-color: rgba(0, 119, 255, 0.05) !important;
+}
+
+body:has(a[href="/trainings"]) .text-blue-600,
+body:has(a[href="/trainings"]) .text-blue-700 {
+  color: #0077ff !important;
+}
+
+body:has(a[href="/trainings"]) .bg-blue-50 {
+  background-color: #eef6ff !important;
+}
+
+body:has(a[href="/trainings"]) .bg-blue-100 {
+  background-color: #dfeeff !important;
+}
+
+body:has(a[href="/trainings"]) .border-blue-200,
+body:has(a[href="/trainings"]) .border-blue-300 {
+  border-color: #c7ddfb !important;
+}
+
+body:has(a[href="/trainings"]) aside.bg-slate-50,
+body:has(a[href="/trainings"]) nav.bg-slate-50 {
+  background-color: #f7f9fc !important;
+}
+
+body:has(a[href="/trainings"]) header.bg-white\/95 {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+}
+
 @media print {
   @page {
     size: A4 landscape;
