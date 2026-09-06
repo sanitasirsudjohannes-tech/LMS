@@ -76,10 +76,38 @@
 }
 
 /* Dark mode is intentionally minimal here. The main participant theme in globals.css
- * owns dark surfaces, text, borders, semantic states, and action colors. Only embedded
- * media needs an explicit dark frame because its source classes are intentionally dark.
+ * owns dark surfaces, text, borders, semantic states, and action colors.
  */
 @media (prefers-color-scheme: dark) {
+  /* Welcome hero: use a deeper blue gradient that belongs to the dark participant shell. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
+    background-image: linear-gradient(135deg, #0b1f3a 0%, #123d70 55%, #0b5d78 100%) !important;
+    border-color: #24415f !important;
+  }
+
+  /* Hero secondary copy/icons should be cool white/blue instead of emerald-tinted. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50\/90,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-100 {
+    color: #dbeafe !important;
+  }
+
+  /* Statistic tiles stay readable but no longer look like bright glass cards. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .bg-white\/10 {
+    background-color: rgb(8 17 31 / 0.32) !important;
+  }
+
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .border-white\/15,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .border-white\/20 {
+    border-color: rgb(147 197 253 / 0.22) !important;
+  }
+
+  /* Decorative glow remains subtle in dark mode. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .bg-cyan-300\/10 {
+    background-color: rgb(34 211 238 / 0.08) !important;
+  }
+
+  /* Embedded media keeps an intentional dark frame. */
   body:has(a[href="/trainings"]) .bg-slate-900:has(> iframe),
   body:has(a[href="/trainings"]) .bg-slate-950:has(> iframe) {
     background-color: #0b111b !important;
