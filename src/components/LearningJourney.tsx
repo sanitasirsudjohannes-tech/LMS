@@ -28,7 +28,7 @@ export default function LearningJourney({ activeStage, completed = {}, compact =
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Alur Pembelajaran</p>
           {!compact && <p className="mt-0.5 text-xs text-slate-500">Ikuti setiap tahap secara berurutan sampai sertifikat tersedia.</p>}
         </div>
-        <span className="rounded-full bg-[#07375c]/10 px-2.5 py-1 text-[10px] font-bold text-[#07375c] dark:bg-sky-400/10 dark:text-sky-300">
+        <span className="rounded-full bg-[#0077ff]/10 px-2.5 py-1 text-[10px] font-bold text-[#0077ff] dark:bg-[#4da3ff]/10 dark:text-[#4da3ff]">
           Tahap {activeIndex + 1}/4
         </span>
       </div>
@@ -50,14 +50,14 @@ export default function LearningJourney({ activeStage, completed = {}, compact =
                   done
                     ? 'border-emerald-600 bg-emerald-600 text-white'
                     : active
-                      ? 'border-[#07375c] bg-[#07375c] text-white shadow-sm dark:border-sky-400 dark:bg-sky-400 dark:text-slate-950'
+                      ? 'border-[#0077ff] bg-[#0077ff] text-white shadow-sm dark:border-[#4da3ff] dark:bg-[#4da3ff] dark:text-[#08111f]'
                       : unlocked
                         ? 'border-slate-300 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'
                         : 'border-slate-200 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-600'
                 }`}>
                   {done ? <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : unlocked ? <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                 </div>
-                <span className={`truncate text-[9px] font-semibold sm:text-[10px] ${active ? 'text-[#07375c] dark:text-sky-300' : done ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500'}`}>{stage.label}</span>
+                <span className={`truncate text-[9px] font-semibold sm:text-[10px] ${active ? 'text-[#0077ff] dark:text-[#4da3ff]' : done ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500'}`}>{stage.label}</span>
               </div>
             </div>
           );
