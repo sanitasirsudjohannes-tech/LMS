@@ -46,7 +46,6 @@ export default function LoginPage() {
           lower.includes('grant') ||
           authError.status === 400
         ) {
-          // Panggil RPC database untuk mengecek keberadaan email tanpa terhalang RLS
           const { data: isRegistered } = await supabase.rpc('check_email_exists', { p_email: email.trim() });
 
           if (isRegistered === false) {
@@ -133,75 +132,80 @@ export default function LoginPage() {
           <p className="text-xs text-sky-100/70">LMS Online & Pelatihan Terpadu RSUD Johannes</p>
         </div>
 
-        <div className="p-6 sm:p-10 lg:p-12">
-          <div className="mx-auto max-w-md">
-            <div className="mb-8 flex flex-col items-center text-center">
-              <LontarLogo variant="full" priority className="mb-5 max-w-[210px] rounded-xl" />
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Masuk</h2>
-              <p className="mt-2 text-sm text-slate-500">Gunakan email dan kata sandi akun Anda.</p>
-            </div>
+        <div className="overflow-hidden">
+          <div className="w-full overflow-hidden border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+            <LontarLogo variant="full" priority className="block w-full max-w-none rounded-none" />
+          </div>
 
-            {error && (
-              <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">Alamat Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nama@email.com"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#07375c]/25 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
-                  />
-                </div>
+          <div className="px-6 pb-6 pt-7 sm:px-10 sm:pb-10 sm:pt-8 lg:px-12 lg:pb-12">
+            <div className="mx-auto max-w-md">
+              <div className="mb-8 text-center">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Masuk</h2>
+                <p className="mt-2 text-sm text-slate-500">Gunakan email dan kata sandi akun Anda.</p>
               </div>
 
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Password</label>
-                  <Link href="/forgot-password" className="text-[11px] font-medium text-slate-500 hover:text-[#07375c] dark:hover:text-sky-300">Lupa Password?</Link>
+              {error && (
+                <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                  <span>{error}</span>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-11 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#07375c]/25 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              )}
+
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">Alamat Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="nama@email.com"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#07375c]/25 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
+                    />
+                  </div>
                 </div>
+
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Password</label>
+                    <Link href="/forgot-password" className="text-[11px] font-medium text-slate-500 hover:text-[#07375c] dark:hover:text-sky-300">Lupa Password?</Link>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-11 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#07375c]/25 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                      aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#07375c] py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#052c4a] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? <span>Memproses...</span> : <><span>Masuk Sekarang</span><ArrowRight className="h-4 w-4" /></>}
+                </button>
+              </form>
+
+              <div className="mt-7 border-t border-slate-100 pt-5 text-center text-xs text-slate-500 dark:border-slate-800">
+                Belum memiliki akun?{' '}
+                <Link href="/register" className="font-semibold text-[#07375c] hover:underline dark:text-sky-300">Daftar Akun Baru</Link>
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#07375c] py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#052c4a] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? <span>Memproses...</span> : <><span>Masuk Sekarang</span><ArrowRight className="h-4 w-4" /></>}
-              </button>
-            </form>
-
-            <div className="mt-7 border-t border-slate-100 pt-5 text-center text-xs text-slate-500 dark:border-slate-800">
-              Belum memiliki akun?{' '}
-              <Link href="/register" className="font-semibold text-[#07375c] hover:underline dark:text-sky-300">Daftar Akun Baru</Link>
             </div>
           </div>
         </div>
