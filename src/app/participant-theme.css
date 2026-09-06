@@ -1,102 +1,88 @@
-/* Final participant color normalization.
- * Keeps the participant experience on one visual language:
+/* Participant color refinement.
+ * Light-mode normalization is intentionally isolated from dark mode.
  * blue = active/primary, green = success, amber = warning, slate = neutral/locked.
- * Scoped through the participant navigation so admin UI is untouched.
  */
 
-body:has(a[href="/trainings"]) {
-  --participant-primary: #0077ff;
-  --participant-primary-hover: #0068e6;
-  --participant-primary-soft: #eaf3ff;
-  --participant-primary-border: #bfd9ff;
-}
-
-/* Primary actions and active-stage icons must never look charcoal in light mode. */
-body:has(a[href="/trainings"]) a.bg-slate-950:not(:has(> iframe)),
-body:has(a[href="/trainings"]) button.bg-slate-950,
-body:has(a[href="/trainings"]) div.bg-slate-950:not(:has(> iframe)) {
-  background-color: var(--participant-primary) !important;
-  color: #ffffff !important;
-}
-
-body:has(a[href="/trainings"]) a.hover\:bg-slate-800:hover,
-body:has(a[href="/trainings"]) button.hover\:bg-slate-800:hover {
-  background-color: var(--participant-primary-hover) !important;
-}
-
-/* Certificate is a primary destination, not a warning state. */
-body:has(a[href="/trainings"]) a.bg-amber-500,
-body:has(a[href="/trainings"]) a.bg-amber-600,
-body:has(a[href="/trainings"]) button.bg-amber-500,
-body:has(a[href="/trainings"]) button.bg-amber-600,
-body:has(a[href="/trainings"]) div.bg-amber-500 {
-  background-color: var(--participant-primary) !important;
-  color: #ffffff !important;
-}
-
-body:has(a[href="/trainings"]) a.hover\:bg-amber-500:hover,
-body:has(a[href="/trainings"]) a.hover\:bg-amber-600:hover,
-body:has(a[href="/trainings"]) button.hover\:bg-amber-500:hover,
-body:has(a[href="/trainings"]) button.hover\:bg-amber-600:hover {
-  background-color: var(--participant-primary-hover) !important;
-}
-
-/* Active training selection uses the same blue family; emerald stays reserved for completed/success states. */
-body:has(a[href="/trainings"]) button.bg-emerald-50 {
-  background-color: var(--participant-primary-soft) !important;
-  border-color: var(--participant-primary-border) !important;
-}
-
-body:has(a[href="/trainings"]) button.bg-emerald-50 .bg-emerald-600 {
-  background-color: var(--participant-primary) !important;
-}
-
-body:has(a[href="/trainings"]) button.bg-emerald-50 .border-emerald-600 {
-  border-color: var(--participant-primary) !important;
-}
-
-/* Overall learning progress is navigation/progress, therefore primary blue. */
-body:has(a[href="/trainings"]) .from-emerald-600.to-teal-500 {
-  background-image: linear-gradient(90deg, var(--participant-primary), #36c7e8) !important;
-}
-
-/* Embedded content should have a light frame in light mode, not a charcoal card. */
-body:has(a[href="/trainings"]) .bg-slate-900:has(> iframe),
-body:has(a[href="/trainings"]) .bg-slate-950:has(> iframe) {
-  background-color: #eef4fb !important;
-  border-color: var(--participant-primary-border) !important;
-}
-
-/* Keep disabled and locked elements neutral. */
-body:has(a[href="/trainings"]) button:disabled.bg-slate-200,
-body:has(a[href="/trainings"]) .cursor-not-allowed.bg-slate-200 {
-  background-color: #e6edf5 !important;
-  color: #94a3b8 !important;
-}
-
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   body:has(a[href="/trainings"]) {
-    --participant-primary: #4da3ff;
-    --participant-primary-hover: #71b5ff;
-    --participant-primary-soft: #102b4d;
-    --participant-primary-border: #285787;
+    --participant-primary: #0077ff;
+    --participant-primary-hover: #0068e6;
+    --participant-primary-soft: #eaf3ff;
+    --participant-primary-border: #bfd9ff;
   }
 
-  body:has(a[href="/trainings"]) a.dark\:bg-white,
-  body:has(a[href="/trainings"]) button.dark\:bg-white,
-  body:has(a[href="/trainings"]) div.dark\:bg-white {
+  /* Primary actions and active-stage icons should use the participant blue in light mode. */
+  body:has(a[href="/trainings"]) a.bg-slate-950:not(:has(> iframe)),
+  body:has(a[href="/trainings"]) button.bg-slate-950,
+  body:has(a[href="/trainings"]) div.bg-slate-950:not(:has(> iframe)) {
     background-color: var(--participant-primary) !important;
-    color: #08111f !important;
+    color: #ffffff !important;
   }
 
+  body:has(a[href="/trainings"]) a.hover\:bg-slate-800:hover,
+  body:has(a[href="/trainings"]) button.hover\:bg-slate-800:hover {
+    background-color: var(--participant-primary-hover) !important;
+  }
+
+  /* Certificate actions use the same primary family; amber remains for warnings/statuses. */
+  body:has(a[href="/trainings"]) a.bg-amber-500,
+  body:has(a[href="/trainings"]) a.bg-amber-600,
+  body:has(a[href="/trainings"]) button.bg-amber-500,
+  body:has(a[href="/trainings"]) button.bg-amber-600,
+  body:has(a[href="/trainings"]) div.bg-amber-500 {
+    background-color: var(--participant-primary) !important;
+    color: #ffffff !important;
+  }
+
+  body:has(a[href="/trainings"]) a.hover\:bg-amber-500:hover,
+  body:has(a[href="/trainings"]) a.hover\:bg-amber-600:hover,
+  body:has(a[href="/trainings"]) button.hover\:bg-amber-500:hover,
+  body:has(a[href="/trainings"]) button.hover\:bg-amber-600:hover {
+    background-color: var(--participant-primary-hover) !important;
+  }
+
+  /* Selected training is navigation state, so it uses blue rather than success green. */
+  body:has(a[href="/trainings"]) button.bg-emerald-50 {
+    background-color: var(--participant-primary-soft) !important;
+    border-color: var(--participant-primary-border) !important;
+  }
+
+  body:has(a[href="/trainings"]) button.bg-emerald-50 .bg-emerald-600 {
+    background-color: var(--participant-primary) !important;
+  }
+
+  body:has(a[href="/trainings"]) button.bg-emerald-50 .border-emerald-600 {
+    border-color: var(--participant-primary) !important;
+  }
+
+  /* Overall learning progress uses primary blue/cyan. */
+  body:has(a[href="/trainings"]) .from-emerald-600.to-teal-500 {
+    background-image: linear-gradient(90deg, var(--participant-primary), #36c7e8) !important;
+  }
+
+  /* Embedded content gets a light frame only in light mode. */
+  body:has(a[href="/trainings"]) .bg-slate-900:has(> iframe),
+  body:has(a[href="/trainings"]) .bg-slate-950:has(> iframe) {
+    background-color: #eef4fb !important;
+    border-color: var(--participant-primary-border) !important;
+  }
+
+  /* Locked/disabled states stay neutral. */
+  body:has(a[href="/trainings"]) button:disabled.bg-slate-200,
+  body:has(a[href="/trainings"]) .cursor-not-allowed.bg-slate-200 {
+    background-color: #e6edf5 !important;
+    color: #94a3b8 !important;
+  }
+}
+
+/* Dark mode is intentionally minimal here. The main participant theme in globals.css
+ * owns dark surfaces, text, borders, semantic states, and action colors. Only embedded
+ * media needs an explicit dark frame because its source classes are intentionally dark.
+ */
+@media (prefers-color-scheme: dark) {
   body:has(a[href="/trainings"]) .bg-slate-900:has(> iframe),
   body:has(a[href="/trainings"]) .bg-slate-950:has(> iframe) {
     background-color: #0b111b !important;
     border-color: #273449 !important;
-  }
-
-  body:has(a[href="/trainings"]) button.bg-emerald-50 {
-    background-color: var(--participant-primary-soft) !important;
-    border-color: var(--participant-primary-border) !important;
   }
 }
