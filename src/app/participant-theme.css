@@ -73,38 +73,108 @@
     background-color: #e6edf5 !important;
     color: #94a3b8 !important;
   }
-}
 
-/* Dark mode is intentionally minimal here. The main participant theme in globals.css
- * owns dark surfaces, text, borders, semantic states, and action colors.
- */
-@media (prefers-color-scheme: dark) {
-  /* Welcome hero: use a deeper blue gradient that belongs to the dark participant shell. */
+  /* Dashboard welcome card follows the Admin "PANEL PENGELOLA • LONTAR" visual language. */
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
-    background-image: linear-gradient(135deg, #0b1f3a 0%, #123d70 55%, #0b5d78 100%) !important;
-    border-color: #24415f !important;
+    background-image: none !important;
+    background-color: #eff8ff !important;
+    color: #0f172a !important;
+    margin: 1rem !important;
+    border: 1px solid #dbeafe !important;
+    border-radius: 1rem !important;
   }
 
-  /* Hero secondary copy/icons should be cool white/blue instead of emerald-tinted. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .border-white\/20,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .border-white\/15 {
+    border-color: #bfdbfe !important;
+  }
+
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .bg-white\/10 {
+    background-color: #ffffff !important;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
+  }
+
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50,
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50\/90,
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-100 {
-    color: #dbeafe !important;
+    color: #475569 !important;
   }
 
-  /* Statistic tiles stay readable but no longer look like bright glass cards. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 > .pointer-events-none {
+    display: none !important;
+  }
+
+  /* "Pelatihan Saya" header uses the same panel treatment instead of a full navy banner. */
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] {
+    background-color: #eff8ff !important;
+    color: #0f172a !important;
+    border: 1px solid #dbeafe !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
+  }
+
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-200,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100\/80 {
+    color: #64748b !important;
+  }
+
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .bg-white\/10 {
+    background-color: #ffffff !important;
+    border: 1px solid #dbeafe !important;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
+  }
+}
+
+/* Dark mode follows the established Admin visual language. */
+@media (prefers-color-scheme: dark) {
+  /* Dashboard welcome card mirrors Admin's dark panel: slate shell + muted sky inner panel. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
+    background-image: none !important;
+    background-color: rgb(8 47 73 / 0.4) !important;
+    color: #f8fafc !important;
+    margin: 1rem !important;
+    border: 1px solid rgb(12 74 110 / 0.6) !important;
+    border-radius: 1rem !important;
+  }
+
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-50\/90,
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .text-emerald-100 {
+    color: #94a3b8 !important;
+  }
+
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .bg-white\/10 {
-    background-color: rgb(8 17 31 / 0.32) !important;
+    background-color: rgb(15 23 42 / 0.72) !important;
   }
 
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .border-white\/15,
   body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .border-white\/20 {
-    border-color: rgb(147 197 253 / 0.22) !important;
+    border-color: #334155 !important;
   }
 
-  /* Decorative glow remains subtle in dark mode. */
-  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 .bg-cyan-300\/10 {
-    background-color: rgb(34 211 238 / 0.08) !important;
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 > .pointer-events-none {
+    display: none !important;
+  }
+
+  /* "Pelatihan Saya" header matches the same Admin-style dark panel. */
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] {
+    background-color: rgb(8 47 73 / 0.4) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgb(12 74 110 / 0.6) !important;
+    border-radius: 1rem !important;
+    box-shadow: none !important;
+  }
+
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-200,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100,
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .text-sky-100\/80 {
+    color: #94a3b8 !important;
+  }
+
+  body:has(a[href="/trainings"]) section.bg-\[\#07375c\] .bg-white\/10 {
+    background-color: rgb(15 23 42 / 0.72) !important;
+    border: 1px solid #334155 !important;
   }
 
   /* Embedded media keeps an intentional dark frame. */
