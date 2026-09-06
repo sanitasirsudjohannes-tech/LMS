@@ -34,7 +34,7 @@ export default function TrainingsPage() {
         if (currentUser.role === 'admin') return void router.push('/admin');
         setUser(currentUser);
 
-        const trainings = StorageAPI.getTrainings().filter(isTrainingAvailable);
+        const trainings = StorageAPI.getTrainings().filter(training => isTrainingAvailable(training));
         const view = trainings.map(training => {
           const pre = StorageAPI.getTestAttempts(currentUser.id, 'pretest', training.id);
           const post = StorageAPI.getTestAttempts(currentUser.id, 'posttest', training.id);
