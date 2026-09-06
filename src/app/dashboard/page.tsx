@@ -1,25 +1,30 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { useRouter } from 'next/navigation';
+import {
+  ArrowRight,
+  Award,
+  BookOpen,
+  Building2,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  Clock3,
+  FileCheck2,
+  GraduationCap,
+  Lock,
+  PlayCircle,
+  Sliders,
+  Sparkles,
+  Trophy,
+} from 'lucide-react';
+import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
-import { UserProfile, Training, Material, TestAttempt, MaterialProgress, Certificate } from '@/types';
-import {
-  FileCheck2,
-  BookOpen,
-  GraduationCap,
-  Award,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
-  Sliders,
-  Check,
-  Building2
-} from 'lucide-react';
 import { isTrainingAvailable } from '@/lib/utils';
+import { Certificate, Material, MaterialProgress, TestAttempt, Training, UserProfile } from '@/types';
 
 function formatPosttestOpening(iso: string): string {
   return new Date(iso).toLocaleString('id-ID', {
@@ -29,8 +34,17 @@ function formatPosttestOpening(iso: string): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: false,
   }) + ' WITA';
+}
+
+function formatTrainingDate(value?: string | null): string {
+  if (!value) return '';
+  return new Date(value).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 async function getServerOffsetMs(): Promise<number> {
@@ -74,7 +88,7 @@ export default function DashboardPage() {
       setServerOffsetMs(0);
     }
 
-    const mats = StorageAPI.getMaterials(tr.id).filter(m => m.active);
+    const mats = StorageAPI.getMaterials(tr.id).filter((m) => m.active);
     setMaterials(mats);
 
     const pre = StorageAPI.getTestAttempts(userId, 'pretest', tr.id);
@@ -91,7 +105,7 @@ export default function DashboardPage() {
     setMaterialProgress(mp);
 
     let cert = StorageAPI.getCertificateForUser(userId, tr.id);
-    const hasPassed = post.some(attempt => attempt.score >= tr.passing_score);
+    const hasPassed = post.some((attempt) => attempt.score >= tr.passing_score);
     if (hasPassed && !cert) {
       try {
         cert = await StorageAPI.ensureMyCertificate(tr.id);
@@ -118,13 +132,13 @@ export default function DashboardPage() {
           router.push('/admin');
           return;
         }
-        setCurrentUser(user);
 
-        const listTr = StorageAPI.getTrainings().filter(training => isTrainingAvailable(training));
+        setCurrentUser(user);
+        const listTr = StorageAPI.getTrainings().filter((training) => isTrainingAvailable(training));
         setTrainings(listTr);
 
         const previouslySelected = StorageAPI.getTraining();
-        const initialTr = listTr.find(training => training.id === previouslySelected?.id) || listTr[0];
+        const initialTr = listTr.find((training) => training.id === previouslySelected?.id) || listTr[0];
         setSelectedTraining(initialTr);
 
         if (initialTr) {
@@ -136,6 +150,7 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
+
     void load();
   }, [router]);
 
@@ -145,11 +160,18 @@ export default function DashboardPage() {
     await loadTrainingDetails(currentUser.id, tr);
   };
 
+  const completedMaterialIds = useMemo(
+    () => materialProgress.filter((p) => p.completed_at).map((p) => p.material_id),
+    [materialProgress],
+  );
+
   if (loadError) {
     return (
-      <div className="max-w-xl mx-auto py-12 text-center space-y-4">
+      <div className="mx-auto max-w-xl py-12 text-center space-y-4">
         <p className="text-sm text-red-700 dark:text-red-300">{loadError}</p>
-        <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold">Coba Lagi</button>
+        <button type="button" onClick={() => window.location.reload()} className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white">
+          Coba Lagi
+        </button>
       </div>
     );
   }
@@ -163,19 +185,18 @@ export default function DashboardPage() {
   }
 
   const hasCompletedPretest = !!pretestAttempt;
-  const completedMaterialIds = materialProgress.filter(p => p.completed_at).map(p => p.material_id);
-  const completedMaterialsCount = materials.filter(m => completedMaterialIds.includes(m.id)).length;
+  const completedMaterialsCount = materials.filter((m) => completedMaterialIds.includes(m.id)).length;
   const hasCompletedAllMaterials = materials.length === 0 || completedMaterialsCount === materials.length;
   const bestPosttestScore = posttestAttempts.reduce((max, a) => Math.max(max, a.score), 0);
   const passingScore = selectedTraining?.passing_score || 80;
-  const isPassedPosttest = posttestAttempts.some(a => a.score >= passingScore);
+  const isPassedPosttest = posttestAttempts.some((a) => a.score >= passingScore);
   const hasCertificate = !!certificate;
   const posttestOpeningMs = selectedTraining?.posttest_start_at ? new Date(selectedTraining.posttest_start_at).getTime() : null;
   const isPosttestTimeLocked = Boolean(
     selectedTraining?.posttest_start_at &&
-    posttestOpeningMs !== null &&
-    Number.isFinite(posttestOpeningMs) &&
-    Date.now() + serverOffsetMs < posttestOpeningMs
+      posttestOpeningMs !== null &&
+      Number.isFinite(posttestOpeningMs) &&
+      Date.now() + serverOffsetMs < posttestOpeningMs,
   );
   const posttestOpeningLabel = selectedTraining?.posttest_start_at ? formatPosttestOpening(selectedTraining.posttest_start_at) : '';
 
@@ -189,17 +210,17 @@ export default function DashboardPage() {
 
   let ctaLink = '/pretest';
   let ctaText = 'Mulai Pre-Test';
-  let ctaSub = 'Wajib diselesaikan sebelum membuka materi';
+  let ctaSub = 'Langkah pertama sebelum membuka materi';
   let ctaDisabled = false;
 
   if (!hasCompletedPretest) {
     ctaLink = '/pretest';
     ctaText = 'Mulai Pre-Test';
-    ctaSub = 'Langkah 1: Kerjakan tes awal';
+    ctaSub = 'Kerjakan tes awal untuk memulai pelatihan';
   } else if (!hasCompletedAllMaterials) {
-    const nextMat = materials.find(m => !completedMaterialIds.includes(m.id)) || materials[0];
+    const nextMat = materials.find((m) => !completedMaterialIds.includes(m.id)) || materials[0];
     ctaLink = nextMat ? `/material/${nextMat.id}` : '#';
-    ctaText = nextMat ? `Lanjut ${nextMat.title.split(':')[0] || 'Materi'}` : 'Semua Materi Selesai';
+    ctaText = nextMat ? `Lanjutkan ${nextMat.title.split(':')[0] || 'Materi'}` : 'Semua Materi Selesai';
     ctaSub = `Materi ${completedMaterialsCount + 1} dari ${materials.length}`;
   } else if (!isPassedPosttest && isPosttestTimeLocked) {
     ctaLink = '#';
@@ -209,141 +230,334 @@ export default function DashboardPage() {
   } else if (!isPassedPosttest) {
     ctaLink = '/posttest';
     ctaText = 'Mulai Post-Test';
-    ctaSub = `Passing grade minimum: ${passingScore}`;
+    ctaSub = `Nilai kelulusan minimum ${passingScore}`;
   } else if (hasCertificate) {
     ctaLink = '/certificate';
-    ctaText = 'Unduh Sertifikat PDF';
-    ctaSub = 'Selamat! Pelatihan telah selesai diselesaikan';
+    ctaText = 'Lihat Sertifikat';
+    ctaSub = 'Pelatihan selesai. Sertifikat Anda sudah tersedia';
   } else {
     ctaLink = '/certificates';
     ctaText = 'Cek Arsip Sertifikat';
-    ctaSub = 'Anda lulus; sertifikat belum diterbitkan oleh sistem';
+    ctaSub = 'Anda sudah lulus; sertifikat sedang menunggu penerbitan';
   }
 
+  const trainingPeriod = selectedTraining
+    ? [formatTrainingDate(selectedTraining.start_date), formatTrainingDate(selectedTraining.end_date)].filter(Boolean).join(' – ')
+    : '';
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6 py-2">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-        <div className="flex items-center gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60 p-3.5">
-          <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm"><Building2 className="w-5 h-5" /></div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">LONTAR</p>
-            <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">RSUD Prof. Dr. W.Z. Johannes Kupang</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
-          <div>
-            <span className="text-xs text-slate-500 font-medium">Selamat datang,</span>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{currentUser.full_name}</h1>
-            <p className="text-xs text-slate-500 mt-0.5">{currentUser.institution} {currentUser.nip_nik ? `• NIP: ${currentUser.nip_nik}` : ''}</p>
-          </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 w-fit">Peserta Pelatihan</span>
-        </div>
-
-        <div className="space-y-3 pt-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Daftar Pelatihan Yang Tersedia ({trainings.length})</span>
-            <span className="text-[11px] text-slate-400">Pilih untuk mengikuti</span>
-          </div>
-
-          {trainings.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3">
-              {trainings.map(t => {
-                const isSelected = selectedTraining?.id === t.id;
-                return (
-                  <div key={t.id} onClick={() => handleSelectTraining(t)} className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${isSelected ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 shadow-sm ring-1 ring-slate-900 dark:ring-slate-100' : 'bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold leading-tight">{t.title}</h3>
-                        {isSelected && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-white">Pelatihan Dipilih</span>}
-                      </div>
-                      <p className={`text-xs ${isSelected ? 'opacity-80' : 'text-slate-500'} line-clamp-1`}>{t.description || 'Tidak ada deskripsi singkat.'}</p>
-                      {(t.start_date || t.end_date) && <div className={`text-[11px] font-mono mt-1 ${isSelected ? 'opacity-90' : 'text-blue-600 dark:text-blue-400'}`}>📅 Periode: {t.start_date ? new Date(t.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Awal'} - {t.end_date ? new Date(t.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Selesai'}</div>}
-                    </div>
-                    <div className="shrink-0">{isSelected ? <Check className="w-5 h-5 text-emerald-400 dark:text-emerald-600" /> : <span className="text-xs font-medium text-slate-500 hover:underline">Pilih ➔</span>}</div>
-                  </div>
-                );
-              })}
+    <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 pt-1 sm:space-y-8">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-5 py-6 text-white sm:px-8 sm:py-8">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-cyan-300/10 blur-2xl" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] backdrop-blur">
+                <Building2 className="h-3.5 w-3.5" /> LONTAR Learning Portal
+              </div>
+              <div>
+                <p className="text-sm font-medium text-emerald-50">Selamat datang kembali,</p>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{currentUser.full_name}</h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-emerald-50/90">
+                  Lanjutkan pembelajaran Anda di RSUD Prof. Dr. W.Z. Johannes Kupang dan selesaikan tahapan pelatihan sampai sertifikat.
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl p-6 text-center space-y-2">
-              <Sliders className="w-8 h-8 text-amber-500 mx-auto" />
-              <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">Belum Ada Pelatihan Aktif</h4>
-              <p className="text-xs text-amber-700 dark:text-amber-300 max-w-md mx-auto">Saat ini belum ada program pelatihan yang dipublikasikan atau diaktifkan oleh Administrator. Silakan hubungi tim diklat atau periksa kembali secara berkala.</p>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:min-w-[360px]">
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4">
+                <BookOpen className="mb-2 h-4 w-4 text-emerald-100" />
+                <p className="text-xl font-bold sm:text-2xl">{trainings.length}</p>
+                <p className="mt-0.5 text-[10px] font-medium text-emerald-50 sm:text-xs">Pelatihan</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4">
+                <Trophy className="mb-2 h-4 w-4 text-emerald-100" />
+                <p className="text-xl font-bold sm:text-2xl">{isPassedPosttest ? 1 : 0}</p>
+                <p className="mt-0.5 text-[10px] font-medium text-emerald-50 sm:text-xs">Lulus</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4">
+                <Award className="mb-2 h-4 w-4 text-emerald-100" />
+                <p className="text-xl font-bold sm:text-2xl">{hasCertificate ? 1 : 0}</p>
+                <p className="mt-0.5 text-[10px] font-medium text-emerald-50 sm:text-xs">Sertifikat</p>
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         {selectedTraining && (
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-slate-700 dark:text-slate-300">Progres Pelatihan Ini ({selectedTraining.title})</span>
-                <span className="text-slate-900 dark:text-white font-mono text-sm">{progressPercentage}%</span>
+          <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1.5fr_0.8fr] lg:gap-7">
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  <PlayCircle className="h-3.5 w-3.5" /> Sedang dipelajari
+                </span>
+                {trainingPeriod && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <CalendarDays className="h-3.5 w-3.5" /> {trainingPeriod}
+                  </span>
+                )}
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden p-0.5"><div className="bg-slate-900 dark:bg-slate-100 h-full rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }} /></div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Lanjutkan pelatihan</p>
+                <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-2xl">{selectedTraining.title}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                  {selectedTraining.description || 'Selesaikan setiap tahap secara berurutan untuk menyelesaikan pelatihan ini.'}
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-600 dark:text-slate-300">Progress keseluruhan</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300">{progressPercentage}%</span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 transition-all duration-500" style={{ width: `${progressPercentage}%` }} />
+                </div>
+                <p className="text-[11px] text-slate-400">{currentStepPoints} dari {totalSteps} tahap telah selesai</p>
+              </div>
             </div>
 
-            <div className="pt-2">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-emerald-600" />
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Langkah berikutnya</span>
+              </div>
               {ctaDisabled ? (
-                <div className="w-full py-3.5 px-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-sm flex items-center justify-between border border-slate-200 dark:border-slate-700"><div><span className="font-bold text-base block">{ctaText}</span><span className="text-xs font-normal">{ctaSub}</span></div><Lock className="w-5 h-5 shrink-0" /></div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-slate-700 dark:text-slate-200">{ctaText}</p>
+                      <p className="mt-1 text-xs leading-5">{ctaSub}</p>
+                    </div>
+                    <Lock className="mt-0.5 h-5 w-5 shrink-0" />
+                  </div>
+                </div>
               ) : (
-                <Link href={ctaLink} className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-all shadow-md flex items-center justify-between group"><div><span className="font-bold text-base block group-hover:translate-x-0.5 transition-transform">{ctaText}</span><span className="text-xs opacity-80 font-normal">{ctaSub}</span></div><ArrowRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" /></Link>
+                <Link href={ctaLink} className="group block rounded-2xl bg-slate-950 p-4 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:bg-white dark:text-slate-950">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold">{ctaText}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-300 dark:text-slate-600">{ctaSub}</p>
+                    </div>
+                    <ArrowRight className="mt-0.5 h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </Link>
               )}
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      {selectedTraining && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">Tahapan Pelatihan: {selectedTraining.title}</h3>
-          <div className="space-y-3">
-            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${hasCompletedPretest ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${hasCompletedPretest ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'}`}>{hasCompletedPretest ? <CheckCircle2 className="w-5 h-5" /> : <FileCheck2 className="w-4 h-4" />}</div>
-                <div><h4 className="text-sm font-bold text-slate-900 dark:text-white">1. Pre-Test</h4><p className="text-xs text-slate-500">{hasCompletedPretest ? `Selesai • Nilai: ${pretestAttempt?.score} / 100` : 'Wajib dikerjakan sebelum materi terbuka'}</p></div>
-              </div>
-              {hasCompletedPretest ? <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-md">Selesai ✓</span> : <Link href="/pretest" className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90">Mulai</Link>}
+      <div className="grid gap-6 lg:grid-cols-[0.82fr_1.5fr]">
+        <section className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+          <div className="mb-5 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-600">Katalog Anda</p>
+              <h2 className="mt-1 text-lg font-bold text-slate-950 dark:text-white">Pelatihan tersedia</h2>
             </div>
-
-            {materials.map((mat, idx) => {
-              const isCompleted = completedMaterialIds.includes(mat.id);
-              const isUnlocked = hasCompletedPretest && (idx === 0 || completedMaterialIds.includes(materials[idx - 1].id));
-              return (
-                <div key={mat.id} className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${isCompleted ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' : isUnlocked ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isCompleted ? 'bg-emerald-600 text-white' : isUnlocked ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}>{isCompleted ? <CheckCircle2 className="w-5 h-5" /> : isUnlocked ? <BookOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}</div>
-                    <div><h4 className="text-sm font-bold text-slate-900 dark:text-white">{idx + 2}. {mat.title}</h4><p className="text-xs text-slate-500 flex items-center gap-2"><span>Durasi min: {mat.minimum_duration_seconds} detik</span>{isCompleted && <span className="text-emerald-600 font-semibold">• Telah Dibaca</span>}</p></div>
-                  </div>
-                  {isCompleted ? <Link href={`/material/${mat.id}`} className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline">Baca Lagi</Link> : isUnlocked ? <Link href={`/material/${mat.id}`} className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90">Buka</Link> : <span className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> Terkunci</span>}
-                </div>
-              );
-            })}
-
-            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${isPassedPosttest ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' : hasCompletedAllMaterials && !isPosttestTimeLocked ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isPassedPosttest ? 'bg-emerald-600 text-white' : hasCompletedAllMaterials && !isPosttestTimeLocked ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}>{isPassedPosttest ? <CheckCircle2 className="w-5 h-5" /> : hasCompletedAllMaterials && !isPosttestTimeLocked ? <GraduationCap className="w-4 h-4" /> : <Lock className="w-4 h-4" />}</div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">{materials.length + 2}. Post-Test</h4>
-                  <p className="text-xs text-slate-500">{isPassedPosttest ? `LULUS • Nilai Terbaik: ${bestPosttestScore} / 100` : isPosttestTimeLocked ? `Belum dibuka • Mulai ${posttestOpeningLabel}` : posttestAttempts.length > 0 ? `Percobaan ${posttestAttempts.length}/${selectedTraining.max_posttest_attempts} • Nilai Terakhir: ${posttestAttempts.at(-1)?.score}` : `Passing grade: ${selectedTraining.passing_score}`}</p>
-                </div>
-              </div>
-              {isPassedPosttest ? <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-md">Lulus ✓</span> : hasCompletedAllMaterials && !isPosttestTimeLocked ? <Link href="/posttest" className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90">Mulai Test</Link> : <span className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> {isPosttestTimeLocked ? 'Belum Dibuka' : 'Terkunci'}</span>}
-            </div>
-
-            {certificateNotice && <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{certificateNotice}</div>}
-
-            <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${hasCertificate ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60' : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800 opacity-70'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${hasCertificate ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}><Award className="w-4 h-4" /></div>
-                <div><h4 className="text-sm font-bold text-slate-900 dark:text-white">{materials.length + 3}. Sertifikat Digital</h4><p className="text-xs text-slate-500">{hasCertificate ? 'Sertifikat telah diterbitkan & dapat diunduh' : isPassedPosttest ? 'Anda sudah lulus • sertifikat belum diterbitkan' : 'Tersedia setelah lulus Post-Test'}</p></div>
-              </div>
-              {hasCertificate ? <Link href="/certificate" onClick={() => certificate && StorageAPI.selectCertificate(certificate.id)} className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">Unduh PDF</Link> : <span className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> Terkunci</span>}
-            </div>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">{trainings.length}</span>
           </div>
-        </div>
-      )}
+
+          {trainings.length > 0 ? (
+            <div className="space-y-3">
+              {trainings.map((training) => {
+                const isSelected = selectedTraining?.id === training.id;
+                const period = [formatTrainingDate(training.start_date), formatTrainingDate(training.end_date)].filter(Boolean).join(' – ');
+                return (
+                  <button
+                    key={training.id}
+                    type="button"
+                    onClick={() => void handleSelectTraining(training)}
+                    className={`w-full rounded-2xl border p-4 text-left transition ${
+                      isSelected
+                        ? 'border-emerald-200 bg-emerald-50 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/70'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'}`}>
+                            <BookOpen className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="line-clamp-2 text-sm font-bold leading-5 text-slate-900 dark:text-white">{training.title}</p>
+                            {period && <p className="mt-0.5 text-[11px] text-slate-400">{period}</p>}
+                          </div>
+                        </div>
+                        <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{training.description || 'Program pembelajaran LONTAR.'}</p>
+                      </div>
+                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-transparent dark:border-slate-700'}`}>
+                        <Check className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center dark:border-amber-900/60 dark:bg-amber-950/30">
+              <Sliders className="mx-auto h-7 w-7 text-amber-500" />
+              <h3 className="mt-3 text-sm font-bold text-amber-900 dark:text-amber-200">Belum ada pelatihan aktif</h3>
+              <p className="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-300">Pelatihan yang dipublikasikan admin akan muncul di sini.</p>
+            </div>
+          )}
+        </section>
+
+        {selectedTraining && (
+          <section className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+            <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-600">Learning path</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-950 dark:text-white">Tahapan pelatihan</h2>
+              </div>
+              <p className="max-w-md text-xs leading-5 text-slate-400 sm:text-right">Ikuti setiap langkah secara berurutan. Tahap berikutnya terbuka otomatis setelah syarat sebelumnya selesai.</p>
+            </div>
+
+            <div className="space-y-3">
+              <TimelineItem
+                icon={FileCheck2}
+                title="Pre-Test"
+                description={hasCompletedPretest ? `Selesai • Nilai ${pretestAttempt?.score}/100` : 'Tes awal sebelum materi pembelajaran'}
+                state={hasCompletedPretest ? 'done' : 'active'}
+                action={hasCompletedPretest ? <StatusPill label="Selesai" /> : <SmallAction href="/pretest" label="Mulai" />}
+              />
+
+              {materials.map((mat, idx) => {
+                const isCompleted = completedMaterialIds.includes(mat.id);
+                const isUnlocked = hasCompletedPretest && (idx === 0 || completedMaterialIds.includes(materials[idx - 1].id));
+                return (
+                  <TimelineItem
+                    key={mat.id}
+                    icon={BookOpen}
+                    title={mat.title}
+                    description={isCompleted ? 'Materi selesai dibaca' : `Durasi minimum ${mat.minimum_duration_seconds} detik`}
+                    state={isCompleted ? 'done' : isUnlocked ? 'active' : 'locked'}
+                    action={
+                      isCompleted ? (
+                        <SmallAction href={`/material/${mat.id}`} label="Baca Lagi" subtle />
+                      ) : isUnlocked ? (
+                        <SmallAction href={`/material/${mat.id}`} label="Buka" />
+                      ) : (
+                        <LockedLabel />
+                      )
+                    }
+                  />
+                );
+              })}
+
+              <TimelineItem
+                icon={GraduationCap}
+                title="Post-Test"
+                description={
+                  isPassedPosttest
+                    ? `Lulus • Nilai terbaik ${bestPosttestScore}/100`
+                    : isPosttestTimeLocked
+                      ? `Dibuka ${posttestOpeningLabel}`
+                      : posttestAttempts.length > 0
+                        ? `Percobaan ${posttestAttempts.length}/${selectedTraining.max_posttest_attempts} • Nilai terakhir ${posttestAttempts.at(-1)?.score}`
+                        : `Nilai kelulusan ${selectedTraining.passing_score}`
+                }
+                state={isPassedPosttest ? 'done' : hasCompletedAllMaterials && !isPosttestTimeLocked ? 'active' : 'locked'}
+                action={
+                  isPassedPosttest ? (
+                    <StatusPill label="Lulus" />
+                  ) : hasCompletedAllMaterials && !isPosttestTimeLocked ? (
+                    <SmallAction href="/posttest" label="Mulai" />
+                  ) : (
+                    <LockedLabel label={isPosttestTimeLocked ? 'Belum Dibuka' : 'Terkunci'} />
+                  )
+                }
+              />
+
+              {certificateNotice && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  {certificateNotice}
+                </div>
+              )}
+
+              <TimelineItem
+                icon={Award}
+                title="Sertifikat Digital"
+                description={hasCertificate ? 'Sertifikat tersedia untuk dilihat dan diunduh' : isPassedPosttest ? 'Menunggu penerbitan sertifikat' : 'Tersedia setelah lulus Post-Test'}
+                state={hasCertificate ? 'certificate' : 'locked'}
+                action={
+                  hasCertificate ? (
+                    <Link
+                      href="/certificate"
+                      onClick={() => certificate && StorageAPI.selectCertificate(certificate.id)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-amber-600"
+                    >
+                      Lihat <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <LockedLabel />
+                  )
+                }
+              />
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
+}
+
+type TimelineState = 'done' | 'active' | 'locked' | 'certificate';
+
+type TimelineItemProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  state: TimelineState;
+  action: React.ReactNode;
+};
+
+function TimelineItem({ icon: Icon, title, description, state, action }: TimelineItemProps) {
+  const style = {
+    done: 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/70 dark:bg-emerald-950/25',
+    active: 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900',
+    locked: 'border-slate-200/80 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/30',
+    certificate: 'border-amber-200 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/25',
+  }[state];
+
+  const iconStyle = {
+    done: 'bg-emerald-600 text-white',
+    active: 'bg-slate-950 text-white dark:bg-white dark:text-slate-950',
+    locked: 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500',
+    certificate: 'bg-amber-500 text-white',
+  }[state];
+
+  return (
+    <div className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 sm:p-4 ${style}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconStyle}`}>
+          {state === 'done' ? <CheckCircle2 className="h-5 w-5" /> : state === 'locked' ? <Lock className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+        </div>
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
+          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p>
+        </div>
+      </div>
+      <div className="shrink-0">{action}</div>
+    </div>
+  );
+}
+
+function StatusPill({ label }: { label: string }) {
+  return <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"><CheckCircle2 className="h-3 w-3" />{label}</span>;
+}
+
+function SmallAction({ href, label, subtle = false }: { href: string; label: string; subtle?: boolean }) {
+  return (
+    <Link href={href} className={subtle ? 'text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-300' : 'inline-flex items-center gap-1 rounded-lg bg-slate-950 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950'}>
+      {label}{!subtle && <ArrowRight className="h-3 w-3" />}
+    </Link>
+  );
+}
+
+function LockedLabel({ label = 'Terkunci' }: { label?: string }) {
+  return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400"><Lock className="h-3 w-3" />{label}</span>;
 }
