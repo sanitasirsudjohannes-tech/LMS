@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import './participant-theme.css';
 import './app-theme.css';
 import '@loadingio/loading-bar/dist/loading-bar.css';
 import Navbar from '@/components/Navbar';
