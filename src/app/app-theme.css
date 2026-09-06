@@ -1,0 +1,142 @@
+/*
+ * LONTAR global color system
+ * Light mode follows the current participant visual language.
+ * Dark mode follows the existing admin slate palette.
+ * This file is loaded last so every surface shares one predictable theme.
+ */
+
+:root {
+  --lontar-primary: #0077ff;
+  --lontar-primary-hover: #0068e6;
+  --lontar-primary-soft: #eaf3ff;
+  --lontar-accent: #36c7e8;
+  --lontar-bg: #f5f8fc;
+  --lontar-surface: #ffffff;
+  --lontar-surface-soft: #f7f9fc;
+  --lontar-surface-raised: #eef4fb;
+  --lontar-border: #dfe7f1;
+  --lontar-text: #172033;
+  --lontar-text-secondary: #445268;
+  --lontar-muted: #6f7f91;
+}
+
+@media (prefers-color-scheme: light) {
+  html { color-scheme: light; }
+
+  body {
+    background: var(--lontar-bg) !important;
+    color: var(--lontar-text) !important;
+  }
+
+  /* Shared shells and neutral surfaces. */
+  body .bg-slate-50 { background-color: var(--lontar-surface-soft) !important; }
+  body .bg-slate-100 { background-color: var(--lontar-surface-raised) !important; }
+  body .bg-white { background-color: var(--lontar-surface) !important; }
+  body .border-slate-200,
+  body .border-slate-300 { border-color: var(--lontar-border) !important; }
+
+  body .text-slate-950,
+  body .text-slate-900,
+  body .text-slate-800 { color: var(--lontar-text) !important; }
+  body .text-slate-700,
+  body .text-slate-600 { color: var(--lontar-text-secondary) !important; }
+  body .text-slate-500,
+  body .text-slate-400 { color: var(--lontar-muted) !important; }
+
+  /* Legacy brand color becomes the single application primary. */
+  body .bg-\[\#07375c\] { background-color: var(--lontar-primary) !important; }
+  body .text-\[\#07375c\] { color: var(--lontar-primary) !important; }
+  body .border-\[\#07375c\] { border-color: var(--lontar-primary) !important; }
+  body .ring-\[\#07375c\] { --tw-ring-color: var(--lontar-primary) !important; }
+  body .hover\:bg-\[\#052c4a\]:hover,
+  body .hover\:bg-\[\#0b4d7d\]:hover { background-color: var(--lontar-primary-hover) !important; }
+  body .hover\:text-\[\#07375c\]:hover { color: var(--lontar-primary-hover) !important; }
+  body .focus\:ring-\[\#07375c\]\/25:focus { --tw-ring-color: rgb(0 119 255 / 0.25) !important; }
+
+  /* Dark slate is only an action color in light mode, never a primary CTA. */
+  body a.bg-slate-950,
+  body a.bg-slate-900,
+  body button.bg-slate-950,
+  body button.bg-slate-900 {
+    background-color: var(--lontar-primary) !important;
+    color: #ffffff !important;
+  }
+  body a.hover\:bg-slate-800:hover,
+  body button.hover\:bg-slate-800:hover {
+    background-color: var(--lontar-primary-hover) !important;
+  }
+
+  /* Soft blue selection and focus language. */
+  body .bg-blue-50,
+  body .bg-blue-100,
+  body .bg-\[\#07375c\]\/10 { background-color: var(--lontar-primary-soft) !important; }
+  body .text-blue-600,
+  body .text-blue-700 { color: var(--lontar-primary) !important; }
+  body .border-blue-200,
+  body .border-blue-300 { border-color: #bfd9ff !important; }
+
+  /* Replace old beige landing/logo frame with the same light surface family. */
+  body .bg-\[\#f8f6ef\] { background-color: var(--lontar-surface-soft) !important; }
+  body .border-\[\#e6e0d2\] { border-color: var(--lontar-border) !important; }
+
+  /* Main blue/cyan gradient language. */
+  body .from-emerald-700.via-emerald-600.to-teal-600 {
+    background-image: linear-gradient(135deg, #0077ff 0%, #1685ff 58%, #36c7e8 100%) !important;
+  }
+  body .from-emerald-600.to-teal-500 {
+    background-image: linear-gradient(90deg, #0077ff, #36c7e8) !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html { color-scheme: dark; }
+
+  /* Dark mode deliberately matches the established admin palette. */
+  :root {
+    --lontar-primary: #38bdf8;
+    --lontar-primary-hover: #7dd3fc;
+    --lontar-primary-soft: #0c4a6e;
+    --lontar-accent: #22d3ee;
+    --lontar-bg: #020617;
+    --lontar-surface: #0f172a;
+    --lontar-surface-soft: #1e293b;
+    --lontar-surface-raised: #334155;
+    --lontar-border: #1e293b;
+    --lontar-text: #f8fafc;
+    --lontar-text-secondary: #cbd5e1;
+    --lontar-muted: #94a3b8;
+  }
+
+  body {
+    background: #020617 !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Neutralize the older participant-only dark tokens so participant and admin match. */
+  body:has(a[href="/trainings"]) {
+    --participant-primary: #38bdf8 !important;
+    --participant-primary-hover: #7dd3fc !important;
+    --participant-primary-soft: #0c4a6e !important;
+    --participant-accent: #22d3ee !important;
+    --participant-bg: #020617 !important;
+    --participant-surface: #0f172a !important;
+    --participant-surface-soft: #1e293b !important;
+    --participant-surface-raised: #334155 !important;
+    --participant-border: #1e293b !important;
+    --participant-text: #f8fafc !important;
+    --participant-text-secondary: #cbd5e1 !important;
+    --participant-muted: #94a3b8 !important;
+    background: #020617 !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Keep legacy brand references aligned with admin's sky accent in dark mode. */
+  body .dark\:text-sky-300 { color: #7dd3fc !important; }
+  body .dark\:bg-sky-400 { background-color: #38bdf8 !important; }
+  body .dark\:border-sky-400 { border-color: #38bdf8 !important; }
+
+  /* Participant hero uses a restrained dark blue gradient compatible with admin slate. */
+  body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
+    background-image: linear-gradient(135deg, #0f172a 0%, #0c4a6e 55%, #164e63 100%) !important;
+  }
+}
