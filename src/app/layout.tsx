@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './participant-theme.css';
+import './app-theme.css';
 import '@loadingio/loading-bar/dist/loading-bar.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -32,7 +33,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#0077ff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c111b' },
+    { media: '(prefers-color-scheme: dark)', color: '#020617' },
   ],
 };
 
