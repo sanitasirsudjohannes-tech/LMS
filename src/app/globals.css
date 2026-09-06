@@ -26,181 +26,232 @@ body {
 }
 
 /*
- * Participant-only color layer inspired by the VK Education LMS redesign.
- * The selector keys off the participant navigation item (/trainings), which
- * is not rendered in the admin shell, so admin colors stay untouched.
+ * Participant theme inspired by the VK Education LMS redesign.
+ * Admin pages do not render /trainings in their navigation, so this layer
+ * applies only to the participant shell.
  */
 body:has(a[href="/trainings"]) {
+  color-scheme: light dark;
   --participant-primary: #0077ff;
   --participant-primary-hover: #0068e6;
   --participant-primary-soft: #eaf3ff;
-  --participant-primary-softer: #f5f9ff;
-  --participant-cyan: #36c7e8;
+  --participant-accent: #36c7e8;
+  --participant-bg: #f5f8fc;
+  --participant-surface: #ffffff;
+  --participant-surface-soft: #f7f9fc;
+  --participant-surface-raised: #eef4fb;
   --participant-border: #dfe7f1;
+  --participant-text: #172033;
+  --participant-text-secondary: #445268;
   --participant-muted: #6f7f91;
-  background: #f5f8fc !important;
-  color: #172033 !important;
+  --participant-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.04);
+  background: var(--participant-bg) !important;
+  color: var(--participant-text) !important;
 }
 
 body:has(a[href="/trainings"]) > div {
-  background: #f5f8fc;
+  background: var(--participant-bg) !important;
 }
 
-body:has(a[href="/trainings"]) .bg-\[\#07375c\] {
+/* Brand color mapping */
+body:has(a[href="/trainings"]) .bg-\[\#07375c\],
+body:has(a[href="/trainings"]) button.bg-slate-900,
+body:has(a[href="/trainings"]) a.bg-slate-900 {
   background-color: var(--participant-primary) !important;
 }
 
-body:has(a[href="/trainings"]) .text-\[\#07375c\] {
+body:has(a[href="/trainings"]) .text-\[\#07375c\],
+body:has(a[href="/trainings"]) .text-blue-600,
+body:has(a[href="/trainings"]) .text-blue-700 {
   color: var(--participant-primary) !important;
 }
 
-body:has(a[href="/trainings"]) .border-\[\#07375c\] {
-  border-color: var(--participant-primary) !important;
+body:has(a[href="/trainings"]) .border-\[\#07375c\],
+body:has(a[href="/trainings"]) .border-blue-200,
+body:has(a[href="/trainings"]) .border-blue-300 {
+  border-color: color-mix(in srgb, var(--participant-primary) 24%, var(--participant-border)) !important;
 }
 
 body:has(a[href="/trainings"]) .ring-\[\#07375c\] {
   --tw-ring-color: var(--participant-primary) !important;
 }
 
-body:has(a[href="/trainings"]) .hover\:bg-\[\#052c4a\]:hover {
-  background-color: var(--participant-primary-hover) !important;
-}
-
-body:has(a[href="/trainings"]) .bg-slate-900,
-body:has(a[href="/trainings"]) button.bg-slate-900,
-body:has(a[href="/trainings"]) a.bg-slate-900 {
-  background-color: var(--participant-primary) !important;
-}
-
+body:has(a[href="/trainings"]) .hover\:bg-\[\#052c4a\]:hover,
 body:has(a[href="/trainings"]) button.hover\:bg-slate-800:hover,
 body:has(a[href="/trainings"]) a.hover\:bg-slate-800:hover {
   background-color: var(--participant-primary-hover) !important;
+}
+
+body:has(a[href="/trainings"]) .bg-\[\#07375c\]\/10,
+body:has(a[href="/trainings"]) .bg-blue-100 {
+  background-color: var(--participant-primary-soft) !important;
+}
+
+body:has(a[href="/trainings"]) .bg-\[\#07375c\]\/5,
+body:has(a[href="/trainings"]) .bg-blue-50 {
+  background-color: color-mix(in srgb, var(--participant-primary-soft) 72%, var(--participant-surface)) !important;
 }
 
 body:has(a[href="/trainings"]) .from-emerald-700.via-emerald-600.to-teal-600 {
   background-image: linear-gradient(135deg, #0077ff 0%, #1685ff 58%, #36c7e8 100%) !important;
 }
 
-body:has(a[href="/trainings"]) .bg-\[\#07375c\]\/10 {
-  background-color: rgba(0, 119, 255, 0.10) !important;
-}
-
-body:has(a[href="/trainings"]) .bg-\[\#07375c\]\/5 {
-  background-color: rgba(0, 119, 255, 0.05) !important;
-}
-
-body:has(a[href="/trainings"]) .text-blue-600,
-body:has(a[href="/trainings"]) .text-blue-700 {
-  color: #0077ff !important;
-}
-
-body:has(a[href="/trainings"]) .bg-blue-50 {
-  background-color: #eef6ff !important;
-}
-
-body:has(a[href="/trainings"]) .bg-blue-100 {
-  background-color: #dfeeff !important;
-}
-
-body:has(a[href="/trainings"]) .border-blue-200,
-body:has(a[href="/trainings"]) .border-blue-300 {
-  border-color: #c7ddfb !important;
-}
-
-/* Keep the complete participant shell light even when the device is in dark mode. */
-body:has(a[href="/trainings"]) .dark\:bg-slate-950,
-body:has(a[href="/trainings"]) .dark\:bg-slate-900 {
-  background-color: #ffffff !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:bg-slate-900\/95 {
-  background-color: rgba(255, 255, 255, 0.97) !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:bg-slate-800,
-body:has(a[href="/trainings"]) .dark\:bg-slate-800\/60 {
-  background-color: #f5f8fc !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:bg-slate-700 {
-  background-color: #eaf1f8 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:border-slate-800,
-body:has(a[href="/trainings"]) .dark\:border-slate-700,
-body:has(a[href="/trainings"]) .dark\:border-slate-600 {
-  border-color: #dfe7f1 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:ring-slate-800,
-body:has(a[href="/trainings"]) .dark\:ring-slate-700 {
-  --tw-ring-color: #dfe7f1 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:text-white,
-body:has(a[href="/trainings"]) .dark\:text-slate-100,
-body:has(a[href="/trainings"]) .dark\:text-slate-200 {
-  color: #172033 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:text-slate-300 {
-  color: #445268 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:text-slate-400 {
-  color: #6f7f91 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:hover\:bg-slate-900:hover,
-body:has(a[href="/trainings"]) .dark\:hover\:bg-slate-800:hover {
-  background-color: #eef5ff !important;
-}
-
-/* Selected/primary actions remain bright blue instead of charcoal. */
-body:has(a[href="/trainings"]) button.dark\:bg-slate-100,
-body:has(a[href="/trainings"]) a.dark\:bg-slate-100 {
-  background-color: var(--participant-primary) !important;
-  color: #ffffff !important;
-}
-
-body:has(a[href="/trainings"]) button.dark\:text-slate-900,
-body:has(a[href="/trainings"]) a.dark\:text-slate-900 {
-  color: #ffffff !important;
-}
-
-/* Status colors stay semantic, but their dark variants are softened. */
-body:has(a[href="/trainings"]) .dark\:bg-emerald-950\/60,
-body:has(a[href="/trainings"]) .dark\:bg-emerald-950\/50,
-body:has(a[href="/trainings"]) .dark\:bg-emerald-950\/30 {
-  background-color: #ecfdf5 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:bg-amber-950\/60,
-body:has(a[href="/trainings"]) .dark\:bg-amber-950\/40,
-body:has(a[href="/trainings"]) .dark\:bg-amber-950\/30 {
-  background-color: #fffbeb !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:bg-red-950\/60,
-body:has(a[href="/trainings"]) .dark\:bg-red-950\/40,
-body:has(a[href="/trainings"]) .dark\:bg-red-950\/30 {
-  background-color: #fef2f2 !important;
-}
-
-body:has(a[href="/trainings"]) .dark\:bg-blue-950\/50,
-body:has(a[href="/trainings"]) .dark\:bg-blue-950\/40 {
-  background-color: #eef6ff !important;
+/* Shared light surfaces */
+body:has(a[href="/trainings"]) header.bg-white\/95,
+body:has(a[href="/trainings"]) .bg-white {
+  background-color: var(--participant-surface) !important;
 }
 
 body:has(a[href="/trainings"]) aside.bg-slate-50,
 body:has(a[href="/trainings"]) nav.bg-slate-50,
-body:has(a[href="/trainings"]) aside.dark\:bg-slate-950 {
-  background-color: #f7f9fc !important;
+body:has(a[href="/trainings"]) .bg-slate-50 {
+  background-color: var(--participant-surface-soft) !important;
 }
 
-body:has(a[href="/trainings"]) header.bg-white\/95,
-body:has(a[href="/trainings"]) header.dark\:bg-slate-950\/95 {
-  background-color: rgba(255, 255, 255, 0.97) !important;
+body:has(a[href="/trainings"]) .bg-slate-100 {
+  background-color: var(--participant-surface-raised) !important;
+}
+
+body:has(a[href="/trainings"]) .border-slate-200,
+body:has(a[href="/trainings"]) .border-slate-300 {
+  border-color: var(--participant-border) !important;
+}
+
+body:has(a[href="/trainings"]) .text-slate-950,
+body:has(a[href="/trainings"]) .text-slate-900,
+body:has(a[href="/trainings"]) .text-slate-800 {
+  color: var(--participant-text) !important;
+}
+
+body:has(a[href="/trainings"]) .text-slate-700,
+body:has(a[href="/trainings"]) .text-slate-600 {
+  color: var(--participant-text-secondary) !important;
+}
+
+body:has(a[href="/trainings"]) .text-slate-500,
+body:has(a[href="/trainings"]) .text-slate-400 {
+  color: var(--participant-muted) !important;
+}
+
+/* Semantic colors remain meaningful in both themes. */
+body:has(a[href="/trainings"]) .bg-emerald-50,
+body:has(a[href="/trainings"]) .bg-emerald-100 {
+  background-color: #ecfdf5 !important;
+}
+
+body:has(a[href="/trainings"]) .bg-amber-50,
+body:has(a[href="/trainings"]) .bg-amber-100 {
+  background-color: #fffbeb !important;
+}
+
+body:has(a[href="/trainings"]) .bg-red-50,
+body:has(a[href="/trainings"]) .bg-red-100 {
+  background-color: #fef2f2 !important;
+}
+
+/* Follow the gadget's dark-mode preference automatically. */
+@media (prefers-color-scheme: dark) {
+  body:has(a[href="/trainings"]) {
+    --participant-primary: #4da3ff;
+    --participant-primary-hover: #71b5ff;
+    --participant-primary-soft: #102b4d;
+    --participant-accent: #48d5ef;
+    --participant-bg: #0c111b;
+    --participant-surface: #131a26;
+    --participant-surface-soft: #101722;
+    --participant-surface-raised: #1a2432;
+    --participant-border: #273449;
+    --participant-text: #f1f6fc;
+    --participant-text-secondary: #c4d0df;
+    --participant-muted: #8fa0b5;
+    --participant-shadow: 0 1px 2px rgb(0 0 0 / 0.18), 0 10px 28px rgb(0 0 0 / 0.18);
+  }
+
+  body:has(a[href="/trainings"]) header.dark\:bg-slate-950\/95,
+  body:has(a[href="/trainings"]) .dark\:bg-slate-950,
+  body:has(a[href="/trainings"]) .dark\:bg-slate-900 {
+    background-color: var(--participant-surface) !important;
+  }
+
+  body:has(a[href="/trainings"]) aside.dark\:bg-slate-950,
+  body:has(a[href="/trainings"]) .dark\:bg-slate-800,
+  body:has(a[href="/trainings"]) .dark\:bg-slate-800\/60 {
+    background-color: var(--participant-surface-soft) !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:bg-slate-700 {
+    background-color: var(--participant-surface-raised) !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:border-slate-800,
+  body:has(a[href="/trainings"]) .dark\:border-slate-700,
+  body:has(a[href="/trainings"]) .dark\:border-slate-600 {
+    border-color: var(--participant-border) !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:ring-slate-800,
+  body:has(a[href="/trainings"]) .dark\:ring-slate-700 {
+    --tw-ring-color: var(--participant-border) !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:text-white,
+  body:has(a[href="/trainings"]) .dark\:text-slate-100,
+  body:has(a[href="/trainings"]) .dark\:text-slate-200 {
+    color: var(--participant-text) !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:text-slate-300 {
+    color: var(--participant-text-secondary) !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:text-slate-400 {
+    color: var(--participant-muted) !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:hover\:bg-slate-900:hover,
+  body:has(a[href="/trainings"]) .dark\:hover\:bg-slate-800:hover {
+    background-color: var(--participant-surface-raised) !important;
+  }
+
+  body:has(a[href="/trainings"]) button.dark\:bg-slate-100,
+  body:has(a[href="/trainings"]) a.dark\:bg-slate-100 {
+    background-color: var(--participant-primary) !important;
+    color: #08111f !important;
+  }
+
+  body:has(a[href="/trainings"]) button.dark\:text-slate-900,
+  body:has(a[href="/trainings"]) a.dark\:text-slate-900 {
+    color: #08111f !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:bg-blue-950\/50,
+  body:has(a[href="/trainings"]) .dark\:bg-blue-950\/40 {
+    background-color: #102b4d !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:bg-emerald-950\/60,
+  body:has(a[href="/trainings"]) .dark\:bg-emerald-950\/50,
+  body:has(a[href="/trainings"]) .dark\:bg-emerald-950\/30 {
+    background-color: #0d3027 !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:bg-amber-950\/60,
+  body:has(a[href="/trainings"]) .dark\:bg-amber-950\/40,
+  body:has(a[href="/trainings"]) .dark\:bg-amber-950\/30 {
+    background-color: #35280d !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:bg-red-950\/60,
+  body:has(a[href="/trainings"]) .dark\:bg-red-950\/40,
+  body:has(a[href="/trainings"]) .dark\:bg-red-950\/30 {
+    background-color: #351719 !important;
+  }
+
+  body:has(a[href="/trainings"]) .dark\:text-sky-300,
+  body:has(a[href="/trainings"]) .dark\:text-blue-300,
+  body:has(a[href="/trainings"]) .dark\:text-blue-400 {
+    color: var(--participant-primary) !important;
+  }
 }
 
 @media print {
