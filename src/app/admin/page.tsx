@@ -187,40 +187,32 @@ export default function AdminOverviewPage() {
                       type="button"
                       key={t.id}
                       onClick={() => handleSelectTraining(t)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between gap-3 text-left ${
+                      className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between gap-3 text-left bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white ${
                         isSelected
-                          ? 'bg-[#07375c] text-white border-[#052c4a] shadow-md ring-1 ring-[#07375c]'
-                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                          ? 'border-sky-300 dark:border-sky-700 shadow-lg shadow-slate-200/70 dark:shadow-black/25 -translate-y-0.5'
+                          : 'border-slate-200 dark:border-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md'
                       }`}
                     >
                       <div className="w-full">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                             status === 'active'
-                              ? isSelected
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                               : status === 'draft'
-                                ? isSelected
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                                : isSelected
-                                  ? 'bg-slate-600 text-white dark:bg-slate-300 dark:text-slate-900'
-                                  : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                           }`}>
                             {getStatusLabel(t)}
                           </span>
-                          {isSelected && <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />}
+                          {isSelected && <Check className="w-4 h-4 text-sky-600 dark:text-sky-300 shrink-0" />}
                         </div>
                         <h3 className="text-sm font-bold leading-snug">{t.title}</h3>
-                        <p className={`text-xs mt-1 line-clamp-2 ${isSelected ? 'opacity-80' : 'text-slate-500'}`}>
+                        <p className="text-xs mt-1 line-clamp-2 text-slate-500 dark:text-slate-400">
                           {t.description || 'Tidak ada deskripsi'}
                         </p>
                       </div>
 
-                      <div className={`w-full pt-2 border-t text-[11px] font-mono flex items-center justify-between ${
-                        isSelected ? 'border-slate-800 dark:border-slate-200 opacity-90' : 'border-slate-200 dark:border-slate-700 text-slate-400'
-                      }`}>
+                      <div className="w-full pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px] font-mono flex items-center justify-between text-slate-400">
                         <span>Passing Score: {t.passing_score}</span>
                         <span>Percobaan: {t.max_posttest_attempts}x</span>
                       </div>
