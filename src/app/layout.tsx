@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import './participant-theme.css';
 import '@loadingio/loading-bar/dist/loading-bar.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -29,7 +30,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#07375c',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#0077ff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0c111b' },
+  ],
 };
 
 export default function RootLayout({
