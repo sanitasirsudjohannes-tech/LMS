@@ -63,8 +63,7 @@ export default function PretestPage() {
     selectAnswer(questionId, option);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!currentUser || !training) return;
     if (answeredCount < questions.length) {
       await Swal.fire({ icon: 'warning', title: 'Jawaban Belum Lengkap', text: `Masih ada ${questions.length - answeredCount} soal yang belum dijawab.`, confirmButtonText: 'Periksa Soal' });
@@ -128,7 +127,7 @@ export default function PretestPage() {
           <button onClick={handleContinueToMaterial} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#07375c] px-8 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-[#052c4a] dark:bg-sky-400 dark:text-slate-950 sm:w-auto">Lanjut ke Materi <ArrowRight className="h-4 w-4" /></button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-3 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-900 dark:text-white">Progress Jawaban</p><p className="text-[11px] text-slate-500">{answeredCount}/{questions.length} terjawab</p></div><span className="text-sm font-bold text-[#07375c] dark:text-sky-300">{progress}%</span></div>
@@ -166,11 +165,11 @@ export default function PretestPage() {
               {activeQuestion < questions.length - 1 ? (
                 <button type="button" onClick={() => setActiveQuestion(i => Math.min(questions.length - 1, i + 1))} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07375c] px-5 py-3 text-xs font-bold text-white dark:bg-sky-400 dark:text-slate-950">Berikutnya <ArrowRight className="h-4 w-4" /></button>
               ) : (
-                <button type="submit" disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07375c] px-6 py-3 text-xs font-bold text-white disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950">{submitting ? 'Mengirim...' : `Kirim Pre-Test (${answeredCount}/${questions.length})`} <ArrowRight className="h-4 w-4" /></button>
+                <button type="button" onClick={() => void handleSubmit()} disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07375c] px-6 py-3 text-xs font-bold text-white disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950">{submitting ? 'Mengirim...' : `Kirim Pre-Test (${answeredCount}/${questions.length})`} <ArrowRight className="h-4 w-4" /></button>
               )}
             </div>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );
