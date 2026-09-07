@@ -21,7 +21,9 @@ export default function MaterialsAdminPage() {
   const [description, setDescription] = useState('');
   const [content, setContent] = useState('');
   const [contentUrl, setContentUrl] = useState('');
-  const [minDuration, setMinDuration] = useState(15);
+  const [minHours, setMinHours] = useState(0);
+  const [minMinutes, setMinMinutes] = useState(0);
+  const [minSeconds, setMinSeconds] = useState(15);
   const [orderNum, setOrderNum] = useState(1);
   const [active, setActive] = useState(true);
 
@@ -69,7 +71,9 @@ export default function MaterialsAdminPage() {
     setDescription('');
     setContent('');
     setContentUrl('');
-    setMinDuration(15);
+    setMinHours(0);
+    setMinMinutes(0);
+    setMinSeconds(15);
     setOrderNum(Math.max(0, ...materials.map(material => material.order_number)) + 1);
     setActive(true);
     setIsModalOpen(true);
@@ -82,7 +86,10 @@ export default function MaterialsAdminPage() {
     setDescription(m.description || '');
     setContent(m.content);
     setContentUrl(m.content_url || '');
-    setMinDuration(m.minimum_duration_seconds);
+    const totalSeconds = Math.max(0, Number(m.minimum_duration_seconds) || 0);
+    setMinHours(Math.floor(totalSeconds / 3600));
+    setMinMinutes(Math.floor((totalSeconds % 3600) / 60));
+    setMinSeconds(totalSeconds % 60);
     setOrderNum(m.order_number);
     setActive(m.active);
     setIsModalOpen(true);
@@ -97,7 +104,9 @@ export default function MaterialsAdminPage() {
       description: description.trim(),
       content: content.trim(),
       content_url: contentUrl.trim() || undefined,
-      minimum_duration_seconds: Number(minDuration) || 0,
+      minimum_duration_seconds: (Math.max(0, Number(minHours) || 0) * 3600)
+        + (Math.min(59, Math.max(0, Number(minMinutes) || 0)) * 60)
+        + Math.min(59, Math.max(0, Number(minSeconds) || 0)),
       order_number: Number(orderNum) || 1,
       active
     };
@@ -166,6 +175,18 @@ export default function MaterialsAdminPage() {
     }
   };
 
+  const formatDurationLabel = (totalSeconds: number) => {
+    const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const seconds = safeSeconds % 60;
+    const parts: string[] = [];
+    if (hours > 0) parts.push(`${hours} jam`);
+    if (minutes > 0) parts.push(`${minutes} menit`);
+    if (seconds > 0 || parts.length === 0) parts.push(`${seconds} detik`);
+    return parts.join(' ');
+  };
+
   const selectedTrainingObj = trainings.find(t => t.id === selectedTrainingId);
 
   return (
@@ -209,7 +230,7 @@ export default function MaterialsAdminPage() {
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{m.description || m.content}</p>
                   <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-2 font-mono">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500" /> Durasi min: {m.minimum_duration_seconds}s</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500" /> Durasi min: {formatDurationLabel(m.minimum_duration_seconds)}</span>
                     {m.content_url && (() => {
                       const type = getMediaType(m.content_url);
                       return type === 'pdf' ? (
@@ -248,8 +269,25 @@ export default function MaterialsAdminPage() {
               <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Deskripsi Ringkas</label><input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ringkasan singkat materi..." className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" /></div>
               <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Konten Bacaan (Teks/HTML)</label><textarea rows={6} required value={content} onChange={(e) => setContent(e.target.value)} placeholder="Tuliskan isi materi lengkap di sini..." className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-sans" /></div>
               <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">URL Media / PDF / Video Embed (Opsional)</label><input type="url" value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} placeholder="Link file PDF (misal: https://.../materi.pdf) atau URL Embed Video" className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Durasi Minimum (Detik)</label><input type="number" min={0} required value={minDuration} onChange={(e) => setMinDuration(Number(e.target.value))} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono" /></div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Durasi Minimum Membaca</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Jam</label>
+                      <input type="number" min={0} max={999} required value={minHours} onChange={(e) => setMinHours(Math.max(0, Number(e.target.value) || 0))} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Menit</label>
+                      <input type="number" min={0} max={59} required value={minMinutes} onChange={(e) => setMinMinutes(Math.min(59, Math.max(0, Number(e.target.value) || 0)))} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Detik</label>
+                      <input type="number" min={0} max={59} required value={minSeconds} onChange={(e) => setMinSeconds(Math.min(59, Math.max(0, Number(e.target.value) || 0)))} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono" />
+                    </div>
+                  </div>
+                  <p className="mt-1.5 text-[10px] text-slate-400">Contoh: 0 jam 10 menit 30 detik. Sistem tetap menyimpan durasi secara presisi dalam detik.</p>
+                </div>
                 <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Urutan Tampil (#)</label><input type="number" min={1} required value={orderNum} onChange={(e) => setOrderNum(Number(e.target.value))} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono" /></div>
               </div>
               <div className="flex items-center gap-2 pt-2"><input type="checkbox" id="activeCheck" checked={active} onChange={(e) => setActive(e.target.checked)} className="rounded border-slate-300 text-slate-900 focus:ring-slate-900" /><label htmlFor="activeCheck" className="text-xs font-medium text-slate-700 dark:text-slate-300">Status Materi Aktif</label></div>
