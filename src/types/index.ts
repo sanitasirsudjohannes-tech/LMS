@@ -1,5 +1,6 @@
 export type UserRole = 'peserta' | 'admin';
 export type TrainingStatus = 'draft' | 'active' | 'archived';
+export type AdminPreviewStep = 'pretest' | 'material' | 'posttest' | 'review' | 'certificate';
 
 export interface UserProfile {
   id: string;
@@ -27,6 +28,7 @@ export interface Training {
   created_at: string;
   archived_at?: string | null;
   operational_data_purged_at?: string | null;
+  structure_version?: number;
 }
 
 export interface Material {
@@ -181,6 +183,35 @@ export interface DatabaseUsage {
   free_plan_limit_megabytes: number;
   safe_limit_megabytes: number;
   safe_usage_percent: number;
+}
+
+export interface TrainingReadinessDetail {
+  ok: boolean;
+  label: string;
+  count?: number;
+}
+
+export interface TrainingReadiness {
+  training_id: string;
+  total_items: number;
+  completed_items: number;
+  ready: boolean;
+  details: Record<string, TrainingReadinessDetail>;
+  preview_completed_at?: string | null;
+}
+
+export interface AdminPreviewSession {
+  id: string;
+  admin_id: string;
+  training_id: string;
+  structure_version: number;
+  current_step: AdminPreviewStep;
+  status: 'in_progress' | 'completed' | 'expired';
+  preview_data: Record<string, unknown>;
+  started_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+  expires_at: string;
 }
 
 export interface TrainingBackup {
