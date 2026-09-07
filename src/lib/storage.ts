@@ -15,7 +15,10 @@ import {
   TrainingMaintenance,
   DatabaseUsage,
   TrainingBackup,
-  CertificateGlobalSettings
+  CertificateGlobalSettings,
+  TrainingReadiness,
+  AdminPreviewSession,
+  AdminPreviewStep
 } from '@/types';
 import { supabase } from './supabase';
 
@@ -377,6 +380,43 @@ export const StorageAPI = {
     if (error) throw new Error(`Ukuran database gagal dimuat: ${error.message}`);
     if (!data) throw new Error('Informasi ukuran database tidak tersedia.');
     return data as DatabaseUsage;
+  },
+
+  getTrainingReadinessList: async (): Promise<TrainingReadiness[]> => {
+    const { data, error } = await supabase.rpc('admin_training_readiness_list');
+    if (error) throw new Error(`Checklist kesiapan gagal dimuat: ${error.message}`);
+    return (data || []) as TrainingReadiness[];
+  },
+
+  startAdminPreview: async (trainingId: string): Promise<AdminPreviewSession> => {
+    const { data, error } = await supabase.rpc('admin_preview_start', { p_training_id: trainingId });
+    if (error) throw new Error(`Mode Uji Coba gagal dimulai: ${error.message}`);
+    if (!data) throw new Error('Sesi Mode Uji Coba tidak tersedia.');
+    return data as AdminPreviewSession;
+  },
+
+  saveAdminPreview: async (
+    sessionId: string,
+    previewData: Record<string, unknown>,
+    currentStep: AdminPreviewStep,
+    status: 'in_progress' | 'completed' = 'in_progress'
+  ): Promise<AdminPreviewSession> => {
+    const { data, error } = await supabase.rpc('admin_preview_save', {
+      p_session_id: sessionId,
+      p_preview_data: previewData,
+      p_current_step: currentStep,
+      p_status: status
+    });
+    if (error) throw new Error(`Progress uji coba gagal disimpan: ${error.message}`);
+    if (!data) throw new Error('Progress uji coba tidak tersedia.');
+    return data as AdminPreviewSession;
+  },
+
+  resetAdminPreview: async (trainingId: string): Promise<AdminPreviewSession> => {
+    const { data, error } = await supabase.rpc('admin_preview_reset', { p_training_id: trainingId });
+    if (error) throw new Error(`Mode Uji Coba gagal direset: ${error.message}`);
+    if (!data) throw new Error('Sesi Mode Uji Coba baru tidak tersedia.');
+    return data as AdminPreviewSession;
   },
 
   archiveTraining: async (id: string): Promise<void> => {
