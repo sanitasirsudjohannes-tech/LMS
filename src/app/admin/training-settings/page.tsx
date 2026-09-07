@@ -424,7 +424,7 @@ export default function TrainingSettingsAdminPage() {
                         <details className="mt-2">
                           <summary className="cursor-pointer select-none text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Lihat rincian checklist</summary>
                           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                            {['period', 'pretest', 'materials', 'posttest', 'passing_score', 'jpl', 'certificate', 'signature', 'stamp', 'preview'].map(key => {
+                            {['period', 'question_bank', 'materials', 'passing_score', 'jpl', 'certificate', 'signature', 'stamp', 'preview'].map(key => {
                               const item = readinessState.details?.[key];
                               if (!item) return null;
                               return (
