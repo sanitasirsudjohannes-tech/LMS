@@ -520,11 +520,10 @@ export const StorageAPI = {
   getQuestions: (testType?: 'pretest' | 'posttest', trainingId?: string): Question[] => {
     const targetTrainingId = trainingId || cacheState.training?.id;
     if (!targetTrainingId) return [];
-    let list = cacheState.questions.filter(q => q.training_id === targetTrainingId);
-    if (testType) {
-      list = list.filter(q => q.test_type === testType && q.active);
-    }
-    return list;
+    const list = cacheState.questions.filter(q => q.training_id === targetTrainingId);
+    // Sejak migration 028, Pre-Test dan Post-Test memakai bank soal yang sama.
+    // Parameter testType dipertahankan agar pemanggil lama tetap kompatibel.
+    return testType ? list.filter(q => q.active) : list;
   },
 
   loadQuestionsForAdmin: async (trainingId: string): Promise<Question[]> => {
@@ -533,7 +532,6 @@ export const StorageAPI = {
       .from('questions')
       .select('*')
       .eq('training_id', trainingId)
-      .order('test_type')
       .order('id');
     if (error) throw new Error(`Gagal memuat soal admin: ${error.message}`);
     const loaded = (data || []) as Question[];
@@ -563,7 +561,9 @@ export const StorageAPI = {
     const saved: Question = {
       id: targetId,
       training_id: q.training_id || cacheState.training?.id || '',
-      test_type: q.test_type || 'pretest',
+      // Nilai pretest dipakai sebagai penanda internal kompatibilitas.
+      // Soal ini tetap digunakan bersama oleh Pre-Test dan Post-Test.
+      test_type: 'pretest',
       question: q.question || '',
       option_a: q.option_a || '',
       option_b: q.option_b || '',
@@ -601,6 +601,7 @@ export const StorageAPI = {
 
     const payload: Question[] = questions.map(question => ({
       ...question,
+      test_type: 'pretest',
       id: crypto.randomUUID(),
       training_id: trainingId
     }));
