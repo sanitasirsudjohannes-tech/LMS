@@ -176,16 +176,25 @@ export default function AdminTrainingPreviewPage() {
 
       const tr = trainingResult.data as Training;
       const questions = (questionResult.data || []) as Question[];
+      const normalizedQuestion = (question: Question) => question.question.trim().toLowerCase().replace(/\s+/g, ' ');
+      const bank = [...questions]
+        .sort((a, b) => {
+          const keyCompare = normalizedQuestion(a).localeCompare(normalizedQuestion(b));
+          if (keyCompare !== 0) return keyCompare;
+          const typeCompare = (a.test_type === 'pretest' ? 0 : 1) - (b.test_type === 'pretest' ? 0 : 1);
+          return typeCompare !== 0 ? typeCompare : a.id.localeCompare(b.id);
+        })
+        .filter((question, index, sorted) => index === 0 || normalizedQuestion(question) !== normalizedQuestion(sorted[index - 1]));
       const seededPretest = orderTestQuestions(
-        questions.filter(question => question.test_type === 'pretest') as ParticipantQuestion[],
+        bank as ParticipantQuestion[],
         `${previewSession.id}:pretest`
       );
       const seededPosttest = orderTestQuestions(
-        questions.filter(question => question.test_type === 'posttest') as ParticipantQuestion[],
+        bank as ParticipantQuestion[],
         `${previewSession.id}:posttest`
       );
 
-      const byId = new Map(questions.map(question => [question.id, question]));
+      const byId = new Map(bank.map(question => [question.id, question]));
       setTraining(tr);
       setMaterials((materialResult.data || []) as Material[]);
       setPretestQuestions(seededPretest.map(question => byId.get(question.id)!).filter(Boolean));
