@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { DatabaseUsage, Training, TrainingMaintenance, TrainingStatus } from '@/types';
-import { Plus, Edit2, Trash2, X, Award, Calendar, Archive, Download, Database, Eraser, ShieldCheck } from 'lucide-react';
+import { DatabaseUsage, Training, TrainingMaintenance, TrainingReadiness, TrainingStatus } from '@/types';
+import { Plus, Edit2, Trash2, X, Award, Calendar, Archive, Download, Database, Eraser, ShieldCheck, CheckCircle2, CircleAlert, PlayCircle } from 'lucide-react';
 import { formatDateInputWita, toWitaDateBoundary } from '@/lib/utils';
 import { downloadTrainingBackupZip } from '@/lib/trainingBackup';
 
 export default function TrainingSettingsAdminPage() {
+  const router = useRouter();
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
 
@@ -26,6 +28,7 @@ export default function TrainingSettingsAdminPage() {
   const [editingPurged, setEditingPurged] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [maintenance, setMaintenance] = useState<Record<string, TrainingMaintenance>>({});
+  const [readiness, setReadiness] = useState<Record<string, TrainingReadiness>>({});
   const [databaseUsage, setDatabaseUsage] = useState<DatabaseUsage | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -36,6 +39,15 @@ export default function TrainingSettingsAdminPage() {
     ]);
     setMaintenance(Object.fromEntries(rows.map(row => [row.training_id, row])));
     setDatabaseUsage(usage);
+
+    // Migration 027 menambahkan checklist kesiapan. Jangan membuat halaman admin
+    // gagal total bila frontend ter-deploy beberapa menit sebelum SQL dijalankan.
+    try {
+      const readinessRows = await StorageAPI.getTrainingReadinessList();
+      setReadiness(Object.fromEntries(readinessRows.map(row => [row.training_id, row])));
+    } catch {
+      setReadiness({});
+    }
   };
 
   useEffect(() => {
@@ -336,6 +348,7 @@ export default function TrainingSettingsAdminPage() {
           trainings.map((t) => {
             const isCurrentActive = selectedTraining?.id === t.id;
             const maintenanceState = maintenance[t.id];
+            const readinessState = readiness[t.id];
             const isProcessing = processingId === t.id;
             return (
               <div
@@ -375,6 +388,57 @@ export default function TrainingSettingsAdminPage() {
                         <span>• {maintenanceState.certificate_count} sertifikat</span>
                         {maintenanceState.last_backup_at && <span className="text-emerald-700 dark:text-emerald-400">• Backup tersedia</span>}
                         {maintenanceState.operational_data_purged_at && <span className="text-blue-700 dark:text-blue-400">• Data operasional sudah dibersihkan</span>}
+                      </div>
+                    )}
+                    {readinessState && (
+                      <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                {readinessState.ready ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <CircleAlert className="h-4 w-4 text-amber-500" />}
+                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">Checklist Kesiapan</span>
+                              </div>
+                              <span className={`text-[10px] font-bold ${readinessState.ready ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {readinessState.completed_items}/{readinessState.total_items} • {readinessState.ready ? 'SIAP DIPUBLIKASIKAN' : 'BELUM LENGKAP'}
+                              </span>
+                            </div>
+                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                              <div
+                                className={`h-full rounded-full transition-all ${readinessState.ready ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                                style={{ width: `${Math.round((readinessState.completed_items / Math.max(1, readinessState.total_items)) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={Boolean(maintenanceState?.operational_data_purged_at)}
+                            onClick={() => router.push(`/admin/preview/${t.id}`)}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
+                            title={maintenanceState?.operational_data_purged_at ? 'Data operasional pelatihan sudah dibersihkan' : 'Jalankan seluruh alur seperti peserta'}
+                          >
+                            <PlayCircle className="h-4 w-4" /> {readinessState.details?.preview?.ok ? 'Lihat / Ulangi Uji Coba' : 'Uji Coba sebagai Peserta'}
+                          </button>
+                        </div>
+
+                        <details className="mt-2">
+                          <summary className="cursor-pointer select-none text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Lihat rincian checklist</summary>
+                          <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                            {['period', 'pretest', 'materials', 'posttest', 'passing_score', 'jpl', 'certificate', 'signature', 'stamp', 'preview'].map(key => {
+                              const item = readinessState.details?.[key];
+                              if (!item) return null;
+                              return (
+                                <div key={key} className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[10px] ${item.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
+                                  {item.ok ? <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+                                  <span>{item.label}{typeof item.count === 'number' ? ` (${item.count})` : ''}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {readinessState.preview_completed_at && (
+                            <p className="mt-2 text-[9px] text-slate-400">Uji coba terakhir selesai: {new Date(readinessState.preview_completed_at).toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })} WITA</p>
+                          )}
+                        </details>
                       </div>
                     )}
                   </div>
