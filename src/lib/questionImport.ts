@@ -14,12 +14,11 @@ export interface QuestionImportResult {
 }
 
 const REQUIRED_HEADERS = [
-  'jenis_tes', 'pertanyaan', 'pilihan_a', 'pilihan_b',
+  'pertanyaan', 'pilihan_a', 'pilihan_b',
   'pilihan_c', 'pilihan_d', 'kunci_jawaban'
 ] as const;
 
 const HEADER_ALIASES: Record<string, string> = {
-  jenis: 'jenis_tes', tipe_tes: 'jenis_tes', test_type: 'jenis_tes',
   soal: 'pertanyaan', question: 'pertanyaan', option_a: 'pilihan_a',
   option_b: 'pilihan_b', option_c: 'pilihan_c', option_d: 'pilihan_d',
   jawaban_benar: 'kunci_jawaban', correct_answer: 'kunci_jawaban', status_aktif: 'aktif'
@@ -72,15 +71,8 @@ const parseBoolean = (value: unknown): boolean | null => {
   return null;
 };
 
-const parseTestType = (value: unknown): 'pretest' | 'posttest' | null => {
-  const normalized = String(value ?? '').trim().toLowerCase().replace(/[\s_-]/g, '');
-  if (normalized === 'pretest') return 'pretest';
-  if (normalized === 'posttest') return 'posttest';
-  return null;
-};
-
-const questionKey = (row: Pick<QuestionImportRow, 'test_type' | 'question'>) =>
-  `${row.test_type}|${row.question.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+const questionKey = (row: Pick<QuestionImportRow, 'question'>) =>
+  row.question.trim().toLowerCase().replace(/\s+/g, ' ');
 
 export async function readQuestionImportFile(file: File): Promise<unknown[][]> {
   const extension = file.name.split('.').pop()?.toLowerCase();
@@ -124,7 +116,6 @@ export function validateQuestionRows(
   rows.slice(1).forEach((cells, index) => {
     const rowNumber = index + 2;
     const get = (header: string) => cells[indexOf(header)];
-    const testType = parseTestType(get('jenis_tes'));
     const question = String(get('pertanyaan') ?? '').trim();
     const optionA = String(get('pilihan_a') ?? '').trim();
     const optionB = String(get('pilihan_b') ?? '').trim();
@@ -134,19 +125,18 @@ export function validateQuestionRows(
     const active = parseBoolean(indexOf('aktif') >= 0 ? get('aktif') : undefined);
     const rowErrors: string[] = [];
 
-    if (!testType) rowErrors.push('jenis_tes harus pretest atau posttest');
     if (!question) rowErrors.push('pertanyaan kosong');
     if (!optionA || !optionB || !optionC || !optionD) rowErrors.push('pilihan A–D wajib diisi');
     if (!['A', 'B', 'C', 'D'].includes(correctAnswer)) rowErrors.push('kunci_jawaban harus A, B, C, atau D');
     if (active === null) rowErrors.push('aktif harus ya/tidak atau true/false');
 
-    if (rowErrors.length > 0 || !testType || active === null) {
+    if (rowErrors.length > 0 || active === null) {
       errors.push({ row: rowNumber, message: rowErrors.join('; ') });
       return;
     }
 
     const parsed: QuestionImportRow = {
-      test_type: testType,
+      test_type: 'pretest',
       question,
       option_a: optionA,
       option_b: optionB,
@@ -172,8 +162,8 @@ const csvEscape = (value: string) => `"${value.replace(/"/g, '""')}"`;
 export function downloadQuestionImportTemplate() {
   const headers = [...REQUIRED_HEADERS, 'aktif'];
   const examples = [
-    ['pretest', 'Apa tujuan utama keselamatan pasien?', 'Mencegah cedera', 'Menambah biaya', 'Mengurangi petugas', 'Memperpanjang antrean', 'A', 'ya'],
-    ['posttest', 'Kapan kebersihan tangan dilakukan?', 'Hanya pagi', 'Sebelum dan sesudah kontak pasien', 'Saat diawasi', 'Seminggu sekali', 'B', 'ya']
+    ['Apa tujuan utama keselamatan pasien?', 'Mencegah cedera', 'Menambah biaya', 'Mengurangi petugas', 'Memperpanjang antrean', 'A', 'ya'],
+    ['Kapan kebersihan tangan dilakukan?', 'Hanya pagi', 'Sebelum dan sesudah kontak pasien', 'Saat diawasi', 'Seminggu sekali', 'B', 'ya']
   ];
   const csv = [headers, ...examples].map(row => row.map(csvEscape).join(',')).join('\r\n');
   const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
