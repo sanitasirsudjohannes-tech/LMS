@@ -50,6 +50,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (loadError) return <div className="max-w-md mx-auto py-12 text-center space-y-4"><p className="text-sm text-red-700 dark:text-red-300">{loadError}</p><button type="button" onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold">Coba Lagi</button></div>;
   if (loading || !currentUser) return <div className="flex min-h-[50vh] w-full items-center justify-center"><LontarLoadingSpinner size="lg" text="Memuat Dashboard Admin..." /></div>;
 
+  const isPreviewPath = pathname.startsWith('/admin/preview/');
+  if (isPreviewPath) return <main className="w-full py-2">{children}</main>;
+
   const isCertificatePath = pathname.startsWith('/admin/certificates') || pathname.startsWith('/admin/certificate-settings') || pathname.startsWith('/admin/certificate-general') || pathname.startsWith('/admin/certificate-training');
 
   return (
