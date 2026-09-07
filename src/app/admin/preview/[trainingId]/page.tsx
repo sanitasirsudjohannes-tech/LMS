@@ -573,7 +573,7 @@ export default function AdminTrainingPreviewPage() {
     }
 
     return (
-      <form onSubmit={(event) => { event.preventDefault(); void submitTest(testType); }} className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex items-center justify-between">
@@ -627,11 +627,11 @@ export default function AdminTrainingPreviewPage() {
             {activeQuestion < questions.length - 1 ? (
               <button type="button" onClick={() => setActiveQuestion(index => Math.min(questions.length - 1, index + 1))} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07375c] px-5 py-3 text-xs font-bold text-white dark:bg-sky-400 dark:text-slate-950">Berikutnya <ArrowRight className="h-4 w-4" /></button>
             ) : (
-              <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07375c] px-6 py-3 text-xs font-bold text-white disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950">Kirim {testType === 'pretest' ? 'Pre-Test' : 'Post-Test'} ({answeredCount}/{questions.length}) <ArrowRight className="h-4 w-4" /></button>
+              <button type="button" onClick={() => void submitTest(testType)} disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07375c] px-6 py-3 text-xs font-bold text-white disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950">Kirim {testType === 'pretest' ? 'Pre-Test' : 'Post-Test'} ({answeredCount}/{questions.length}) <ArrowRight className="h-4 w-4" /></button>
             )}
           </div>
         </div>
-      </form>
+      </div>
     );
   };
 
