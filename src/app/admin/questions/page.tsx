@@ -12,14 +12,12 @@ export default function QuestionsAdminPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [selectedTrainingId, setSelectedTrainingId] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [activeTab, setActiveTab] = useState<'pretest' | 'posttest'>('pretest');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [operationError, setOperationError] = useState('');
-  const [testType, setTestType] = useState<'pretest' | 'posttest'>('pretest');
   const [questionText, setQuestionText] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
@@ -64,16 +62,16 @@ export default function QuestionsAdminPage() {
   };
 
   const handleOpenCreate = () => {
-    setOperationError(''); setEditingId(null); setTestType(activeTab); setQuestionText(''); setOptionA(''); setOptionB(''); setOptionC(''); setOptionD(''); setCorrectAnswer('A'); setActive(true); setIsModalOpen(true);
+    setOperationError(''); setEditingId(null); setQuestionText(''); setOptionA(''); setOptionB(''); setOptionC(''); setOptionD(''); setCorrectAnswer('A'); setActive(true); setIsModalOpen(true);
   };
 
   const handleOpenEdit = (q: Question) => {
-    setOperationError(''); setEditingId(q.id); setTestType(q.test_type); setQuestionText(q.question); setOptionA(q.option_a); setOptionB(q.option_b); setOptionC(q.option_c); setOptionD(q.option_d); setCorrectAnswer(q.correct_answer); setActive(q.active); setIsModalOpen(true);
+    setOperationError(''); setEditingId(q.id); setQuestionText(q.question); setOptionA(q.option_a); setOptionB(q.option_b); setOptionC(q.option_c); setOptionD(q.option_d); setCorrectAnswer(q.correct_answer); setActive(q.active); setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newQ: Partial<Question> = { id: editingId || undefined, training_id: selectedTrainingId, test_type: testType, question: questionText.trim(), option_a: optionA.trim(), option_b: optionB.trim(), option_c: optionC.trim(), option_d: optionD.trim(), correct_answer: correctAnswer, active };
+    const newQ: Partial<Question> = { id: editingId || undefined, training_id: selectedTrainingId, test_type: 'pretest', question: questionText.trim(), option_a: optionA.trim(), option_b: optionB.trim(), option_c: optionC.trim(), option_d: optionD.trim(), correct_answer: correctAnswer, active };
     setSaving(true); setOperationError('');
     try {
       await StorageAPI.saveQuestion(newQ); setIsModalOpen(false); reloadQuestions();
@@ -113,7 +111,6 @@ export default function QuestionsAdminPage() {
     finally { setIsImporting(false); }
   };
 
-  const filteredQuestions = questions.filter(q => q.test_type === activeTab);
   const selectedTrainingObj = trainings.find(t => t.id === selectedTrainingId);
 
   return (
@@ -122,11 +119,13 @@ export default function QuestionsAdminPage() {
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Kelola Soal Tes</h2><p className="text-xs text-slate-500 mt-0.5">Atur soal Pre-Test & Post-Test dan kunci jawaban.</p></div>
+          <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Bank Soal Pre-Test & Post-Test</h2><p className="text-xs text-slate-500 mt-0.5">Satu bank soal digunakan bersama untuk Pre-Test dan Post-Test. Soal, pilihan, dan kunci jawaban cukup dibuat satu kali.</p></div>
           <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 w-full md:w-auto"><Sliders className="w-4 h-4 text-slate-400 ml-2 shrink-0" /><select value={selectedTrainingId} onChange={(e) => handleTrainingChange(e.target.value)} className="w-full md:w-[260px] bg-transparent text-xs font-bold text-slate-900 dark:text-white focus:outline-none pr-2 py-1.5 truncate">{trainings.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></div>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl self-start"><button onClick={() => setActiveTab('pretest')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'pretest' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}>Pre-Test ({questions.filter(q => q.test_type === 'pretest').length})</button><button onClick={() => setActiveTab('posttest')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === 'posttest' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}>Post-Test ({questions.filter(q => q.test_type === 'posttest').length})</button></div>
+          <div className="inline-flex items-center rounded-xl bg-sky-50 px-3 py-2 text-[11px] font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+            {questions.length} soal • digunakan pada Pre-Test dan Post-Test
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={downloadQuestionImportTemplate} className="px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"><Download className="w-4 h-4" /><span>Template</span></button>
             <label className={`px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer ${isImporting || !selectedTrainingId ? 'opacity-50 pointer-events-none' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}>{isImporting ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}<span>{isImporting ? 'Memproses...' : 'Impor'}</span><input type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" onChange={handleImportQuestions} className="sr-only" disabled={isImporting || !selectedTrainingId} /></label>
@@ -136,16 +135,16 @@ export default function QuestionsAdminPage() {
       </div>
 
       <div className="space-y-4">
-        {loadingQuestions ? <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-xs"><LontarLoadingSpinner size="md" text="Memuat soal pelatihan..." /></div> : filteredQuestions.length > 0 ? filteredQuestions.map((q, idx) => (
+        {loadingQuestions ? <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-xs"><LontarLoadingSpinner size="md" text="Memuat soal pelatihan..." /></div> : questions.length > 0 ? questions.map((q, idx) => (
           <div key={q.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
             <div className="flex items-start justify-between gap-4"><div className="flex items-start gap-3"><span className="w-7 h-7 rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{idx + 1}</span><div><h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">{q.question}</h3><span className="text-[10px] text-emerald-600 font-semibold font-mono uppercase">Kunci Jawaban Benar: Pilihan {q.correct_answer}</span></div></div><div className="flex items-center gap-1 shrink-0"><button onClick={() => handleOpenEdit(q)} className="p-1.5 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><Edit2 className="w-4 h-4" /></button><button onClick={() => handleDelete(q.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><Trash2 className="w-4 h-4" /></button></div></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">{[{ key: 'A', text: q.option_a }, { key: 'B', text: q.option_b }, { key: 'C', text: q.option_c }, { key: 'D', text: q.option_d }].map(opt => <div key={opt.key} className={`p-2.5 rounded-xl border flex items-center gap-2 ${q.correct_answer === opt.key ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 font-semibold text-emerald-900 dark:text-emerald-200' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'}`}><span className="w-5 h-5 rounded-full border text-[10px] font-bold flex items-center justify-center shrink-0">{opt.key}</span><span>{opt.text}</span></div>)}</div>
           </div>
-        )) : <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-xs">Belum ada soal {activeTab.toUpperCase()} untuk &quot;{selectedTrainingObj?.title}&quot;.</div>}
+        )) : <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-xs">Belum ada soal untuk &quot;{selectedTrainingObj?.title}&quot;. Tambahkan satu bank soal yang akan dipakai pada Pre-Test dan Post-Test.</div>}
       </div>
 
       {isModalOpen && <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 max-w-xl w-full space-y-4 shadow-xl max-h-[90vh] overflow-y-auto"><div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3"><h3 className="text-base font-bold text-slate-900 dark:text-white">{editingId ? 'Edit Soal' : `Tambah Soal (${selectedTrainingObj?.title})`}</h3><button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button></div><form onSubmit={handleSave} className="space-y-4">
-        <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jenis Tes</label><select value={testType} onChange={(e) => setTestType(e.target.value as 'pretest' | 'posttest')} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"><option value="pretest">Pre-Test</option><option value="posttest">Post-Test</option></select></div>
+        <div className="rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2.5 text-xs text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200">Soal ini otomatis digunakan pada <strong>Pre-Test dan Post-Test</strong>.</div>
         <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Pertanyaan Soal</label><textarea rows={3} required value={questionText} onChange={(e) => setQuestionText(e.target.value)} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" /></div>
         <div className="space-y-2">{[['A', optionA, setOptionA], ['B', optionB, setOptionB], ['C', optionC, setOptionC], ['D', optionD, setOptionD]].map(([key, value, setter]) => <input key={key as string} type="text" required placeholder={`Pilihan ${key}`} value={value as string} onChange={(e) => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white" />)}</div>
         <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Jawaban Benar</label><select value={correctAnswer} onChange={(e) => setCorrectAnswer(e.target.value as 'A' | 'B' | 'C' | 'D')} className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400"><option value="A">Pilihan A</option><option value="B">Pilihan B</option><option value="C">Pilihan C</option><option value="D">Pilihan D</option></select></div>
