@@ -253,7 +253,7 @@ export default function DashboardPage() {
           <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-cyan-300/10 blur-2xl" />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] backdrop-blur">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] backdrop-blur">
                 <Building2 className="h-3.5 w-3.5" /> LONTAR Learning Portal
               </div>
               <div>
@@ -269,17 +269,17 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4">
                 <BookOpen className="mb-2 h-4 w-4 text-emerald-100" />
                 <p className="text-xl font-bold sm:text-2xl">{trainings.length}</p>
-                <p className="mt-0.5 text-[10px] font-medium text-emerald-50 sm:text-xs">Pelatihan</p>
+                <p className="mt-0.5 text-xs font-medium text-emerald-50 sm:text-xs">Pelatihan</p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4">
                 <Trophy className="mb-2 h-4 w-4 text-emerald-100" />
                 <p className="text-xl font-bold sm:text-2xl">{isPassedPosttest ? 1 : 0}</p>
-                <p className="mt-0.5 text-[10px] font-medium text-emerald-50 sm:text-xs">Lulus</p>
+                <p className="mt-0.5 text-xs font-medium text-emerald-50 sm:text-xs">Lulus</p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4">
                 <Award className="mb-2 h-4 w-4 text-emerald-100" />
                 <p className="text-xl font-bold sm:text-2xl">{hasCertificate ? 1 : 0}</p>
-                <p className="mt-0.5 text-[10px] font-medium text-emerald-50 sm:text-xs">Sertifikat</p>
+                <p className="mt-0.5 text-xs font-medium text-emerald-50 sm:text-xs">Sertifikat</p>
               </div>
             </div>
           </div>
@@ -289,11 +289,11 @@ export default function DashboardPage() {
           <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1.5fr_0.8fr] lg:gap-7">
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
                   <PlayCircle className="h-3.5 w-3.5" /> Sedang dipelajari
                 </span>
                 {trainingPeriod && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                     <CalendarDays className="h-3.5 w-3.5" /> {trainingPeriod}
                   </span>
                 )}
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                 <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                   <div className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 transition-all duration-500" style={{ width: `${progressPercentage}%` }} />
                 </div>
-                <p className="text-[11px] text-slate-400">{currentStepPoints} dari {totalSteps} tahap telah selesai</p>
+                <p className="text-xs text-slate-400">{currentStepPoints} dari {totalSteps} tahap telah selesai</p>
               </div>
             </div>
 
@@ -357,7 +357,7 @@ export default function DashboardPage() {
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-600">Katalog Anda</p>
               <h2 className="mt-1 text-lg font-bold text-slate-950 dark:text-white">Pelatihan tersedia</h2>
             </div>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">{trainings.length}</span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">{trainings.length}</span>
           </div>
 
           {trainings.length > 0 ? (
@@ -384,7 +384,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="line-clamp-2 text-sm font-bold leading-5 text-slate-900 dark:text-white">{training.title}</p>
-                            {period && <p className="mt-0.5 text-[11px] text-slate-400">{period}</p>}
+                            {period && <p className="mt-0.5 text-xs text-slate-400">{period}</p>}
                           </div>
                         </div>
                         <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{training.description || 'Program pembelajaran LONTAR.'}</p>
@@ -410,7 +410,7 @@ export default function DashboardPage() {
           <section className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-600">Learning path</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-600">Alur Pelatihan</p>
                 <h2 className="mt-1 text-lg font-bold text-slate-950 dark:text-white">Tahapan pelatihan</h2>
               </div>
               <p className="max-w-md text-xs leading-5 text-slate-400 sm:text-right">Ikuti setiap langkah secara berurutan. Tahap berikutnya terbuka otomatis setelah syarat sebelumnya selesai.</p>
@@ -488,7 +488,7 @@ export default function DashboardPage() {
                     <Link
                       href="/certificate"
                       onClick={() => certificate && StorageAPI.selectCertificate(certificate.id)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-amber-600"
+                      className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-amber-600"
                     >
                       Lihat <ArrowRight className="h-3 w-3" />
                     </Link>
@@ -531,13 +531,13 @@ function TimelineItem({ icon: Icon, title, description, state, action }: Timelin
   }[state];
 
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 sm:p-4 ${style}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3.5 sm:p-4 ${style}`}>
       <div className="flex min-w-0 items-center gap-3">
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconStyle}`}>
           {state === 'done' ? <CheckCircle2 className="h-5 w-5" /> : state === 'locked' ? <Lock className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
         </div>
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
+          <h3 className="break-words text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
           <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p>
         </div>
       </div>
@@ -547,17 +547,17 @@ function TimelineItem({ icon: Icon, title, description, state, action }: Timelin
 }
 
 function StatusPill({ label }: { label: string }) {
-  return <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"><CheckCircle2 className="h-3 w-3" />{label}</span>;
+  return <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"><CheckCircle2 className="h-3 w-3" />{label}</span>;
 }
 
 function SmallAction({ href, label, subtle = false }: { href: string; label: string; subtle?: boolean }) {
   return (
-    <Link href={href} className={subtle ? 'text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-300' : 'inline-flex items-center gap-1 rounded-lg bg-slate-950 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950'}>
+    <Link href={href} className={subtle ? 'text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-300' : 'inline-flex min-h-11 items-center gap-1 rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950'}>
       {label}{!subtle && <ArrowRight className="h-3 w-3" />}
     </Link>
   );
 }
 
 function LockedLabel({ label = 'Terkunci' }: { label?: string }) {
-  return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400"><Lock className="h-3 w-3" />{label}</span>;
+  return <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400"><Lock className="h-3 w-3" />{label}</span>;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -41,6 +41,25 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   const [authLoading, setAuthLoading] = useState(() => StorageAPI.getCurrentUser() === null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const menuRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = menuRef.current;
+    if (!isMobileMenuOpen || !dialog) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = 'hidden';
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop = () => { if (desktop.matches) setIsMobileMenuOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => {
+      desktop.removeEventListener('change', closeOnDesktop);
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     let mounted = true;
@@ -75,6 +94,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
       if (!active) return;
       if (event === 'SIGNED_OUT') {
         clearValidatedUser();
+        setIsMobileMenuOpen(false);
         setCurrentUser(null);
         setAuthLoading(false);
         return;
@@ -162,7 +182,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
               <LontarLogo priority className="shrink-0 ring-1 ring-slate-200 dark:ring-slate-700" />
               <div className="min-w-0">
                 <span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span>
-                <span className="hidden truncate text-[10px] font-medium text-slate-500 sm:block">LMS Online & Pelatihan Terpadu RSUD Johannes</span>
+                <span className="hidden truncate text-xs font-medium text-slate-500 sm:block">LMS Online & Pelatihan Terpadu RSUD Johannes</span>
               </div>
             </Link>
             <div className="flex items-center gap-2">
@@ -176,15 +196,15 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
+  const renderSidebarContent = (mobile = false) => (
     <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-950">
-      <div className="px-4 pb-2 pt-5"><p className="px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Menu Utama</p></div>
+      <div className="px-4 pb-2 pt-5"><p className="px-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Menu Utama</p></div>
       <nav className="flex-1 overflow-y-auto px-3 py-2" aria-label="Navigasi utama">
         <div className="space-y-1">
           {navItems.map((item) => {
             const active = isActive(item);
             return (
-              <Link key={item.href} href={item.href} onClick={() => mobile && setIsMobileMenuOpen(false)} className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? 'bg-white text-[#07375c] shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-sky-300 dark:ring-slate-800' : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white'}`}>
+              <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} onClick={() => mobile && setIsMobileMenuOpen(false)} className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? 'bg-white text-[#07375c] shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-sky-300 dark:ring-slate-800' : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white'}`}>
                 {active && <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-[#07375c] dark:bg-sky-400" />}
                 <item.icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
@@ -200,35 +220,55 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className={currentUser.role === 'peserta' ? 'participant-shell min-h-screen' : 'min-h-screen'}>
       <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
         <div className="flex h-full items-center">
           <div className="flex h-full w-full items-center px-4 lg:w-64 lg:shrink-0 lg:border-r lg:border-slate-200 dark:lg:border-slate-800">
-            <button type="button" onClick={() => setIsMobileMenuOpen(true)} className="mr-2 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden dark:text-slate-300 dark:hover:bg-slate-900" aria-label="Buka menu" aria-expanded={isMobileMenuOpen}><Menu className="h-5 w-5" /></button>
+            <button type="button" onClick={() => setIsMobileMenuOpen(true)} className="mr-2 lontar-icon-button rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden dark:text-slate-300 dark:hover:bg-slate-900" aria-label="Buka menu" aria-expanded={isMobileMenuOpen}><Menu className="h-5 w-5" /></button>
             <Link href={currentUser.role === 'admin' ? '/admin' : '/dashboard'} className="flex min-w-0 items-center gap-2.5">
               <LontarLogo priority className="shrink-0 ring-1 ring-slate-200 dark:ring-slate-700" />
-              <div className="min-w-0"><span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span><span className="hidden truncate text-[9px] font-medium text-slate-500 xl:block">LMS Online & Pelatihan Terpadu</span></div>
+              <div className="min-w-0"><span className="block text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span><span className="hidden truncate text-xs font-medium text-slate-500 xl:block">LMS Online & Pelatihan Terpadu</span></div>
             </Link>
-            <div className="ml-auto flex min-w-0 items-center gap-3 lg:hidden"><div className="hidden min-w-0 text-right sm:block"><p className="max-w-[180px] truncate text-xs font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p><p className="truncate text-[10px] capitalize text-slate-500">{currentUser.role}</p></div><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800"><User className="h-4 w-4" /></div></div>
+            <div className="ml-auto flex min-w-0 items-center gap-3 lg:hidden"><div className="hidden min-w-0 text-right sm:block"><p className="max-w-[180px] truncate text-xs font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p><p className="truncate text-xs capitalize text-slate-500">{currentUser.role}</p></div><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800"><User className="h-4 w-4" /></div></div>
           </div>
-          <div className="hidden min-w-0 flex-1 items-center justify-end px-4 sm:px-6 lg:flex"><div className="flex min-w-0 items-center gap-3"><div className="min-w-0 text-right"><p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p><p className="truncate text-[10px] capitalize text-slate-500">{currentUser.role} • {currentUser.institution}</p></div><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800"><User className="h-4 w-4" /></div></div></div>
+          <div className="hidden min-w-0 flex-1 items-center justify-end px-4 sm:px-6 lg:flex"><div className="flex min-w-0 items-center gap-3"><div className="min-w-0 text-right"><p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{currentUser.full_name}</p><p className="truncate text-xs capitalize text-slate-500">{currentUser.role} • {currentUser.institution}</p></div><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800"><User className="h-4 w-4" /></div></div></div>
         </div>
       </header>
 
-      <aside className="fixed bottom-0 left-0 top-16 z-30 hidden w-64 border-r border-slate-200 bg-slate-50 lg:block dark:border-slate-800 dark:bg-slate-950"><SidebarContent /></aside>
+      <aside className="fixed bottom-0 left-0 top-16 z-30 hidden w-64 border-r border-slate-200 bg-slate-50 lg:block dark:border-slate-800 dark:bg-slate-950">{renderSidebarContent()}</aside>
       <div className="pt-16 lg:pl-64">{children}</div>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button type="button" aria-label="Tutup menu" onClick={() => setIsMobileMenuOpen(false)} className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]" />
+        <dialog
+          ref={menuRef}
+          aria-label="Menu utama"
+          onCancel={() => setIsMobileMenuOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Tab') return;
+            const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+              'a[href], button:not(:disabled):not([tabindex="-1"])',
+            )).filter(element => element.getClientRects().length > 0);
+            const first = controls[0];
+            const last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first?.focus();
+            }
+          }}
+          className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none border-0 bg-transparent p-0 backdrop:bg-slate-950/45 lg:hidden"
+        >
+          <button type="button" aria-label="Tutup menu" onClick={() => setIsMobileMenuOpen(false)} tabIndex={-1} className="absolute inset-0" />
           <aside className="absolute bottom-0 left-0 top-0 w-[min(86vw,17rem)] border-r border-slate-200 bg-slate-50 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
             <div className="flex h-16 items-center border-b border-slate-200 px-4 dark:border-slate-800">
               <Link href={currentUser.role === 'admin' ? '/admin' : '/dashboard'} onClick={() => setIsMobileMenuOpen(false)} className="flex min-w-0 items-center gap-2.5"><LontarLogo priority className="shrink-0 ring-1 ring-slate-200 dark:ring-slate-700" /><span className="text-sm font-bold tracking-[0.12em] text-[#07375c] dark:text-sky-300">LONTAR</span></Link>
-              <button type="button" onClick={() => setIsMobileMenuOpen(false)} className="ml-auto rounded-lg p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-900" aria-label="Tutup menu"><X className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setIsMobileMenuOpen(false)} className="ml-auto lontar-icon-button rounded-lg p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-900" aria-label="Tutup menu"><X className="h-5 w-5" /></button>
             </div>
-            <div className="h-[calc(100%-4rem)]"><SidebarContent mobile /></div>
+            <div className="h-[calc(100%-4rem)]">{renderSidebarContent(true)}</div>
           </aside>
-        </div>
+        </dialog>
       )}
     </div>
   );

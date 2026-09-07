@@ -33,12 +33,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto py-6 sm:py-12">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="lontar-auth">
+      <div className="lontar-auth-panel space-y-6">
         
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reset Password</h1>
-          <p className="text-xs text-slate-500">Masukkan email Anda untuk menerima instruksi perbaikan password</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Pulihkan Kata Sandi</h1>
+          <p className="text-xs text-slate-500">Masukkan email Anda untuk menerima instruksi pemulihan kata sandi</p>
         </div>
 
         {sent ? (
@@ -47,26 +47,26 @@ export default function ForgotPasswordPage() {
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Instruksi Dikirim!</h3>
               <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                Tautan reset password telah dikirimkan ke <strong>{email}</strong>. Silakan periksa inbox email Anda.
+                Tautan pemulihan kata sandi telah dikirimkan ke <strong>{email}</strong>. Silakan periksa kotak masuk email Anda.
               </p>
             </div>
             <Link
               href="/login"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200 hover:underline pt-2"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Login
+              <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Masuk
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">{error}</div>}
+            {error && <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">{error}</div>}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="forgot-password-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Alamat Email Terdaftar
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input id="forgot-password-email" autoComplete="email"
                   type="email"
                   required
                   value={email}
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+              className="w-full py-3 font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2 lontar-primary-action"
             >
               <span>{loading ? 'Mengirim...' : 'Kirim Tautan Reset'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
 
         <div className="text-center text-xs text-slate-500 pt-2">
           <Link href="/login" className="font-semibold text-slate-900 dark:text-white inline-flex items-center gap-1">
-            <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Halaman Login
+            <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Halaman Masuk
           </Link>
         </div>
       </div>

@@ -31,12 +31,12 @@ export default function RegisterPage() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Password dan Konfirmasi Password tidak cocok.');
+      setError('Kata sandi dan konfirmasi kata sandi tidak cocok.');
       return;
     }
 
     if (password.length < 6) {
-      setError('Password minimal 6 karakter.');
+      setError('Kata sandi minimal 6 karakter.');
       return;
     }
 
@@ -72,8 +72,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto py-6 sm:py-10">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="lontar-auth">
+      <div className="lontar-auth-panel space-y-6">
 
         <div className="text-center space-y-1">
           <LontarLogo className="mx-auto mb-3 ring-1 ring-slate-200 dark:ring-slate-700" />
@@ -82,7 +82,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-xs flex items-center gap-2">
+          <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
@@ -91,7 +91,7 @@ export default function RegisterPage() {
         {success && (
           <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2">
             <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
-            <span>Pendaftaran berhasil & tersimpan ke Supabase! Mengarahkan...</span>
+            <span>Pendaftaran berhasil. Mengarahkan ke halaman pelatihan...</span>
           </div>
         )}
 
@@ -99,12 +99,12 @@ export default function RegisterPage() {
 
           {/* Nama Lengkap */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label htmlFor="register-full-name" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Nama Lengkap <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
+              <input id="register-full-name" autoComplete="name"
                 type="text"
                 required
                 value={fullName}
@@ -117,12 +117,12 @@ export default function RegisterPage() {
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label htmlFor="register-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Email <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
+              <input id="register-email" autoComplete="email"
                 type="email"
                 required
                 value={email}
@@ -135,12 +135,12 @@ export default function RegisterPage() {
 
           {/* Instalasi / Unit Kerja */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label htmlFor="register-institution" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Ruangan /Unit /Instalasi / Bidang <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Building className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
+              <input id="register-institution" autoComplete="organization"
                 type="text"
                 required
                 value={institution}
@@ -154,12 +154,12 @@ export default function RegisterPage() {
           {/* Grid Optional: NIP/NIK & HP */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="register-nip" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 NIP <span className="text-slate-400 font-normal">(Opsional)</span>
               </label>
               <div className="relative">
                 <FileText className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input id="register-nip" autoComplete="off"
                   type="text"
                   value={nipNik}
                   onChange={(e) => setNipNik(e.target.value)}
@@ -170,12 +170,12 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="register-phone" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Nomor HP / WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
               </label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input id="register-phone" autoComplete="tel"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -189,23 +189,23 @@ export default function RegisterPage() {
           {/* Passwords */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Password <span className="text-red-500">*</span>
+              <label htmlFor="register-password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Kata Sandi <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input id="register-password" autoComplete="new-password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimal 6 karakter"
-                  className="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100"
+                  className="w-full pl-9 pr-12 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'} aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)}
+                  className="lontar-icon-button absolute right-0 top-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -213,23 +213,23 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Konfirmasi Password <span className="text-red-500">*</span>
+              <label htmlFor="register-confirmation" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Konfirmasi Kata Sandi <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input id="register-confirmation" autoComplete="new-password"
                   type={showConfirmPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Ulangi password"
-                  className="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100"
+                  placeholder="Ulangi kata sandi"
+                  className="w-full pl-9 pr-12 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(v => !v)}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  aria-label={showConfirmPassword ? 'Sembunyikan konfirmasi kata sandi' : 'Tampilkan konfirmasi kata sandi'} aria-pressed={showConfirmPassword} onClick={() => setShowConfirmPassword(v => !v)}
+                  className="lontar-icon-button absolute right-0 top-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -240,7 +240,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || success}
-            className="w-full py-3 bg-[#07375c] hover:bg-[#052c4a] text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2 mt-2 disabled:opacity-60"
+            className="w-full py-3 font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center justify-center gap-2 mt-2 disabled:opacity-60 lontar-primary-action"
           >
             {loading ? (
               <span>Mendaftarkan...</span>
