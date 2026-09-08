@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TrainingStructureNotice from '@/components/TrainingStructureNotice';
 import Swal from 'sweetalert2';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { Material, Training } from '@/types';
@@ -191,6 +192,7 @@ export default function MaterialsAdminPage() {
 
   return (
     <div className="space-y-6">
+      <TrainingStructureNotice trainingId={selectedTrainingId} />
       {operationError && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
           {operationError}

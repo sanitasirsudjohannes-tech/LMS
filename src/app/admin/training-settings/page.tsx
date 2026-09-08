@@ -1,5 +1,6 @@
 'use client';
 
+import TrainingStructureNotice from '@/components/TrainingStructureNotice';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
@@ -119,6 +120,29 @@ export default function TrainingSettingsAdminPage() {
     }
 
     try {
+      const existing = trainings.find(item => item.id === editingId);
+      if (status === 'active' && !existing?.active) {
+        if (!editingId) {
+          await Swal.fire('Simpan sebagai Draf', 'Pelatihan baru perlu dilengkapi dan diuji coba sebelum dipublikasikan.', 'info');
+          return;
+        }
+        const rows = await StorageAPI.getTrainingReadinessList();
+        const latest = rows.find(item => item.training_id === editingId);
+        if (!latest?.ready) {
+          const missing = Object.values(latest?.details || {}).filter(item => !item.ok).map(item => item.label).join(', ');
+          await Swal.fire('Persiapan Belum Lengkap', missing || 'Selesaikan checklist dan uji coba versi terbaru terlebih dahulu.', 'warning');
+          setReadiness(Object.fromEntries(rows.map(row => [row.training_id, row])));
+          return;
+        }
+        const confirmed = await Swal.fire({
+          icon: 'warning', title: 'Publikasikan Pelatihan?',
+          text: 'Pelatihan akan terlihat oleh peserta. Setelah peserta mulai, soal, materi, durasi, nilai kelulusan, dan batas percobaan terkunci. Pastikan periode, total waktu baca, dan sertifikat sudah sesuai.',
+          input: 'checkbox', inputPlaceholder: 'Saya sudah memeriksa kesiapan pelatihan.',
+          showCancelButton: true, confirmButtonText: 'Publikasikan', cancelButtonText: 'Batal',
+          preConfirm: value => { if (!value) { Swal.showValidationMessage('Konfirmasi kesiapan terlebih dahulu.'); return false; } return true; }
+        });
+        if (!confirmed.isConfirmed) return;
+      }
       await StorageAPI.saveTraining({
         id: editingId || undefined,
         title: title.trim(),
@@ -306,6 +330,7 @@ export default function TrainingSettingsAdminPage() {
 
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden">
+      <TrainingStructureNotice trainingId={editingId || selectedTraining?.id || ''} />
       {loadError && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{loadError}</div>}
       
       {/* Header */}
@@ -424,7 +449,7 @@ export default function TrainingSettingsAdminPage() {
                         <details className="mt-2">
                           <summary className="cursor-pointer select-none text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Lihat rincian checklist</summary>
                           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                            {['period', 'question_bank', 'materials', 'passing_score', 'jpl', 'certificate', 'signature', 'stamp', 'preview'].map(key => {
+                            {['period', 'question_bank', 'materials', 'passing_score', 'jpl', 'certificate', 'signature', 'stamp', 'duration_review', 'preview'].map(key => {
                               const item = readinessState.details?.[key];
                               if (!item) return null;
                               return (

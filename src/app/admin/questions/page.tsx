@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TrainingStructureNotice from '@/components/TrainingStructureNotice';
 import Swal from 'sweetalert2';
 import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
@@ -115,6 +116,7 @@ export default function QuestionsAdminPage() {
 
   return (
     <div className="space-y-6">
+      <TrainingStructureNotice trainingId={selectedTrainingId} />
       {operationError && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">{operationError}</div>}
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">

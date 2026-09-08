@@ -35,6 +35,7 @@ import {
   Training,
   UserProfile
 } from '@/types';
+import { formatDuration } from '@/lib/utils';
 import LearningJourney from '@/components/LearningJourney';
 import TimerWidget from '@/components/TimerWidget';
 import LontarLoadingSpinner from '@/components/LontarLoadingSpinner';
@@ -57,6 +58,8 @@ type PreviewData = {
   };
   materials: {
     completed_ids: string[];
+    duration_reviewed_ids?: string[];
+    skipped_timer_ids?: string[];
     started_at: Record<string, string>;
     current_index: number;
   };
@@ -397,9 +400,25 @@ export default function AdminTrainingPreviewPage() {
     await persist(nextData, 'posttest');
   };
 
-  const completeMaterial = async () => {
+  const completeMaterial = async (skipTimer = false) => {
     if (!currentMaterial) return;
-    if (!timerReady && currentMaterial.minimum_duration_seconds > 0) return;
+    if (saving) return;
+    if (!skipTimer && !timerReady && currentMaterial.minimum_duration_seconds > 0) return;
+    const confirmation = await Swal.fire({
+      icon: 'info',
+      title: skipTimer ? 'Lewati Waktu Uji Coba?' : 'Tinjau Durasi Materi',
+      text: `Durasi peserta untuk materi ini: ${formatDuration(currentMaterial.minimum_duration_seconds)}. Total minimum seluruh materi: ${formatDuration(materials.reduce((sum, item) => sum + item.minimum_duration_seconds, 0))}. Pastikan waktu ini sesuai isi materi dan jadwal pelatihan.`,
+      input: 'checkbox',
+      inputPlaceholder: 'Saya sudah memeriksa isi materi dan menyetujui durasi peserta.',
+      showCancelButton: true,
+      confirmButtonText: skipTimer ? 'Setujui & Lewati Timer' : 'Setujui & Lanjutkan',
+      cancelButtonText: 'Kembali',
+      preConfirm: value => {
+        if (!value) { Swal.showValidationMessage('Tinjau dan setujui durasi terlebih dahulu.'); return false; }
+        return true;
+      }
+    });
+    if (!confirmation.isConfirmed) return;
 
     const completed = Array.from(new Set([...previewData.materials.completed_ids, currentMaterial.id]));
     const currentIndex = previewData.materials.current_index;
@@ -409,6 +428,8 @@ export default function AdminTrainingPreviewPage() {
       materials: {
         ...previewData.materials,
         completed_ids: completed,
+        duration_reviewed_ids: Array.from(new Set([...(previewData.materials.duration_reviewed_ids || []), currentMaterial.id])),
+        skipped_timer_ids: skipTimer ? Array.from(new Set([...(previewData.materials.skipped_timer_ids || []), currentMaterial.id])) : (previewData.materials.skipped_timer_ids || []),
         current_index: isLast ? currentIndex : currentIndex + 1
       }
     };
@@ -671,7 +692,7 @@ export default function AdminTrainingPreviewPage() {
           <div className="space-y-3 border-b border-slate-100 pb-5 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#07375c]/10 px-3 py-1 text-xs font-bold text-[#07375c] dark:bg-sky-400/10 dark:text-sky-300"><BookOpen className="h-3.5 w-3.5" /> Materi {index + 1}</span>
-              <span className="text-[11px] font-medium text-slate-400">Minimal baca {currentMaterial.minimum_duration_seconds} detik</span>
+              <span className="text-[11px] font-medium text-slate-400">Durasi peserta: {formatDuration(currentMaterial.minimum_duration_seconds)}</span>
             </div>
             <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{currentMaterial.title}</h1>
             {currentMaterial.description && <p className="text-sm leading-relaxed text-slate-500">{currentMaterial.description}</p>}
@@ -693,7 +714,14 @@ export default function AdminTrainingPreviewPage() {
 
           {currentMaterial.content && <div className="whitespace-pre-line text-sm leading-7 text-slate-800 dark:text-slate-200 sm:text-base">{currentMaterial.content}</div>}
 
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100">
+            <p className="font-bold">Uji coba cepat khusus admin</p>
+            <p className="mt-1">Total waktu baca peserta: {formatDuration(materials.reduce((sum, item) => sum + item.minimum_duration_seconds, 0))}. Anda dapat melewati timer setelah memeriksa materi dan menyetujui durasinya. Waktu wajib peserta tetap berlaku.</p>
+            {!timerReady && currentMaterial.minimum_duration_seconds > 0 && <button type="button" disabled={saving} onClick={() => void completeMaterial(true)} className="mt-3 rounded-lg border border-amber-600 px-4 py-2 font-bold disabled:opacity-50">Tinjau Durasi & Lewati Timer</button>}
+          </div>
+
           <TimerWidget
+            key={currentMaterial.id}
             minimumDurationSeconds={currentMaterial.minimum_duration_seconds}
             startedAtIso={startedAt}
             onComplete={() => setTimerReady(true)}
