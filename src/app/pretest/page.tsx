@@ -1,5 +1,6 @@
 'use client';
 
+import TrainingDeadline from '@/components/TrainingDeadline';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -108,6 +109,7 @@ export default function PretestPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 py-2">
+      <TrainingDeadline endDate={training?.end_date} />
       <LearningJourney activeStage="pretest" completed={{}} />
 
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">

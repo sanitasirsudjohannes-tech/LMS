@@ -65,3 +65,20 @@ Peringatan tenggat memakai pergantian tanggal WITA, bukan pembulatan durasi 24 j
 Validasi lokal: `npm run test:monitoring` (PostgreSQL via PGlite dan utilitas WITA/CSV),
 build produksi, TypeScript, dan ESLint untuk file yang diubah. Tes menggunakan skema
 fixture; belum menjalankan migrasi atau uji akun pada Supabase produksi.
+
+## Monitoring lengkap dan lanjut otomatis (032)
+
+Setelah 030 dan 031 berhasil, jalankan `032_complete_learning_monitoring.sql`.
+Migrasi ini menambahkan enam kategori monitoring, progres per tahap, riwayat aktivitas,
+dan tujuan lanjut belajar yang dihitung oleh server agar berfungsi lintas perangkat.
+
+Saat ini LONTAR belum memakai enrollment khusus per pelatihan. Karena itu **Terdaftar**
+berarti seluruh akun dengan role peserta yang dapat membuka pelatihan aktif. **Sedang
+Belajar** berarti sudah memiliki aktivitas tetapi belum menyelesaikan seluruh alur;
+**Lulus** dan **Tidak Lulus** merupakan hasil Post-Test dan dapat tumpang tindih dengan
+tahap belajar. **Selesai** memerlukan Pre-Test, seluruh materi aktif, Post-Test lulus,
+dan review/sertifikat.
+
+Riwayat menampilkan data operasional yang masih tersimpan. Setelah purge pelatihan
+arsip, aktivitas yang dihapus tidak dapat ditampilkan, sementara sertifikat tetap ada.
+Peringatan tenggat tampil dalam hari, jam, dan menit selama tiga hari terakhir.

@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     router.prefetch('/admin');
-    router.prefetch('/dashboard');
+    router.prefetch('/resume');
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -106,7 +106,7 @@ export default function LoginPage() {
 
       markValidatedUser(profileData);
       sessionStorage.setItem(RECENT_LOGIN_KEY, String(Date.now()));
-      router.replace(profileData.role === 'admin' ? '/admin' : '/dashboard');
+      router.replace(profileData.role === 'admin' ? '/admin' : '/resume');
     } catch (err: unknown) {
       setError(`Terjadi kesalahan: ${err instanceof Error ? err.message : 'Tidak diketahui'}`);
       setLoading(false);

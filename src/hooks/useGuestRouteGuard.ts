@@ -27,7 +27,7 @@ export function useGuestRouteGuard() {
           return;
         }
 
-        router.replace(profile.role === 'admin' ? '/admin' : '/dashboard');
+        router.replace(profile.role === 'admin' ? '/admin' : '/resume');
       } catch (error) {
         // Gangguan jaringan tidak boleh membuat halaman guest terkunci selamanya.
         console.error('Pengecekan sesi guest gagal:', error);

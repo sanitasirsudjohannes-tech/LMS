@@ -1,5 +1,6 @@
 'use client';
 
+import TrainingDeadline from '@/components/TrainingDeadline';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -131,6 +132,7 @@ export default function MaterialDetailPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 py-2">
+      <TrainingDeadline endDate={StorageAPI.getTraining()?.end_date} />
       <LearningJourney activeStage="material" completed={{ pretest: true }} />
 
       <div className="flex items-center justify-between gap-3">

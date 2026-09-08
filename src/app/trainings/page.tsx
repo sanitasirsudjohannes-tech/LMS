@@ -2,17 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  Award,
-  BookOpen,
-  CheckCircle2,
-  Clock3,
-  Search,
-} from "lucide-react";
-import { StorageAPI, initLocalStorage, initCurrentUser } from "@/lib/storage";
+import { Award, BookOpen, CheckCircle2, Clock3, Search } from "lucide-react";
+import { initCurrentUser } from "@/lib/storage";
 import { Training, UserProfile } from "@/types";
-import { daysUntilTrainingEnd } from "@/lib/learningMonitoring";
+import TrainingDeadline from "@/components/TrainingDeadline";
 import { supabase } from "@/lib/supabase";
 import LontarLoadingSpinner from "@/components/LontarLoadingSpinner";
 
@@ -24,7 +17,6 @@ type TrainingView = {
   certificate: boolean;
   materialsCompleted: number;
   totalMaterials: number;
-  daysLeft: number | null;
 };
 
 export default function TrainingsPage() {
@@ -76,7 +68,6 @@ export default function TrainingsPage() {
             certificate: row.has_certificate,
             materialsCompleted: row.completed_materials,
             totalMaterials: row.total_materials,
-            daysLeft: daysUntilTrainingEnd(row.training.end_date),
           })),
         );
       } catch (failure) {
@@ -111,22 +102,10 @@ export default function TrainingsPage() {
       }),
     [items, filter, query],
   );
-  const openTraining = async (training: Training) => {
+  const openTraining = (training: Training) => {
     if (openingId) return;
     setOpeningId(training.id);
-    setError("");
-    try {
-      await initLocalStorage();
-      await StorageAPI.loadTrainingResources(training.id);
-      router.push("/dashboard");
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Pelatihan gagal dibuka. Coba lagi.",
-      );
-      setOpeningId(null);
-    }
+    router.push(`/resume?training=${encodeURIComponent(training.id)}`);
   };
   if (loading)
     return (
@@ -227,11 +206,9 @@ export default function TrainingsPage() {
               certificate,
               materialsCompleted,
               totalMaterials,
-              daysLeft,
             }) => {
               const completed = status === "completed",
-                ongoing = status === "ongoing",
-                urgent = !completed && daysLeft !== null && daysLeft <= 3;
+                ongoing = status === "ongoing";
               return (
                 <article
                   key={training.id}
@@ -264,13 +241,8 @@ export default function TrainingsPage() {
                     {training.description ||
                       "Pelatihan online LONTAR RSUD Prof. Dr. W.Z. Johannes Kupang."}
                   </p>
-                  {urgent && (
-                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                      <AlertTriangle className="h-4 w-4" />
-                      {daysLeft === 0
-                        ? "Periode pelatihan berakhir hari ini."
-                        : `Sisa ${daysLeft} hari sebelum pelatihan berakhir.`}
-                    </div>
+                  {!completed && (
+                    <TrainingDeadline endDate={training.end_date} />
                   )}
                   <div className="mt-auto pt-5">
                     <div className="mb-3 flex flex-wrap gap-2 text-xs text-slate-500">

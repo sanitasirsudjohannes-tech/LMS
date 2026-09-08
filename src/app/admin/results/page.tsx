@@ -20,6 +20,8 @@ import {
 import { supabase } from "@/lib/supabase";
 import { csvCell, formatScoreChange } from "@/lib/learningMonitoring";
 import LontarLoadingSpinner from "@/components/LontarLoadingSpinner";
+import ParticipantStages from "@/components/ParticipantStages";
+import ParticipantTimeline from "@/components/ParticipantTimeline";
 
 type ProgressRow = {
   user_id: string;
@@ -33,6 +35,7 @@ type ProgressRow = {
   learning_status: string;
   last_activity_at: string | null;
   total_count: number;
+  has_certificate: boolean;
 };
 type Summary = {
   started: number;
@@ -97,6 +100,11 @@ export default function ResultsAdminPage() {
     [summary, setSummary] = useState<Summary | null>(null),
     [questions, setQuestions] = useState<QuestionAnalysis[]>([]);
   const [analyticsError, setAnalyticsError] = useState("");
+  const [monitoringSummary, setMonitoringSummary] = useState<
+    Record<string, number>
+  >({});
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [timeline, setTimeline] = useState<ProgressRow | null>(null);
   const [page, setPage] = useState(1),
     [total, setTotal] = useState(0),
     [loading, setLoading] = useState(false),
@@ -154,9 +162,10 @@ export default function ResultsAdminPage() {
     void (async () => {
       setLoading(true);
       setError("");
-      const result = await supabase.rpc("admin_training_progress", {
+      const result = await supabase.rpc("admin_training_monitoring", {
         p_training_id: selected,
         p_search: debounced,
+        p_status: statusFilter,
         p_limit: PAGE_SIZE,
         p_offset: (page - 1) * PAGE_SIZE,
       });
@@ -166,20 +175,21 @@ export default function ResultsAdminPage() {
         setTotal(0);
         setError(result.error.message);
       } else {
-        const data = (result.data || []) as ProgressRow[];
+        const data = (result.data?.rows || []) as ProgressRow[];
+        setMonitoringSummary(result.data?.summary || {});
         if (!data.length && page > 1) {
           setPage(1);
           return;
         }
         setRows(data);
-        setTotal(Number(data[0]?.total_count || 0));
+        setTotal(Number(result.data?.total_count || 0));
       }
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [selected, debounced, page]);
+  }, [selected, debounced, page, statusFilter]);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const completionRate = summary?.started
     ? Math.round((summary.completed / summary.started) * 100)
@@ -196,16 +206,17 @@ export default function ResultsAdminPage() {
       let offset = 0;
       while (true) {
         const { data, error: e } = await supabase.rpc(
-          "admin_training_progress",
+          "admin_training_monitoring",
           {
             p_training_id: selected,
             p_search: debounced,
+            p_status: statusFilter,
             p_limit: 100,
             p_offset: offset,
           },
         );
         if (e) throw e;
-        const batch = (data || []) as ProgressRow[];
+        const batch = (data?.rows || []) as ProgressRow[];
         all.push(...batch);
         if (batch.length < 100) break;
         offset += 100;
@@ -220,6 +231,7 @@ export default function ResultsAdminPage() {
         "Percobaan",
         "Status",
         "Aktivitas Terakhir",
+        "Sertifikat",
       ];
       const body = all.map((r) =>
         [
@@ -232,6 +244,7 @@ export default function ResultsAdminPage() {
           r.post_attempts,
           r.learning_status,
           fmtDate(r.last_activity_at),
+          r.has_certificate ? "Terbit" : "Belum",
         ]
           .map(csvCell)
           .join(","),
@@ -286,6 +299,46 @@ export default function ResultsAdminPage() {
   );
   return (
     <div className="space-y-6">
+      {timeline && (
+        <ParticipantTimeline
+          trainingId={selected}
+          userId={timeline.user_id}
+          name={timeline.full_name}
+          onClose={() => setTimeline(null)}
+        />
+      )}
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="font-bold">Ringkasan Peserta</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Terdaftar adalah seluruh akun peserta yang dapat mengikuti pelatihan.
+          Status lulus dapat muncul sebelum peserta menyelesaikan review.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-6">
+          {[
+            ["registered", "Terdaftar", "all"],
+            ["not_started", "Belum Mulai", "not_started"],
+            ["studying", "Sedang Belajar", "studying"],
+            ["completed", "Selesai", "completed"],
+            ["passed", "Lulus", "passed"],
+            ["failed", "Tidak Lulus", "failed"],
+          ].map(([key, label, filter]) => (
+            <button
+              key={key}
+              aria-pressed={statusFilter === filter}
+              onClick={() => {
+                setStatusFilter(filter);
+                setPage(1);
+              }}
+              className={`rounded-xl border p-3 text-left ${statusFilter === filter ? "border-sky-500 bg-sky-50 dark:bg-sky-950" : ""}`}
+            >
+              <span className="block text-xs">{label}</span>
+              <strong className="text-2xl">
+                {monitoringSummary[key] ?? "—"}
+              </strong>
+            </button>
+          ))}
+        </div>
+      </section>
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-lg font-bold">Monitoring & Analisis Pelatihan</h2>
@@ -415,6 +468,19 @@ export default function ResultsAdminPage() {
                   <p className="mt-2 text-[10px] text-slate-400">
                     Terakhir: {fmtDate(r.last_activity_at)}
                   </p>
+                  <ParticipantStages
+                    pre={r.pre_score}
+                    done={r.completed_materials}
+                    total={r.total_materials}
+                    post={r.best_post_score}
+                    certificate={r.has_certificate}
+                  />
+                  <button
+                    onClick={() => setTimeline(r)}
+                    className="mt-2 text-xs font-bold text-sky-700 dark:text-sky-300"
+                  >
+                    Lihat Riwayat Aktivitas
+                  </button>
                 </div>
               ))}
             </div>
@@ -446,6 +512,19 @@ export default function ResultsAdminPage() {
                       <td className="p-4">
                         <b>{r.full_name}</b>
                         <p className="text-[10px] text-slate-400">{r.email}</p>
+                        <ParticipantStages
+                          pre={r.pre_score}
+                          done={r.completed_materials}
+                          total={r.total_materials}
+                          post={r.best_post_score}
+                          certificate={r.has_certificate}
+                        />
+                        <button
+                          onClick={() => setTimeline(r)}
+                          className="mt-2 text-xs font-bold text-sky-700 dark:text-sky-300"
+                        >
+                          Lihat Riwayat Aktivitas
+                        </button>
                       </td>
                       <td className="p-4 text-center font-mono">
                         {r.pre_score ?? "-"}

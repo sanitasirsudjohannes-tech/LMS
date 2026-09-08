@@ -16,7 +16,12 @@ const utils = ts.transpileModule(
     },
   },
 ).outputText;
-const { daysUntilTrainingEnd, csvCell, formatScoreChange } = await import(
+const {
+  daysUntilTrainingEnd,
+  csvCell,
+  formatScoreChange,
+  remainingTrainingTime,
+} = await import(
   `data:text/javascript;base64,${Buffer.from(utils).toString("base64")}`
 );
 
@@ -49,6 +54,13 @@ test("WITA calendar deadline and CSV safety", () => {
   assert.equal(formatScoreChange(-20), "-20");
   assert.equal(formatScoreChange(0), "0");
   assert.equal(formatScoreChange(null), "—");
+  assert.equal(
+    remainingTrainingTime(
+      "2026-09-08T23:59:00+08:00",
+      Date.parse("2026-09-08T22:29:00+08:00"),
+    ),
+    "Waktu tersisa: 1 jam 30 menit.",
+  );
 });
 
 test("SQL monitoring: pairing, completion, draft exclusion, activity and authorization", async () => {
@@ -58,13 +70,13 @@ test("SQL monitoring: pairing, completion, draft exclusion, activity and authori
  CREATE TABLE profiles(id UUID PRIMARY KEY, full_name TEXT, email TEXT, role TEXT);
  CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE SQL AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::UUID $$;
  CREATE FUNCTION private.is_lms_admin() RETURNS BOOLEAN LANGUAGE SQL AS $$ SELECT EXISTS(SELECT 1 FROM public.profiles WHERE id=auth.uid() AND role='admin') $$;
- CREATE TABLE trainings(id UUID PRIMARY KEY,title TEXT,passing_score INT,active BOOLEAN DEFAULT true,start_date TIMESTAMPTZ,end_date TIMESTAMPTZ);
- CREATE TABLE materials(id UUID PRIMARY KEY,training_id UUID,active BOOLEAN,content TEXT);
+ CREATE TABLE trainings(id UUID PRIMARY KEY,title TEXT,passing_score INT,active BOOLEAN DEFAULT true,start_date TIMESTAMPTZ,end_date TIMESTAMPTZ,posttest_start_at TIMESTAMPTZ);
+ CREATE TABLE materials(id UUID PRIMARY KEY,training_id UUID,active BOOLEAN,content TEXT,title TEXT DEFAULT 'Materi',order_number INT DEFAULT 1);
  CREATE TABLE material_progress(user_id UUID,material_id UUID,started_at TIMESTAMPTZ DEFAULT now(),completed_at TIMESTAMPTZ);
- CREATE TABLE test_attempts(id UUID DEFAULT gen_random_uuid(),user_id UUID,training_id UUID,test_type TEXT,score NUMERIC,started_at TIMESTAMPTZ DEFAULT now(),submitted_at TIMESTAMPTZ DEFAULT now());
- CREATE TABLE test_sessions(user_id UUID,training_id UUID,test_type TEXT,status TEXT,answers JSONB,question_snapshot JSONB,updated_at TIMESTAMPTZ DEFAULT now(),submitted_at TIMESTAMPTZ);
+ CREATE TABLE test_attempts(id UUID DEFAULT gen_random_uuid(),user_id UUID,training_id UUID,test_type TEXT,score NUMERIC,attempt_number INT DEFAULT 1,started_at TIMESTAMPTZ DEFAULT now(),submitted_at TIMESTAMPTZ DEFAULT now());
+ CREATE TABLE test_sessions(user_id UUID,training_id UUID,test_type TEXT,status TEXT,attempt_number INT DEFAULT 1,answers JSONB,question_snapshot JSONB,started_at TIMESTAMPTZ DEFAULT now(),updated_at TIMESTAMPTZ DEFAULT now(),submitted_at TIMESTAMPTZ);
  CREATE TABLE training_reviews(user_id UUID,training_id UUID,created_at TIMESTAMPTZ DEFAULT now());
- CREATE TABLE certificates(user_id UUID,training_id UUID,issued_at TIMESTAMPTZ DEFAULT now());`);
+ CREATE TABLE certificates(id UUID DEFAULT gen_random_uuid(),user_id UUID,training_id UUID,certificate_number TEXT,issued_at TIMESTAMPTZ DEFAULT now());`);
     const sql = fs.readFileSync(
       new URL(
         "../supabase/sql/migrations/031_learning_monitoring_and_analytics.sql",
@@ -74,6 +86,15 @@ test("SQL monitoring: pairing, completion, draft exclusion, activity and authori
     );
     await db.exec(sql);
     await db.exec(sql);
+    const sql32 = fs.readFileSync(
+      new URL(
+        "../supabase/sql/migrations/032_complete_learning_monitoring.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    await db.exec(sql32);
+    await db.exec(sql32);
     const id = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
     const admin = id(1),
       a = id(2),
@@ -88,7 +109,7 @@ test("SQL monitoring: pairing, completion, draft exclusion, activity and authori
     await db.exec(`INSERT INTO profiles VALUES ('${admin}','Admin','admin@test','admin'),('${a}','A','a@test','peserta'),('${b}','B','b@test','peserta'),('${c}','C','c@test','peserta');
  SELECT set_config('request.jwt.claim.sub','${admin}',false);
  INSERT INTO trainings(id,title,passing_score) VALUES ('${t}','Training',80),('${other}','Other',80);
- INSERT INTO materials VALUES ('${m}','${t}',true,'content must not be downloaded'),('${inactive}','${t}',false,'hidden'),('${otherM}','${other}',true,'other content');
+ INSERT INTO materials(id,training_id,active,content) VALUES ('${m}','${t}',true,'content must not be downloaded'),('${inactive}','${t}',false,'hidden'),('${otherM}','${other}',true,'other content');
  INSERT INTO test_attempts(user_id,training_id,test_type,score) VALUES ('${a}','${t}','pretest',100),('${a}','${t}','posttest',100),('${b}','${t}','pretest',0);
  INSERT INTO test_sessions(user_id,training_id,test_type,status,answers,question_snapshot) VALUES ('${c}','${t}','pretest','in_progress','{}','[]'),('${b}','${t}','posttest','in_progress','{"${q}":"B"}','[{"id":"${q}","question":"Example","correct_answer":"A"}]');`);
     const summary = async () =>
@@ -143,12 +164,29 @@ test("SQL monitoring: pairing, completion, draft exclusion, activity and authori
       ),
       1,
     );
+    const monitoring = (
+      await db.query(`SELECT admin_training_monitoring('${t}') value`)
+    ).rows[0].value;
+    assert.equal(monitoring.summary.registered, 3);
+    assert.equal(monitoring.summary.not_started, 0);
+    assert.equal(monitoring.summary.failed, 1);
+    assert.equal(
+      monitoring.rows.find((row) => row.user_id === a).has_certificate,
+      false,
+    );
+    const timeline = (
+      await db.query(`SELECT * FROM admin_participant_timeline('${t}','${a}')`)
+    ).rows;
+    assert.ok(timeline.some((event) => event.event_type === "passed"));
     assert.equal(
       (await db.query(`SELECT * FROM admin_training_progress('${t}','A',1,0)`))
         .rows.length,
       1,
     );
     await db.exec(`SELECT set_config('request.jwt.claim.sub','${b}',false);`);
+    const resume = (await db.query(`SELECT my_learning_resume('${t}') value`))
+      .rows[0].value;
+    assert.equal(resume.path, `/material/${m}`);
     await assert.rejects(
       db.query(`SELECT admin_training_learning_summary('${t}')`),
       /admin/,
@@ -159,6 +197,14 @@ test("SQL monitoring: pairing, completion, draft exclusion, activity and authori
     );
     await assert.rejects(
       db.query(`SELECT * FROM admin_question_analysis('${t}')`),
+      /admin/,
+    );
+    await assert.rejects(
+      db.query(`SELECT admin_training_monitoring('${t}')`),
+      /admin/,
+    );
+    await assert.rejects(
+      db.query(`SELECT * FROM admin_participant_timeline('${t}','${a}')`),
       /admin/,
     );
     const own = (await db.query("SELECT * FROM my_training_overview()")).rows;
@@ -186,6 +232,7 @@ test("SQL monitoring: pairing, completion, draft exclusion, activity and authori
       db.query(`SELECT admin_training_learning_summary('${t}')`),
       /admin/,
     );
+    await assert.rejects(db.query("SELECT my_learning_resume()"), /peserta/);
   } finally {
     await db.close();
   }

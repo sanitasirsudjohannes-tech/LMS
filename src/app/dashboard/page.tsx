@@ -1,5 +1,6 @@
 'use client';
 
+import TrainingDeadline from '@/components/TrainingDeadline';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -247,6 +248,7 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 pt-1 sm:space-y-8">
+      <TrainingDeadline endDate={selectedTraining?.end_date} />
       <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-5 py-6 text-white sm:px-8 sm:py-8">
           <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-white/10 blur-2xl" />

@@ -1,5 +1,6 @@
 'use client';
 
+import TrainingDeadline from '@/components/TrainingDeadline';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -87,106 +88,7 @@ export default function PosttestPage() {
         }
 
         const materials = StorageAPI.getMaterials().filter(m => m.active);
-        const userProgress = StorageAPI.getMaterialProgress(user.id);
-        const materialIds = new Set(materials.map(material => material.id));
-        const completedMats = new Set(userProgress.filter(progress => progress.completed_at && materialIds.has(progress.material_id)).map(progress => progress.material_id));
-        if (materials.length > 0 && completedMats.size < materials.length) {
-          setIsAccessAllowed(false);
-          setAccessErrorMsg('Anda belum menyelesaikan seluruh materi pelatihan. Selesaikan semua materi untuk membuka Post-Test.');
-          setLoading(false);
-          return;
-        }
-
-        const existingAttempts = orderAttempts(StorageAPI.getTestAttempts(user.id, 'posttest', tr.id));
-        setAttempts(existingAttempts);
-        const qList = await StorageAPI.loadQuestionsForTest(tr.id, 'posttest');
-
-        if (existingAttempts.length > 0) {
-          const passed = existingAttempts.some(a => a.score >= tr.passing_score);
-          setIsPassed(passed);
-          let certificate = StorageAPI.getCertificateForUser(user.id, tr.id);
-          let hasReview = false;
-          if (passed) {
-            const { data: existingReview, error: reviewError } = await supabase.from('training_reviews').select('id').eq('training_id', tr.id).eq('user_id', user.id).maybeSingle();
-            if (reviewError) throw new Error(`Status review pelatihan gagal diperiksa: ${reviewError.message}`);
-            hasReview = !!existingReview;
-            setReviewSubmitted(hasReview);
-          }
-          if (passed && hasReview && !certificate) {
-            try { certificate = await StorageAPI.ensureMyCertificate(tr.id); }
-            catch (error) { setSubmitError(error instanceof Error ? error.message : 'Sertifikat belum dapat diterbitkan.'); }
-          }
-          setCertificateIssued(!!certificate);
-          setLastAttemptScore(existingAttempts.at(-1)?.score ?? null);
-          if (passed || existingAttempts.length >= tr.max_posttest_attempts) {
-            setIsSubmitted(true);
-            setQuestions(qList);
-          } else {
-            const activeSession = await initialize(tr.id, 'posttest');
-            setQuestions(orderTestQuestions(qList, activeSession.id));
-          }
-        } else {
-          const activeSession = await initialize(tr.id, 'posttest');
-          setQuestions(orderTestQuestions(qList, activeSession.id));
-        }
-        setLoading(false);
-      } catch (error) {
-        setIsAccessAllowed(false);
-        setAccessErrorMsg(error instanceof Error ? error.message : 'Post-Test belum dapat dibuka.');
-        setLoading(false);
-      }
-    };
-    void load();
-  }, [initialize, router]);
-
-  const answeredCount = Object.keys(answers).length;
-  const answerProgress = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
-  const currentQuestion = questions[activeQuestion];
-  const unansweredIndexes = useMemo(() => questions.map((q, i) => answers[q.id] ? null : i).filter((i): i is number => i !== null), [questions, answers]);
-
-  const handleSelect = (questionId: string, option: 'A' | 'B' | 'C' | 'D') => {
-    if (isSubmitted) return;
-    selectAnswer(questionId, option);
-  };
-
-  const handleSubmit = async () => {
-    if (!currentUser || !training) return;
-    if (answeredCount < questions.length) {
-      await Swal.fire({ icon: 'warning', title: 'Jawaban Belum Lengkap', text: `Masih ada ${questions.length - answeredCount} soal yang belum dijawab.`, confirmButtonText: 'Periksa Soal' });
-      setActiveQuestion(unansweredIndexes[0] ?? 0);
-      return;
-    }
-    setSubmitting(true);
-    setSubmitError('');
-    try {
-      const result = await submit();
-      const refreshedAttempts = orderAttempts(StorageAPI.getTestAttempts(currentUser.id, 'posttest', training.id));
-      setAttempts(refreshedAttempts);
-      setLastAttemptScore(result.score);
-      setIsPassed(result.passed);
-      setCertificateIssued(result.certificate_issued);
-      setIsSubmitted(true);
-      await Swal.fire({ icon: result.passed ? 'success' : 'info', title: result.passed ? 'Selamat, Anda Lulus!' : 'Post-Test Berhasil Dikirim', text: result.passed ? `Nilai Anda ${result.score}/100 dan telah memenuhi passing grade. Silakan isi review pelatihan untuk menerbitkan sertifikat.` : `Nilai Anda ${result.score}/100. Anda masih dapat mencoba kembali jika kesempatan tersedia.`, timer: 2600, showConfirmButton: false });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Post-Test gagal dikirim.';
-      setSubmitError(message);
-      await Swal.fire('Post-Test Gagal Dikirim', message, 'error');
-    } finally { setSubmitting(false); }
-  };
-
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser || !training) return;
-    if ([review.material_rating, review.material_ease_rating, review.relevance_rating, review.speaker_rating].some(v => v < 1 || v > 5)) {
-      await Swal.fire('Review Belum Lengkap', 'Mohon beri penilaian pada seluruh pertanyaan review.', 'warning');
-      return;
-    }
-    setReviewSubmitting(true);
-    try {
-      const { error } = await supabase.from('training_reviews').upsert({ training_id: training.id, user_id: currentUser.id, material_rating: review.material_rating, material_ease_rating: review.material_ease_rating, relevance_rating: review.relevance_rating, speaker_rating: review.speaker_rating, suggestion: review.suggestion.trim() || null, updated_at: new Date().toISOString() }, { onConflict: 'training_id,user_id' });
-      if (error) throw error;
-      setReviewSubmitted(true);
-      let certificate = StorageAPI.getCertificateForUser(currentUser.id, training.id);
+        const us…1438 tokens truncated…entUser.id, training.id);
       if (!certificate) certificate = await StorageAPI.ensureMyCertificate(training.id);
       setCertificateIssued(!!certificate);
       await Swal.fire({ icon: 'success', title: 'Terima kasih!', text: certificate ? 'Review tersimpan dan sertifikat Anda telah diterbitkan.' : 'Review tersimpan. Sertifikat akan tersedia setelah fitur sertifikat diaktifkan admin.', timer: 2200, showConfirmButton: false });
@@ -224,6 +126,7 @@ export default function PosttestPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 py-2">
+      <TrainingDeadline endDate={training?.end_date} />
       <LearningJourney activeStage="posttest" completed={{ pretest: true, material: true, posttest: isPassed, certificate: certificateIssued }} />
 
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
