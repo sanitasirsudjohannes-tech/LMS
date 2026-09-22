@@ -436,11 +436,20 @@ export const StorageAPI = {
     return data as TrainingBackup;
   },
 
-  purgeArchivedTraining: async (id: string, backupId: string): Promise<Record<string, number | string>> => {
-    const { data, error } = await supabase.rpc('admin_purge_archived_training', {
-      p_training_id: id,
-      p_backup_id: backupId
-    });
+  verifyTrainingBackup: async (backup: TrainingBackup): Promise<string> => {
+    const { data, error } = await supabase.rpc('admin_verify_training_backup', { p_backup: backup });
+    if (error) throw new Error(`Verifikasi backup gagal: ${error.message}. Pastikan migrasi 033 sudah diterapkan.`);
+    return data as string;
+  },
+
+  restoreTrainingBackup: async (backup: TrainingBackup): Promise<void> => {
+    const { error } = await supabase.rpc('admin_restore_training_backup', { p_backup: backup });
+    if (error) throw new Error(`Pemulihan dibatalkan: ${error.message}`);
+    lastInitializedAt = 0;
+  },
+
+  purgeArchivedTraining: async (id: string, backup: TrainingBackup): Promise<Record<string, number | string>> => {
+    const { data, error } = await supabase.rpc('admin_purge_verified_training', { p_backup: backup });
     if (error) throw new Error(`Data operasional gagal dibersihkan: ${error.message}`);
     cacheState.materials = cacheState.materials.filter(material => material.training_id !== id);
     cacheState.questions = cacheState.questions.filter(question => question.training_id !== id);

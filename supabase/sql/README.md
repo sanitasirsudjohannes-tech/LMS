@@ -2,7 +2,7 @@
 
 Struktur SQL setelah perapihan baseline 2026-09-03.
 
-- `migrations/` hanya untuk perubahan baru setelah baseline. Migrasi terbaru: **032**; nomor berikutnya **033**.
+- `migrations/` hanya untuk perubahan baru setelah baseline. Migrasi terbaru: **033**; nomor berikutnya **034**.
 - `archive/pre_baseline_017/` menyimpan riwayat migrasi 001-017 yang sudah diterapkan pada database produksi.
 - Database produksi **tidak perlu menjalankan ulang** migrasi 001-017.
 
@@ -77,3 +77,7 @@ dan review/sertifikat.
 Riwayat menampilkan data operasional yang masih tersimpan. Setelah purge pelatihan
 arsip, aktivitas yang dihapus tidak dapat ditampilkan, sementara sertifikat tetap ada.
 Peringatan tenggat tampil dalam hari, jam, dan menit selama tiga hari terakhir.
+
+## Backup dan pemulihan (033)
+
+Jalankan `migrations/033_verified_backup_and_restore.sql` setelah 032. Backup ZIP v2 wajib dipilih kembali sebelum pembersihan; restore tersedia untuk arsip yang dibersihkan memakai backup tersebut. [Panduan penerapan dan batas pemulihan](migrations/033_BACKUP_RESTORE_GUIDE.md).

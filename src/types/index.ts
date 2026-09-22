@@ -215,6 +215,7 @@ export interface AdminPreviewSession {
 }
 
 export interface TrainingBackup {
+  payload_json?: string;
   format: 'LONTAR_TRAINING_BACKUP';
   version: number;
   backup_id: string;

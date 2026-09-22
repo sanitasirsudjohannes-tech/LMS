@@ -82,3 +82,7 @@ dan review/sertifikat.
 Riwayat menampilkan data operasional yang masih tersimpan. Setelah purge pelatihan
 arsip, aktivitas yang dihapus tidak dapat ditampilkan, sementara sertifikat tetap ada.
 Peringatan tenggat tampil dalam hari, jam, dan menit selama tiga hari terakhir.
+
+## 033 — Backup terverifikasi dan pemulihan
+
+Jalankan `033_verified_backup_and_restore.sql` setelah 032. Endpoint purge lama ditutup; gunakan ZIP v2 yang sudah diunduh untuk verifikasi, purge, dan pemulihan atomik di pelatihan asal. Lihat [panduan lengkap](033_BACKUP_RESTORE_GUIDE.md).

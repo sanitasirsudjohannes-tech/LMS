@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:backup": "node --test tests/backup-restore.test.mjs",
     "test:monitoring": "node --test tests/learning-monitoring.test.mjs"
   },
   "dependencies": {

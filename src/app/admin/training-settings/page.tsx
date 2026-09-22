@@ -4,10 +4,10 @@ import TrainingStructureNotice from '@/components/TrainingStructureNotice';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
-import { DatabaseUsage, Training, TrainingMaintenance, TrainingReadiness, TrainingStatus } from '@/types';
+import { DatabaseUsage, Training, TrainingBackup, TrainingMaintenance, TrainingReadiness, TrainingStatus } from '@/types';
 import { Plus, Edit2, Trash2, X, Award, Calendar, Archive, Download, Database, Eraser, ShieldCheck, CheckCircle2, CircleAlert, PlayCircle } from 'lucide-react';
 import { formatDateInputWita, toWitaDateBoundary } from '@/lib/utils';
-import { downloadTrainingBackupZip } from '@/lib/trainingBackup';
+import { downloadTrainingBackupZip, readTrainingBackupZip } from '@/lib/trainingBackup';
 
 export default function TrainingSettingsAdminPage() {
   const router = useRouter();
@@ -211,8 +211,8 @@ export default function TrainingSettingsAdminPage() {
       await loadMaintenance();
       await Swal.fire({
         icon: 'success',
-        title: 'Backup Diunduh',
-        html: `Simpan ZIP di tempat aman.<br><small>Backup ID: <code>${backup.backup_id}</code></small>`
+        title: 'ZIP Siap Disimpan',
+        text: 'Pastikan unduhan selesai dan simpan ZIP di tempat aman. Saat membersihkan data, pilih kembali berkas ZIP tersebut untuk diverifikasi.'
       });
     } catch (error) {
       await Swal.fire('Backup Gagal', error instanceof Error ? error.message : 'Backup tidak dapat dibuat.', 'error');
@@ -221,13 +221,63 @@ export default function TrainingSettingsAdminPage() {
     }
   };
 
-  const handlePurge = async (training: Training) => {
+  const selectBackup = async (training: Training): Promise<TrainingBackup | null> => {
     const { default: Swal } = await import('sweetalert2');
-    const state = maintenance[training.id];
-    if (!state?.last_backup_id) {
-      await Swal.fire('Backup Diperlukan', 'Unduh Backup Pelatihan terlebih dahulu sebelum membersihkan data.', 'warning');
+    const result = await Swal.fire({
+      title: 'Pilih ZIP Backup Tersimpan',
+      text: 'Gunakan ZIP versi 2 dari pelatihan ini. Berkas diperiksa sebelum perubahan data.',
+      input: 'file', inputAttributes: { accept: '.zip', 'aria-label': 'ZIP backup pelatihan' },
+      showCancelButton: true, confirmButtonText: 'Periksa Backup', showLoaderOnConfirm: true,
+      allowOutsideClick: () => !Swal.isLoading(),
+      preConfirm: async (file: File | null) => {
+        try {
+          if (!file) throw new Error('Pilih berkas ZIP terlebih dahulu.');
+          if (file.size > 64 * 1024 * 1024) throw new Error('Ukuran ZIP maksimal 64 MB.');
+          const backup = await readTrainingBackupZip(await file.arrayBuffer());
+          if (backup.training.id !== training.id) throw new Error('Backup berasal dari pelatihan lain.');
+          await StorageAPI.verifyTrainingBackup(backup);
+          return backup;
+        } catch (error) {
+          Swal.showValidationMessage(error instanceof Error ? error.message : 'ZIP tidak dapat diperiksa.');
+          return false;
+        }
+      }
+    });
+    return result.isConfirmed ? result.value as TrainingBackup : null;
+  };
+
+  const handleRestore = async (training: Training) => {
+    const { default: Swal } = await import('sweetalert2');
+    const backup = await selectBackup(training);
+    if (!backup) return;
+    const confirmation = await Swal.fire({
+      title: 'Pulihkan Data Operasional?',
+      text: 'Materi, soal, sesi, hasil tes, dan progres dikembalikan dari backup sebelum pembersihan. Pelatihan tetap diarsipkan. Akun dan sertifikat tidak ditimpa.',
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Pulihkan',
+    });
+    if (!confirmation.isConfirmed) return;
+    setProcessingId(training.id);
+    try {
+      await StorageAPI.restoreTrainingBackup(backup);
+    } catch (error) {
+      await Swal.fire('Pemulihan Dibatalkan', error instanceof Error ? error.message : 'Data gagal dipulihkan.', 'error');
+      setProcessingId(null);
       return;
     }
+    try {
+      await initLocalStorage(true);
+      reloadTrainings();
+      await loadMaintenance();
+      await Swal.fire('Data Dipulihkan', 'Data operasional kembali tersedia. Pelatihan tetap berstatus Arsip.', 'success');
+    } catch {
+      await Swal.fire('Data Sudah Dipulihkan', 'Pembaruan tampilan gagal. Muat ulang halaman untuk melihat hasilnya.', 'warning');
+    } finally { setProcessingId(null); }
+  };
+
+  const handlePurge = async (training: Training) => {
+    const { default: Swal } = await import('sweetalert2');
+    const backup = await selectBackup(training);
+    if (!backup) return;
     const result = await Swal.fire({
       icon: 'warning',
       title: 'Bersihkan Data Operasional?',
@@ -248,20 +298,25 @@ export default function TrainingSettingsAdminPage() {
     });
     if (!result.isConfirmed) return;
     setProcessingId(training.id);
+    let removed: Record<string, number | string>;
     try {
-      const removed = await StorageAPI.purgeArchivedTraining(training.id, state.last_backup_id);
+      removed = await StorageAPI.purgeArchivedTraining(training.id, backup);
+    } catch (error) {
+      await Swal.fire('Pembersihan Dibatalkan', error instanceof Error ? error.message : 'Data tidak dapat dibersihkan.', 'error');
+      setProcessingId(null);
+      return;
+    }
+    try {
+      await initLocalStorage(true);
       reloadTrainings();
       await loadMaintenance();
       await Swal.fire({
-        icon: 'success',
-        title: 'Data Operasional Dibersihkan',
-        text: `${removed.attempts || 0} hasil tes, ${removed.sessions || 0} sesi, ${removed.progress || 0} progres, ${removed.questions || 0} soal, dan ${removed.materials || 0} materi dihapus. Sertifikat tetap tersimpan.`
+        icon: 'success', title: 'Data Operasional Dibersihkan',
+        text: `${removed.attempts || 0} hasil tes, ${removed.sessions || 0} sesi, ${removed.progress || 0} progres, ${removed.questions || 0} soal, dan ${removed.materials || 0} materi dihapus. Simpan ZIP untuk pemulihan. Sertifikat tetap tersimpan.`
       });
-    } catch (error) {
-      await Swal.fire('Pembersihan Gagal', error instanceof Error ? error.message : 'Data tidak dapat dibersihkan.', 'error');
-    } finally {
-      setProcessingId(null);
-    }
+    } catch {
+      await Swal.fire('Data Sudah Dibersihkan', 'Pembaruan tampilan gagal. Muat ulang halaman untuk melihat hasilnya.', 'warning');
+    } finally { setProcessingId(null); }
   };
 
   const handleDelete = async (t: Training) => {
@@ -411,7 +466,7 @@ export default function TrainingSettingsAdminPage() {
                         <span>{maintenanceState.participant_count} peserta</span>
                         <span>• {maintenanceState.attempt_count} hasil tes</span>
                         <span>• {maintenanceState.certificate_count} sertifikat</span>
-                        {maintenanceState.last_backup_at && <span className="text-emerald-700 dark:text-emerald-400">• Backup tersedia</span>}
+                        {maintenanceState.last_backup_at && <span className="text-emerald-700 dark:text-emerald-400">• Ekspor pernah dibuat</span>}
                         {maintenanceState.operational_data_purged_at && <span className="text-blue-700 dark:text-blue-400">• Data operasional sudah dibersihkan</span>}
                       </div>
                     )}
@@ -486,7 +541,7 @@ export default function TrainingSettingsAdminPage() {
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  {t.status !== 'draft' && (
+                  {t.status !== 'draft' && !maintenanceState?.operational_data_purged_at && (
                     <button disabled={isProcessing} onClick={() => handleBackup(t)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
                       <Download className="w-3.5 h-3.5" /> Backup
                     </button>
@@ -499,6 +554,11 @@ export default function TrainingSettingsAdminPage() {
                   {t.status === 'archived' && !maintenanceState?.operational_data_purged_at && (
                     <button disabled={isProcessing} onClick={() => handlePurge(t)} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
                       <Eraser className="w-3.5 h-3.5" /> Bersihkan
+                    </button>
+                  )}
+                  {t.status === 'archived' && maintenanceState?.operational_data_purged_at && (
+                    <button disabled={isProcessing} onClick={() => handleRestore(t)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-semibold disabled:opacity-50">
+                      Pulihkan dari ZIP
                     </button>
                   )}
                   {t.status === 'draft' && (
