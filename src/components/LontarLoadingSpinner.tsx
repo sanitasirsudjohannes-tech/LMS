@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface LoadingBubbleProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -22,22 +22,22 @@ export default function LontarLoadingSpinner({
 }: LoadingBubbleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
-  const mountedRef = useRef(true);
-  const [isMounted, setIsMounted] = useState(false);
+  const mountedRef = useRef(false);
 
   const cfg = sizeMap[size];
 
   useEffect(() => {
-    setIsMounted(true);
     mountedRef.current = true;
+    const container = containerRef.current;
+    if (!container) return;
 
     const init = async () => {
       const ldBarModule = await import('@loadingio/loading-bar');
       const LdBar = ldBarModule.default || ldBarModule;
 
-      if (!mountedRef.current || !containerRef.current) return;
+      if (!mountedRef.current) return;
 
-      const el = containerRef.current;
+      const el = container;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (el as any).ldBar;
       el.innerHTML = '';
@@ -85,29 +85,20 @@ export default function LontarLoadingSpinner({
     return () => {
       mountedRef.current = false;
       if (animRef.current) cancelAnimationFrame(animRef.current);
-      if (containerRef.current) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        delete (containerRef.current as any).ldBar;
-        containerRef.current.innerHTML = '';
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (container as any).ldBar;
+      container.innerHTML = '';
     };
   }, []);
 
   return (
     <div className={`inline-flex flex-col items-center justify-center gap-3 py-4 ${className}`} suppressHydrationWarning>
-      {!isMounted ? (
-        <div
-          style={{ width: cfg.px, height: cfg.px }}
-          className="rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse"
-        />
-      ) : (
-        <div
-          ref={containerRef}
-          className="ldBar label-center"
-          style={{ width: cfg.px, height: cfg.px }}
-          data-preset="bubble"
-        />
-      )}
+      <div
+        ref={containerRef}
+        className="ldBar label-center rounded-full bg-slate-100 dark:bg-slate-800"
+        style={{ width: cfg.px, height: cfg.px }}
+        data-preset="bubble"
+      />
       {text && (
         <span className={`${cfg.font} text-slate-600 dark:text-slate-300 tracking-wide animate-pulse`}>
           {text}

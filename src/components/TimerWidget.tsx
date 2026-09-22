@@ -25,13 +25,7 @@ export default function TimerWidget({
   const completionNotifiedRef = useRef(isAlreadyCompleted);
 
   useEffect(() => {
-    setIsCompleted(isAlreadyCompleted);
-    completionNotifiedRef.current = isAlreadyCompleted;
-  }, [isAlreadyCompleted, startedAtIso]);
-
-  useEffect(() => {
     if (isAlreadyCompleted || minimumDurationSeconds <= 0) {
-      setClockReady(true);
       return;
     }
 

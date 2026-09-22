@@ -7,7 +7,6 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  Award,
   BookOpen,
   CheckCircle2,
   Download,
@@ -138,7 +137,7 @@ export default function AdminTrainingPreviewPage() {
   const [previewData, setPreviewData] = useState<PreviewData>(EMPTY_PREVIEW);
   const [stage, setStage] = useState<AdminPreviewStep>('pretest');
   const [activeQuestion, setActiveQuestion] = useState(0);
-  const [timerReady, setTimerReady] = useState(false);
+  const [timerReadyMaterialId, setTimerReadyMaterialId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -147,8 +146,6 @@ export default function AdminTrainingPreviewPage() {
 
   const loadPreview = useCallback(async () => {
     if (!trainingId) return;
-    setLoading(true);
-    setLoadError('');
     try {
       await initLocalStorage(true);
       const user = StorageAPI.getCurrentUser();
@@ -215,7 +212,10 @@ export default function AdminTrainingPreviewPage() {
   }, [router, trainingId]);
 
   useEffect(() => {
-    void loadPreview();
+    const start = window.setTimeout(() => {
+      void loadPreview();
+    }, 0);
+    return () => window.clearTimeout(start);
   }, [loadPreview]);
 
   const persist = useCallback(async (
@@ -247,13 +247,16 @@ export default function AdminTrainingPreviewPage() {
 
   const currentMaterial = materials[Math.min(previewData.materials.current_index, Math.max(0, materials.length - 1))] || null;
   const completedMaterialIds = useMemo(() => new Set(previewData.materials.completed_ids), [previewData.materials.completed_ids]);
+  const timerReady = Boolean(
+    currentMaterial && (
+      completedMaterialIds.has(currentMaterial.id)
+      || currentMaterial.minimum_duration_seconds <= 0
+      || timerReadyMaterialId === currentMaterial.id
+    )
+  );
 
   useEffect(() => {
     if (stage !== 'material' || !currentMaterial || !session) return;
-
-    const alreadyCompleted = completedMaterialIds.has(currentMaterial.id);
-    if (alreadyCompleted || currentMaterial.minimum_duration_seconds <= 0) setTimerReady(true);
-    else setTimerReady(false);
 
     if (!previewData.materials.started_at[currentMaterial.id]) {
       const nextData: PreviewData = {
@@ -266,9 +269,12 @@ export default function AdminTrainingPreviewPage() {
           }
         }
       };
-      void persist(nextData, 'material').catch(() => undefined);
+      const start = window.setTimeout(() => {
+        void persist(nextData, 'material').catch(() => undefined);
+      }, 0);
+      return () => window.clearTimeout(start);
     }
-  }, [completedMaterialIds, currentMaterial, persist, previewData, session, stage]);
+  }, [currentMaterial, persist, previewData, session, stage]);
 
   useEffect(() => {
     if (stage !== 'certificate') return;
@@ -306,7 +312,7 @@ export default function AdminTrainingPreviewPage() {
       setPreviewData(normalizePreviewData(fresh.preview_data));
       setStage('pretest');
       setActiveQuestion(0);
-      setTimerReady(false);
+      setTimerReadyMaterialId(null);
       await Swal.fire({ icon: 'success', title: 'Uji Coba Direset', timer: 1200, showConfirmButton: false });
     } catch (error) {
       await Swal.fire('Reset Gagal', error instanceof Error ? error.message : 'Mode Uji Coba gagal direset.', 'error');
@@ -433,7 +439,7 @@ export default function AdminTrainingPreviewPage() {
         current_index: isLast ? currentIndex : currentIndex + 1
       }
     };
-    setTimerReady(false);
+    setTimerReadyMaterialId(null);
     await persist(nextData, isLast ? 'posttest' : 'material');
   };
 
@@ -443,7 +449,7 @@ export default function AdminTrainingPreviewPage() {
       ...previewData,
       materials: { ...previewData.materials, current_index: index }
     };
-    setTimerReady(completedMaterialIds.has(materials[index].id) || materials[index].minimum_duration_seconds <= 0);
+    setTimerReadyMaterialId(null);
     await persist(nextData, 'material');
   };
 
@@ -724,7 +730,7 @@ export default function AdminTrainingPreviewPage() {
             key={currentMaterial.id}
             minimumDurationSeconds={currentMaterial.minimum_duration_seconds}
             startedAtIso={startedAt}
-            onComplete={() => setTimerReady(true)}
+            onComplete={() => setTimerReadyMaterialId(currentMaterial.id)}
             isAlreadyCompleted={completedMaterialIds.has(currentMaterial.id)}
           />
 

@@ -176,7 +176,7 @@ export default function MaterialDetailPage() {
 
           {progress && (
             <div className="border-t border-slate-100 pt-5 dark:border-slate-800">
-              <TimerWidget minimumDurationSeconds={material.minimum_duration_seconds} startedAtIso={progress.started_at} onComplete={handleTimerComplete} isAlreadyCompleted={!!progress.completed_at} />
+              <TimerWidget key={`${material.id}:${progress.started_at}:${progress.completed_at || ''}`} minimumDurationSeconds={material.minimum_duration_seconds} startedAtIso={progress.started_at} onComplete={handleTimerComplete} isAlreadyCompleted={!!progress.completed_at} />
             </div>
           )}
 

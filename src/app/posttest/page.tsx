@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import Link from 'next/link';
-import { AlertCircle, ArrowLeft, ArrowRight, Award, CheckCircle2, GraduationCap, Lock, RefreshCw, XCircle as XCircle2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Award, GraduationCap, Lock, RefreshCw, XCircle as XCircle2 } from 'lucide-react';
 import { StorageAPI, initLocalStorage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { ParticipantQuestion, TestAttempt, Training, UserProfile } from '@/types';

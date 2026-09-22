@@ -12,7 +12,6 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  Clock3,
   FileCheck2,
   GraduationCap,
   Lock,
@@ -74,7 +73,7 @@ export default function DashboardPage() {
   const [posttestAttempts, setPosttestAttempts] = useState<TestAttempt[]>([]);
   const [materialProgress, setMaterialProgress] = useState<MaterialProgress[]>([]);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
-  const [serverOffsetMs, setServerOffsetMs] = useState(0);
+  const [serverNowEstimateMs, setServerNowEstimateMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [certificateNotice, setCertificateNotice] = useState('');
@@ -84,9 +83,10 @@ export default function DashboardPage() {
     setCertificateNotice('');
 
     if (tr.posttest_start_at) {
-      setServerOffsetMs(await getServerOffsetMs());
+      const serverOffsetMs = await getServerOffsetMs();
+      setServerNowEstimateMs(Date.now() + serverOffsetMs);
     } else {
-      setServerOffsetMs(0);
+      setServerNowEstimateMs(null);
     }
 
     const mats = StorageAPI.getMaterials(tr.id).filter((m) => m.active);
@@ -197,7 +197,8 @@ export default function DashboardPage() {
     selectedTraining?.posttest_start_at &&
       posttestOpeningMs !== null &&
       Number.isFinite(posttestOpeningMs) &&
-      Date.now() + serverOffsetMs < posttestOpeningMs,
+      serverNowEstimateMs !== null &&
+      serverNowEstimateMs < posttestOpeningMs,
   );
   const posttestOpeningLabel = selectedTraining?.posttest_start_at ? formatPosttestOpening(selectedTraining.posttest_start_at) : '';
 
