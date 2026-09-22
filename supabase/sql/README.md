@@ -3,12 +3,17 @@
 Struktur SQL setelah perapihan baseline 2026-09-03.
 
 - `migrations/` hanya untuk perubahan baru setelah baseline. Migrasi terbaru: **033**; nomor berikutnya **034**.
+- `migrations/order.txt` adalah satu-satunya urutan resmi migrasi aktif. Dua file
+  historis bernomor 022 sama-sama wajib dan urutannya tercantum di sana.
 - `archive/pre_baseline_017/` menyimpan riwayat migrasi 001-017 yang sudah diterapkan pada database produksi.
 - Database produksi **tidak perlu menjalankan ulang** migrasi 001-017.
 
 Catatan penting: produksi sempat menjalankan dua file dengan nomor 016. File pengamanan urutan materi tetap dicatat sebagai 016, sedangkan migrasi integritas sertifikat dinomori ulang menjadi 017 di repository. Isi perbaikan sertifikat sudah diterapkan pada database produksi, sehingga 017 tidak perlu dijalankan ulang di produksi.
 
-Untuk instalasi Supabase baru, gunakan bundle arsip 001-017 secara berurutan sampai tersedia schema dump/squash terverifikasi dari database. Jangan membuat baseline tunggal dengan sekadar copy-paste karena beberapa fungsi, trigger, policy, dan grant ditimpa oleh migrasi berikutnya.
+Untuk instalasi Supabase baru, gunakan bundle arsip 001-017 secara berurutan,
+kemudian semua file di `migrations/order.txt`. Jangan membuat baseline tunggal
+dengan sekadar copy-paste karena beberapa fungsi, trigger, policy, dan grant
+ditimpa oleh migrasi berikutnya.
 
 ## Upgrade uji coba dan publikasi (030)
 

@@ -49,11 +49,13 @@ npm ci
 
 1. Buat project Supabase.
 2. Buka **SQL Editor**.
-3. Jalankan seluruh berkas dalam `supabase/sql/migrations/` sesuai nomor `001` sampai `009`.
-4. Buat akun admin dan tetapkan role menggunakan `supabase/sql/setup/create_admin.sql`.
-5. Data contoh pada `supabase/sql/setup/seed_data.sql` bersifat opsional.
+3. Untuk project baru, jalankan arsip `001–017` sesuai urutan nama file.
+4. Lanjutkan seluruh migrasi aktif sesuai `supabase/sql/migrations/order.txt`.
+5. Buat akun admin dan tetapkan role menggunakan `supabase/sql/setup/create_admin.sql`.
+6. Data contoh pada `supabase/sql/setup/seed_data.sql` bersifat opsional.
 
-Panduan lengkap, urutan migrasi, pembaruan instalasi lama, dan pemecahan masalah tersedia di [`supabase/sql/README.md`](supabase/sql/README.md).
+Database produksi yang sudah berjalan **tidak** menjalankan ulang arsip 001–017.
+Panduan lengkap tersedia di [`supabase/sql/README.md`](supabase/sql/README.md).
 
 ## 3. Pengaturan Supabase Authentication
 
@@ -89,10 +91,13 @@ Buka [http://localhost:3000](http://localhost:3000).
 Pemeriksaan sebelum commit atau deployment:
 
 ```bash
-npm run lint
+npm run check
 npm run build
-npm audit --omit=dev
 ```
+
+GitHub Actions menjalankan pemeriksaan yang sama pada pull request dan setiap
+push ke `main`. Panduan rilis dan rollback tersedia di
+[`docs/RELEASE.md`](docs/RELEASE.md).
 
 ## 6. Deployment Vercel
 
@@ -106,13 +111,10 @@ Jika environment variable diubah, lakukan **Redeploy**. Aplikasi sengaja berhent
 
 ## Memperbarui database yang sudah berjalan
 
-Jalankan ulang tiga migrasi berikut secara berurutan:
-
-1. `supabase/sql/migrations/002_security_hardening.sql`
-2. `supabase/sql/migrations/007_admin_pagination_and_bandwidth.sql`
-3. `supabase/sql/migrations/008_bugfix_stability_2026_09.sql`
-
-Migrasi terbaru memperbaiki kontrol role peserta/admin, statistik peserta yang belum mulai, penerbitan ulang sertifikat, integritas nomor sertifikat dan urutan materi, serta konkurensi submit tes.
+Periksa nomor migrasi terakhir yang sudah dijalankan, lalu jalankan hanya file
+sesudahnya berdasarkan [`order.txt`](supabase/sql/migrations/order.txt).
+Jangan menjalankan ulang migrasi lama atau mengambil urutan hanya dari nomor,
+karena terdapat dua file historis bernomor 022.
 
 ## Struktur penting repository
 
@@ -120,7 +122,7 @@ Migrasi terbaru memperbaiki kontrol role peserta/admin, statistik peserta yang b
 src/app/                  Halaman peserta, admin, login, dan verifikasi
 src/components/           Komponen antarmuka dan template sertifikat
 src/lib/                  Integrasi Supabase, penyimpanan data, PDF, dan utilitas
-supabase/sql/migrations/  Migrasi database wajib dan berurutan
+supabase/sql/migrations/  Migrasi aktif dan daftar urutan resminya
 supabase/sql/setup/       Pembuatan admin dan data contoh opsional
 supabase/sql/maintenance/ Perbaikan khusus instalasi lama
 ```
@@ -129,7 +131,8 @@ supabase/sql/maintenance/ Perbaikan khusus instalasi lama
 
 ### Fungsi RPC tidak ditemukan
 
-Pastikan migrasi `007` dan `008` berhasil. Kemudian reload schema cache Supabase atau jalankan:
+Pastikan seluruh migrasi dalam `order.txt` sampai versi yang dibutuhkan frontend
+telah berhasil. Kemudian reload schema cache Supabase atau jalankan:
 
 ```sql
 NOTIFY pgrst, 'reload schema';

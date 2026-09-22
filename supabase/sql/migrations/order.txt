@@ -1,0 +1,19 @@
+# Canonical order after the production baseline 001-017.
+# Do not infer order from the numeric prefix: both historical 022 files are required.
+018_purge_certificate_guard.sql
+019_certificate_eligibility_integrity.sql
+020_training_reviews.sql
+021_training_review_integrity.sql
+022_check_email_exists_rpc.sql
+022_learning_flow_integrity.sql
+023_question_structure_freeze.sql
+024_test_session_snapshot_security.sql
+025_learning_structure_guard_hardening.sql
+026_fix_learning_activity_guard.sql
+027_admin_preview_and_readiness.sql
+028_shared_question_bank.sql
+029_publication_and_structure_safety.sql
+030_preview_duration_and_publication_guard.sql
+031_learning_monitoring_and_analytics.sql
+032_complete_learning_monitoring.sql
+033_verified_backup_and_restore.sql

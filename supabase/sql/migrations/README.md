@@ -12,8 +12,12 @@ Migrasi produksi aktif saat ini:
 - `023_question_structure_freeze.sql` — membekukan bank soal setelah ada aktivitas peserta agar soal tidak berubah di tengah pengerjaan.
 - `024_test_session_snapshot_security.sql` — mencegah kunci jawaban snapshot terkirim ke browser, memperbaiki autosave parsial, dan tetap mewajibkan semua soal saat submit.
 - `025_learning_structure_guard_hardening.sql` — menutup bypass pemindahan soal/materi antar pelatihan setelah ada aktivitas peserta.
+- `026_fix_learning_activity_guard.sql` sampai `033_verified_backup_and_restore.sql`
+  melanjutkan pengamanan alur belajar, publikasi, monitoring, serta backup/restore.
 
-Jalankan migrasi secara berurutan. Jangan menjalankan ulang 001-017 pada database produksi saat ini.
+Urutan lengkap yang dapat diperiksa mesin ada di [`order.txt`](order.txt).
+Kedua file 022 wajib dijalankan: pemeriksaan email lebih dahulu, lalu integritas
+alur belajar. Jangan menjalankan ulang 001-017 pada database produksi saat ini.
 
 ## Upgrade uji coba dan publikasi (030)
 

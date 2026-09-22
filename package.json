@@ -5,10 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check": "npm run check:migrations && npm run typecheck && npm run lint && npm run test",
+    "check:migrations": "node scripts/check-migrations.mjs",
     "start": "next start",
     "lint": "eslint",
+    "test": "npm run test:monitoring && npm run test:backup",
     "test:backup": "node --test tests/backup-restore.test.mjs",
-    "test:monitoring": "node --test tests/learning-monitoring.test.mjs"
+    "test:monitoring": "node --test tests/learning-monitoring.test.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@loadingio/loading-bar": "^0.1.1",
